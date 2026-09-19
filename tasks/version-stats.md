@@ -8,7 +8,7 @@
 
 - **major = 用户确认**。breaking change 由用户拍板，不自动算。执行前先问用户当前 major。
 - **minor = 功能域数**。用户/前端能直接感知的能力，逐项清点。
-- **patch = fix 类型 commit 累计数**。机数：只数主题行以 `fix` 开头的提交，`perf` 不算 fix。
+- **patch = fix 类型 commit 累计数（机数）**。机数：只数主题行以 `fix` 开头的提交，`perf` 不算 fix。
 
 ## 判定「功能域 vs 管道」（minor 记不记，就这一条）
 
