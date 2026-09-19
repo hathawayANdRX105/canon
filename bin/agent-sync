@@ -18,7 +18,7 @@ import datetime
 STAMP_RE = re.compile(r'^<!-- canon: .*?@ ([0-9a-f]{7,40})')
 
 SYMBOL = {
-    'in-sync': '✓', 'behind': '↓', 'unstamped': '↓',
+    'in-sync': '✓', 'behind': '↓', 'unstamped': '↓', 'missing': '+',
     'local-mod': '⚠', 'diverged': '✗', 'unknown': '✗', 'stale-sha': '✗',
 }
 PUSHABLE = ('missing', 'behind', 'unstamped')
@@ -194,10 +194,18 @@ def cmd_push(canon, only=None, commit=False, force=False):
                 print(f"  {SYMBOL[state]} 拒绝 {state:<9} {dst}  — {note or '本地有改动'}")
         if acted and commit:
             proj_root = m['root']
-            sh('git', '-C', proj_root, 'add', '--', *acted)
-            sh('git', '-C', proj_root, 'commit', '-m',
-               f"docs(sync): from canon @{head[:7]}")
-            print(f"  已提交 {len(acted)} 个文件到 {proj}\n")
+            tracked, ignored = [], []
+            for p in acted:
+                (ignored if sh('git', '-C', proj_root, 'check-ignore', p,
+                               check=False).strip() else tracked).append(p)
+            if tracked:
+                sh('git', '-C', proj_root, 'add', '--', *tracked)
+                sh('git', '-C', proj_root, 'commit', '-m',
+                   f"docs(sync): from canon @{head[:7]}")
+                print(f"  已提交 {len(tracked)} 个文件到 {proj}")
+            if ignored:
+                names = ', '.join(os.path.relpath(p, proj_root) for p in ignored)
+                print(f"  ⚠ {len(ignored)} 个文件被 .gitignore 忽略，已写入未提交：{names}")
         elif acted:
             print(f"  已写入 {len(acted)} 个文件（未提交，记得 commit）\n")
         else:
