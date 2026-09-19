@@ -142,9 +142,11 @@ def iter_projects(canon, only=None):
     pdir = os.path.join(canon, 'projects')
     names = sorted(p[:-5] for p in os.listdir(pdir) if p.endswith('.yaml'))
     if only:
-        if only not in names:
-            die(f"无该项目 manifest: {only}（有: {', '.join(names)}）")
-        return [only]
+        wanted = only if isinstance(only, (list, tuple)) else [only]
+        missing = [w for w in wanted if w not in names]
+        if missing:
+            die(f"无该项目 manifest: {', '.join(missing)}（有: {', '.join(names)}）")
+        return [w for w in wanted if w in names]
     return names
 
 
@@ -257,9 +259,9 @@ def main():
     if cmd == 'status':
         cmd_status(canon, rest[0] if rest else None)
     elif cmd == 'push':
+        only = [a for a in rest if not a.startswith('--')] or None
         commit = '--commit' in rest
         force = '--force' in rest
-        only = next((a for a in rest if not a.startswith('--')), None)
         cmd_push(canon, only, commit, force)
     elif cmd == 'backport':
         if len(rest) < 2:
