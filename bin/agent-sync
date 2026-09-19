@@ -110,7 +110,8 @@ def classify(canon, sha_head, remote, src, dst_abs, pin):
     with open(dst_abs) as f:
         local = f.read()
     s = read_stamp(local)
-    want = pin or sha_head
+    want = (pin or s or sha_head)[:12]
+    head12 = sha_head[:12]
     pristine = canon_show(canon, want, src)
     if pristine is None:
         return ('stale-sha', f'戳 @{s or want[:7]} 在 canon 本地不存在，先 agent-sync pull')
@@ -119,11 +120,12 @@ def classify(canon, sha_head, remote, src, dst_abs, pin):
         if local_clean == pristine:
             return ('unstamped', None)
         return ('unknown', '无戳且内容与 canon 不同：先 backport 或 --force')
+    # 有戳：以戳版本为「本地应有的正本」判定是否被手改过
     if local_clean == pristine:
-        if want == sha_head:
+        if want == head12:
             return ('in-sync', None)
         return ('behind', f'canon 已更新到 @{sha_head[:7]}')
-    if want == sha_head:
+    if want == head12:
         return ('local-mod', '本地改了 canon 没动，建议 backport')
     return ('diverged', f'本地改了，canon 也更新到 @{sha_head[:7]}：人工合并')
 
