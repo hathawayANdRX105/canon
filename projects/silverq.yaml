@@ -1,0 +1,5 @@
+# silverq 试点
+root: /home/hathaway/projects/silverq
+dest: .agent/tasks
+
+tasks/version-stats.md -> version-stats.md

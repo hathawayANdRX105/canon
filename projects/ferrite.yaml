@@ -1,0 +1,6 @@
+# ferrite 试点
+# 注意：ferrite 根目录只读，push 请在 .wt/<branch> 工作树里做，别动主树
+root: /home/hathaway/projects/ferrite
+dest: .agent/tasks
+
+tasks/version-stats.md -> version-stats.md

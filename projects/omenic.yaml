@@ -1,0 +1,5 @@
+# omenic 试点
+root: /home/hathaway/projects/omenic
+dest: .agent/tasks
+
+tasks/version-stats.md -> version-stats.md
