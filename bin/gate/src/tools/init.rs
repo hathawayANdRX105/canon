@@ -81,9 +81,18 @@ pub fn install(rules_dir: Option<&Path>) -> anyhow::Result<()> {
             {
                 fs::remove_file(target)?;
             }
-            fs::copy(&current_exe, target)?;
-            chmod_755(target);
-            println!("✓ Installed {}", target.display());
+            // A busy target (ETXTBSY: the shim is executing in another session)
+            // must not abort init — the stale copy keeps working; warn and go on.
+            match fs::copy(&current_exe, target) {
+                Ok(_) => {
+                    chmod_755(target);
+                    println!("✓ Installed {}", target.display());
+                }
+                Err(e) => eprintln!(
+                    "⚠️  跳过 {}（{e}）— 旧副本仍可用，稍后重跑 gate init 更新",
+                    target.display()
+                ),
+            }
         } else {
             println!("  Already installed: {}", target.display());
         }
@@ -120,8 +129,7 @@ pub fn install(rules_dir: Option<&Path>) -> anyhow::Result<()> {
     };
     match pack {
         Some(dir) => {
-            let githooks = git::find_githooks_dir()
-                .ok_or_else(|| anyhow::anyhow!("could not find .githooks directory"))?;
+            let githooks = ensure_githooks_dir()?;
             let spec_dir = githooks.join("spec");
             let n = seed_rules(&dir, &spec_dir)?;
             println!("  rules: {} new file(s) from {}", n, dir.display());
@@ -190,6 +198,20 @@ fn seed_rules(pack: &Path, spec_dir: &Path) -> anyhow::Result<usize> {
         fs::copy(&path, &dest)?;
         n += 1;
     }
+    // docs/ subtree (protocol + overview + demo) — same never-clobber rule
+    let docs_src = pack.join("docs");
+    if docs_src.is_dir() {
+        let docs_dst = spec_dir.join("docs");
+        fs::create_dir_all(&docs_dst)?;
+        for entry in fs::read_dir(&docs_src)?.flatten() {
+            let dest = docs_dst.join(entry.file_name());
+            if dest.exists() {
+                continue;
+            }
+            fs::copy(entry.path(), &dest)?;
+            n += 1;
+        }
+    }
     Ok(n)
 }
 
@@ -218,10 +240,19 @@ pub fn uninstall() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Find `.githooks/` walking up from cwd; bootstrap `./.githooks/` in fresh
+/// repos that don't have one yet (init must work on first adoption).
+fn ensure_githooks_dir() -> anyhow::Result<PathBuf> {
+    if let Some(dir) = git::find_githooks_dir() {
+        return Ok(dir);
+    }
+    fs::create_dir_all(".githooks")?;
+    Ok(PathBuf::from(".githooks"))
+}
+
 /// Write hook template shell stubs to `.githooks/hooks/`.
 fn write_hook_templates() -> anyhow::Result<()> {
-    let githooks = git::find_githooks_dir()
-        .ok_or_else(|| anyhow::anyhow!("could not find .githooks directory"))?;
+    let githooks = ensure_githooks_dir()?;
     let hooks_dir = githooks.join("hooks");
     fs::create_dir_all(&hooks_dir)?;
 

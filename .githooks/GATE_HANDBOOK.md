@@ -71,7 +71,7 @@ timeout: 30
 
 stdout 必须是 finding JSON 数组：`{"id","severity","path","line","message"}`（L3 可多带 `score`/`confidence`）。
 
-**可移植标准（强制遵守，见 `CHECKLIST_SPEC.md`「mode: grep 规则编写标准」）：**
+**可移植标准（强制遵守，见 `spec/docs/CHECKLIST_SPEC.md`「mode: grep 规则编写标准」）：**
 1. 扫仓库根 `"$ROOT"`，**禁止**写死 `crates/*/src` 布局（换仓库会静默扫 0 文件、假绿）。
 2. grep 用 `--exclude-dir=target --exclude-dir=.wt --exclude-dir=.git`（按目录名，worktree 安全）。
 3. find 用 `\( -name target -o -name .git -o -name .wt \) -prune -o ...`，**禁止** `-not -path "*/.wt/*"`（全路径 glob 在 `.wt/` worktree 下会把自己全排除）。

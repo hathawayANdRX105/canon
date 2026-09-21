@@ -5,7 +5,7 @@
 //! stdout. Severity is max(yaml `fail_severity`, harness-reported) so a FAIL
 //! from the harness always blocks.
 //!
-//! Protocol doc: `rules/gate/CHECKLIST_SPEC.md` in the canon repo.
+//! Protocol doc: `rules/gate/docs/CHECKLIST_SPEC.md` in the canon repo.
 
 use std::io::{Read, Write};
 use std::path::PathBuf;
