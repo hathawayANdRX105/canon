@@ -108,6 +108,10 @@ canon 管规范的**存储、分发与执行**，是 gate 的**唯一源码正�
 
 **残留硬编码**（已收敛到最小）：pre_commit/merge 的 topic 路由 `match`（topic 名 → 内建 runner 的映射；topic 列表本身已由 dispatch.yaml 外部化）；`github_pull_requests.yaml` 的 `fixes_epic_severity` 为声明未接线键（对应 API 层检查尚不存在）。检查规范（开关/参数/严重度）已全部 yaml 化，缺失即 `gate.setup` FAIL。
 
+### 构建与验证（CI 驱动）
+
+**测试与构建一律走 GitHub CI**（`.github/workflows/ci.yml`：fmt --check + `cargo build --locked --all-targets` + `cargo test --locked --all-targets`，绿才算验证过）。本地只允许 `cargo fmt --check` 和 `cargo check --offline` 这类秒级轻量检查。唯一例外：需要把新二进制装进 `~/.local/bin` 时本地 `cargo build --release`（CI 产物进不了本机钩子路径）。
+
 ### 构建与安装
 
 ```bash
