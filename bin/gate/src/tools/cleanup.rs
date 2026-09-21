@@ -145,7 +145,9 @@ fn default_branch() -> String {
 pub fn run(dry_run: bool) -> Vec<Finding> {
     let githooks = crate::tools::git::find_githooks_dir()
         .unwrap_or_else(|| Path::new(".githooks").to_path_buf());
-    let spec_path = githooks.join("spec/cleanup_branch_cleanup.yaml");
+    let spec_path =
+        crate::shared::find_spec_file(&githooks.join("spec"), "cleanup_branch_cleanup.yaml")
+            .unwrap_or_else(|| githooks.join("spec/cleanup_branch_cleanup.yaml"));
     let yaml = match load_yaml(spec_path.to_str().unwrap_or("")) {
         Ok(value) => value,
         Err(error) => {

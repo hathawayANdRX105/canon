@@ -138,7 +138,8 @@ fn run_pr_rules(repo: &str, pr_num: u32) -> Vec<Finding> {
 }
 
 fn run_review_rules(repo: &str, pr_num: u32, spec_dir: &std::path::Path) -> Vec<Finding> {
-    let review_cfg = load_yaml(spec_dir.join("github_reviews.yaml").to_str().unwrap_or("")).ok();
+    let review_cfg = crate::shared::find_spec_file(&spec_dir, "github_reviews.yaml")
+        .and_then(|path| load_yaml(path.to_str().unwrap_or("")).ok());
 
     // Collect all review + issue comments
     let mut bodies = Vec::new();

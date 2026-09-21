@@ -1,7 +1,7 @@
 # gate 手册
 
 gate 是仓库自带的质量门禁：读 `.githooks/spec/*.yaml` 规则 → 调外部命令/LLM → 收 finding → 按严重度放行或拦截。
-**加规则只改 yaml，不改二进制。** 本文件是人能查的一手总览；每条规则的参数以对应 `.githooks/spec/checklist_*.yaml` 为准。
+**加规则只改 yaml，不改二进制。** 本文件是人能查的一手总览；每条规则的参数以对应 `.githooks/spec/quality/checklist_*.yaml` 为准。
 
 ## 三层 SLA
 
@@ -51,7 +51,7 @@ gate check --sla l3 --json      # 机器可读，带 score/confidence extra，�
 
 ## 怎么加一条规则
 
-拷一份模板到 `.githooks/spec/checklist_<名字>.yaml`，填参数：
+拷一份模板到 `.githooks/spec/quality/checklist_<名字>.yaml`，填参数：
 
 ```yaml
 enabled: true

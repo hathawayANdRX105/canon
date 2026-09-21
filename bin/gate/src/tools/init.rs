@@ -180,38 +180,27 @@ fn find_rules_pack() -> Option<PathBuf> {
 }
 
 fn seed_rules(pack: &Path, spec_dir: &Path) -> anyhow::Result<usize> {
-    fs::create_dir_all(spec_dir)?;
-    let mut n = 0;
-    for entry in fs::read_dir(pack)? {
-        let path = entry?.path();
-        let ext = path.extension().and_then(|s| s.to_str());
-        if !matches!(ext, Some("yaml") | Some("md")) {
-            continue;
-        }
-        let dest = spec_dir.join(
-            path.file_name()
-                .ok_or_else(|| anyhow::anyhow!("bad pack entry name"))?,
-        );
-        if dest.exists() {
-            continue; // never clobber user edits
-        }
-        fs::copy(&path, &dest)?;
-        n += 1;
-    }
-    // docs/ subtree (protocol + overview + demo) — same never-clobber rule
-    let docs_src = pack.join("docs");
-    if docs_src.is_dir() {
-        let docs_dst = spec_dir.join("docs");
-        fs::create_dir_all(&docs_dst)?;
-        for entry in fs::read_dir(&docs_src)?.flatten() {
-            let dest = docs_dst.join(entry.file_name());
-            if dest.exists() {
-                continue;
+    fn walk(src: &Path, dst: &Path, n: &mut usize) -> anyhow::Result<()> {
+        fs::create_dir_all(dst)?;
+        for entry in fs::read_dir(src)? {
+            let path = entry?.path();
+            let name = PathBuf::from(
+                path.file_name()
+                    .ok_or_else(|| anyhow::anyhow!("bad pack entry name"))?,
+            );
+            let dest = dst.join(&name);
+            if path.is_dir() {
+                walk(&path, &dest, n)?;
+            } else if !dest.exists() {
+                // never clobber user edits
+                fs::copy(&path, &dest)?;
+                *n += 1;
             }
-            fs::copy(entry.path(), &dest)?;
-            n += 1;
         }
+        Ok(())
     }
+    let mut n = 0;
+    walk(pack, spec_dir, &mut n)?;
     Ok(n)
 }
 

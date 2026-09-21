@@ -193,29 +193,31 @@ fn load_spec(path: &std::path::Path) -> Option<ChecklistSpec> {
 }
 
 fn find_specs(spec_dir: &std::path::Path) -> Vec<(PathBuf, ChecklistSpec)> {
-    let mut out = Vec::new();
-    let Ok(entries) = std::fs::read_dir(spec_dir) else {
-        return out;
-    };
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if path.extension().and_then(|s| s.to_str()) != Some("yaml") {
-            continue;
+    fn walk(dir: &std::path::Path, out: &mut Vec<PathBuf>, depth: u8) {
+        if depth > 3 {
+            return;
         }
-        if path
-            .file_name()
-            .and_then(|s| s.to_str())
-            .is_none_or(|n| !n.starts_with("checklist_"))
-        {
-            continue;
-        }
-        if let Some(spec) = load_spec(&path) {
-            out.push((path, spec));
+        for entry in std::fs::read_dir(dir).into_iter().flatten().flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                walk(&path, out, depth + 1);
+            } else if path.extension().and_then(|s| s.to_str()) == Some("yaml")
+                && path
+                    .file_name()
+                    .is_some_and(|n| n.to_string_lossy().starts_with("checklist_"))
+            {
+                out.push(path);
+            }
         }
     }
+    let mut paths = Vec::new();
+    walk(spec_dir, &mut paths, 0);
     // Stable order: file name.
-    out.sort_by(|a, b| a.0.file_name().cmp(&b.0.file_name()));
-    out
+    paths.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
+    paths
+        .into_iter()
+        .filter_map(|path| load_spec(&path).map(|spec| (path, spec)))
+        .collect()
 }
 
 // ---------------------------------------------------------------------------

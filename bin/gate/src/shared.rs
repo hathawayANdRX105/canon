@@ -6,6 +6,7 @@
 
 use std::collections::BTreeMap;
 use std::fs;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::thread;
 use std::time::Duration;
@@ -402,6 +403,29 @@ pub fn load_yaml(path: &str) -> Result<YamlValue, serde_yaml::Error> {
 // Spec cfg accessors — rule families read their yaml; no code defaults.
 // ---------------------------------------------------------------------------
 
+/// Resolve a spec file by name, searching `spec_dir` recursively (depth ≤ 3).
+/// Yaml files may live flat or grouped in theme subdirs (`quality/`, `code/`,
+/// `github/`, …) — the layout is free and the loaders never hardcode it.
+pub fn find_spec_file(spec_dir: &Path, filename: &str) -> Option<PathBuf> {
+    fn walk(dir: &Path, filename: &str, depth: u8, out: &mut Vec<PathBuf>) {
+        if depth > 3 {
+            return;
+        }
+        for entry in fs::read_dir(dir).into_iter().flatten().flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                walk(&path, filename, depth + 1, out);
+            } else if path.file_name().is_some_and(|n| n == filename) {
+                out.push(path);
+            }
+        }
+    }
+    let mut out = Vec::new();
+    walk(spec_dir, filename, 0, &mut out);
+    out.sort();
+    out.into_iter().next()
+}
+
 /// Load `<repo>/.githooks/spec/<file>` walking up from cwd. `None` when the
 /// file is missing — rule entries turn that into a loud `gate.setup` finding
 /// (no silent defaults: a repo without its spec must not pass green).
@@ -409,8 +433,10 @@ pub fn load_spec_yaml(file: &str) -> Option<YamlValue> {
     let mut dir = std::env::current_dir().ok()?;
     loop {
         if dir.join(".githooks").is_dir() {
-            let path = dir.join(".githooks/spec").join(file);
-            return load_yaml(path.to_str()?).ok().filter(|v| !v.is_null());
+            let spec_dir = dir.join(".githooks/spec");
+            return find_spec_file(&spec_dir, file)
+                .and_then(|path| load_yaml(path.to_str()?).ok())
+                .filter(|v| !v.is_null());
         }
         if !dir.pop() {
             return None;

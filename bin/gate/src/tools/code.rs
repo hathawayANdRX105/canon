@@ -48,31 +48,44 @@ fn changed_files() -> Vec<String> {
 }
 
 /// Languages available in this repo: file stem of every `code_*.yaml` under
-/// `.githooks/spec/`. No yaml ⇒ no check (nothing is hardcoded).
+/// `.githooks/spec/` (recursive). No yaml ⇒ no check (nothing is hardcoded).
 fn available_langs(root: &Path) -> Vec<String> {
     let spec_dir = git::find_githooks_dir()
         .unwrap_or_else(|| root.join(".githooks"))
         .join("spec");
-    let mut langs = fs::read_dir(&spec_dir)
-        .into_iter()
-        .flatten()
-        .flatten()
-        .filter_map(|entry| {
-            let path = entry.path();
-            let name = path.file_name()?.to_string_lossy().to_string();
-            if name.starts_with("code_") && name.ends_with(".yaml") {
-                Some(
-                    name.trim_start_matches("code_")
-                        .trim_end_matches(".yaml")
-                        .to_string(),
-                )
-            } else {
-                None
-            }
-        })
-        .collect::<Vec<_>>();
+    let mut langs = collect_yaml_stems(&spec_dir, "code_");
     langs.sort();
     langs
+}
+
+/// Walk `spec_dir` recursively collecting `<prefix>*.yaml` file stems.
+fn collect_yaml_stems(spec_dir: &Path, prefix: &str) -> Vec<String> {
+    fn walk(dir: &Path, prefix: &str, out: &mut Vec<String>, depth: u8) {
+        if depth > 3 {
+            return;
+        }
+        for entry in fs::read_dir(dir).into_iter().flatten().flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                walk(&path, prefix, out, depth + 1);
+                continue;
+            }
+            let name = path.file_name().map(|n| n.to_string_lossy().to_string());
+            if let Some(n) = name
+                && n.starts_with(prefix)
+                && n.ends_with(".yaml")
+            {
+                out.push(
+                    n.trim_start_matches(prefix)
+                        .trim_end_matches(".yaml")
+                        .to_string(),
+                );
+            }
+        }
+    }
+    let mut out = Vec::new();
+    walk(spec_dir, prefix, &mut out, 0);
+    out
 }
 
 fn strings(cfg: &YamlValue, key: &str) -> Vec<String> {
@@ -105,9 +118,16 @@ fn matches_include(rel: &str, include: &str) -> bool {
 
 pub fn run_lang(lang: &str, target: &str, changed: &[String]) -> Vec<Finding> {
     let root = repo_root();
-    let cfg_path = root
-        .join(".githooks/spec")
-        .join(format!("code_{lang}.yaml"));
+    let cfg_path = crate::shared::find_spec_file(
+        &git::find_githooks_dir()
+            .unwrap_or_else(|| root.join(".githooks"))
+            .join("spec"),
+        &format!("code_{lang}.yaml"),
+    )
+    .unwrap_or_else(|| {
+        root.join(".githooks/spec")
+            .join(format!("code_{lang}.yaml"))
+    });
     if !cfg_path.exists() {
         return vec![Finding::new(
             &format!("code-{lang}"),

@@ -1,6 +1,6 @@
 # Checklist Spec — 项目级 LLM 检查清单
 
-`.githooks/spec/checklist_*.yaml` 走的是和 `code_*.yaml` 同构的「读 yaml → 调外部 harness → 收 finding JSON」管道；唯一区别是把 lint 命令换成 agent harness（任意可执行文件）。
+`.githooks/spec/quality/checklist_*.yaml` 走的是和 `code/code_*.yaml` 同构的「读 yaml → 调外部 harness → 收 finding JSON」管道；唯一区别是把 lint 命令换成 agent harness（任意可执行文件）。
 
 ## 设计目标
 
@@ -15,7 +15,7 @@
 .githooks/
 ├── spec/
 │   ├── dispatch.yaml          # hook → topic（已有；加 checklist topic）
-│   ├── checklist_*.yaml       # 检查清单（新增；glob 自动发现）
+│   ├── quality/checklist_*.yaml  # 检查清单（新增；glob 自动发现，递归）
 │   └── ...
 ```
 

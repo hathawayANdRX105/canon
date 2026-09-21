@@ -229,6 +229,7 @@ mod tests {
             .expect("gate crate must sit at <repo>/bin/gate")
             .join("rules")
             .join("gate")
+            .join("github")
             .join("github_issues.yaml");
         let v =
             load_yaml(path.to_str().expect("spec path is utf-8")).expect("spec yaml must parse");

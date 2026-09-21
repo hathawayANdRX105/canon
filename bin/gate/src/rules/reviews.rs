@@ -504,6 +504,7 @@ mod spec_smoke {
             .unwrap()
             .join("rules")
             .join("gate")
+            .join("github")
             .join(name);
         serde_yaml::from_str(&std::fs::read_to_string(p).unwrap()).unwrap()
     }

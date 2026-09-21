@@ -136,6 +136,6 @@ gate check hardcoded_secret --json   # 机器可读输出（含 score/confidence
 
 ### 新规则包怎么进 canon
 
-1. 规则 yaml 放 `canon/rules/gate/checklist_<名字>.yaml`（schema 见 `rules/gate/docs/CHECKLIST_SPEC.md`）
-2. 各项目 manifest（`projects/<name>.yaml`）加一行把 `rules/gate/checklist_<名字>.yaml` 分发到该仓 `.githooks/spec/`
+1. 规则 yaml 放 `canon/rules/gate/quality/checklist_<名字>.yaml`（schema 见 `rules/gate/docs/CHECKLIST_SPEC.md`）
+2. 各项目 manifest（`projects/<name>.yaml`）加一行把 `rules/gate/quality/checklist_<名字>.yaml` 分发到该仓 `.githooks/spec/`
 3. `agent-sync push <项目>` 下发
