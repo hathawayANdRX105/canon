@@ -1,5 +1,8 @@
 # 版本统计任务书（版本口径唯一正本）
 
+> **什么时候读**：要发版、统计版本号、或改版本口径的时候。**解决什么**：major/minor/patch
+> 三段各由什么决定、功能域怎么判、按什么步骤跑——一份就够，别在项目里另建副本。
+
 > 2026-09-23 合并：通用骨架（原 kime 版）与 silverq 项目真相源（原 `silverq/versioning.md`）
 > 合体为一处——**版本口径只此一份**，项目特有内容在下文「项目篇」各节，冲突以项目篇为准
 > （它绑定真实路径与发版分支）。用法：按「通用篇」定口径与流程，按「项目篇」拿命令与真相源。
@@ -51,13 +54,21 @@ git log <发版分支> --no-merges --format="%s" | grep -cE "^fix"
 ### 5. 发布核对（push tag 后）
 
 按项目篇的产物清单回读 Release：标题、assets 齐全、CI 绿。**workflow 绿 ≠ 产物对**。
+项目篇带「快照」块的（silverq），同一步先把三行数字刷新。
 
 ---
 
 ## 项目篇：silverq（版本口径项目真相源）
 
-- **发版分支**：`master`。**当前快照**：v0.12.25（2026-09-21；机械计数 26，
-  其中 #11「drop UPX」已被 #12 回滚，实际生效 25）。
+### 快照（每次发版更新这三行；过期即以发版时重跑值为准）
+
+- 版本：v0.12.25（2026-09-21）
+- 功能域（minor）：12（清单表待补，见下）
+- patch（`grep -cE "^fix"` on master）：25（机械计数 26，#11「drop UPX」被 #12 回滚）
+
+### 真相源正文
+
+- **发版分支**：`master`。
 - **功能域清单**：文档声称 12 项但清单表在原文件中缺失（2026-09-23 合并时发现）——
   下次发版前**先补清单再核对 minor**，别让 minor 继续悬空。
 - **候选枚举**：
@@ -68,7 +79,7 @@ git log <发版分支> --no-merges --format="%s" | grep -cE "^fix"
 - **排除管道**：`config`、`proxy/factory`、`scheduler/node` 等内部层不计。
 - **更新版本**：
   ```bash
-  MAJOR=<步骤1> MINOR=<步骤2> PATCH=<步骤3>
+  MAJOR=<步骤1用户确认值> MINOR=<步骤2清单项数> PATCH=<步骤3命令输出>
   sed -i "s/^version = .*/version = \"$MAJOR.$MINOR.$PATCH\"/" Cargo.toml
   cargo check   # 刷新 Cargo.lock
   ```
@@ -81,7 +92,7 @@ git log <发版分支> --no-merges --format="%s" | grep -cE "^fix"
   1. GitHub Actions 的 `with:` 参数是字面字符串，`$VAR` 不插值（只 `run:` 步骤插值）——
      标题必须用 `${{ github.ref_name }}`，改动时别退回 `$VAR` 写法。
   2. Release notes 当前是 workflow 内手写 body（无 generate_release_notes，没有「by @作者」尾巴）；
-     若改自动 notes，它会追加「by @作者 in #N/URL」，需加 strip 步骤（参考 kime 仓的做法）。
+     若改自动 notes，它会追加「by @作者 in #N/URL」，需加 strip 步骤（在 workflow 里用 `sed`/`grep -v` 去掉该行）。
   3. 调试期手动触发会留 stale draft（历史残留 v0.13.6 / v0.18.16），发布后 `gh release list` 扫一眼删掉。
 - **2026-09-20 待决**：排除表里 `dataplane/tun` 的旧理由「未实现占位」已失效——TUN 已实现并在
   master（用户主动关闭不用）。按「移除后用户是否察觉」口径，倾向仍计管道；但这是用户确认项，

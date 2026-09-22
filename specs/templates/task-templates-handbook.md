@@ -1,5 +1,9 @@
 # omenic 任务模板手册（phases / steps）
 
+> **什么时候读**：写 Issue 的 Done when 或 PR 的 Construction plan 需要选编排模板时
+> （按需查，不必每次会话通读）。**解决什么**：5 个 phase + 12 个 step 各是什么、什么时候挂、
+> 怎么组合。**怎么用**：从矩阵里挑适用的填进任务书，不抄完整 YAML。
+
 > 日期：2026-08-07
 > 来源：compass-ws `config/templates/{phases,steps}/*.yaml`（17 个模板）
 > 用途：临时——在你有 omenic 自己的原生任务机制之前，沿用 compass 的「编排例 / 工序模板」心智模型，**从手册里挑选适用的填进 Issue 的 Done when 或 PR 的 Construction plan**。

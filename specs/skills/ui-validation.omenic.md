@@ -20,7 +20,7 @@ agent 验证 UI 时**不依赖截图**，用结构化断言。
 
 ## TUI 流程（ratatui）
 
-1. **每屏一个 `specs/tui/<screen>.yaml`** 契约（坐标+文字+focus+state）
+1. **每屏一个 `<项目仓>/specs/tui/<screen>.yaml`** 契约（坐标+文字+focus+state）
 2. **测试用 `ratatui::backend::TestBackend`**：渲染到 buffer，断言 cell 内容
 3. **测试放 `crates/tui/tests/*.rs`**：3 秒内跑完
 4. **截图（`script` 录制）仅作辅助**
@@ -53,7 +53,7 @@ elements:
     expect_navigate: "/admin/channels/new"
 ```
 
-## TUI Spec 格式（`specs/tui/<screen>.yaml`）
+## TUI Spec 格式（`<项目仓>/specs/tui/<screen>.yaml`）
 
 ```yaml
 screen: "会话列表"
