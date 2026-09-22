@@ -1,6 +1,6 @@
 # gate 手册
 
-> 本文件是 canon `docs/gate/` 主题手册正本（2026-09-23 从 `.githooks/` 移出归并——`.githooks/` 只留运行时：hooks + spec + 兜底二进制）。
+> 本文件是 canon `manaual/gate/` 主题手册正本（2026-09-23 从 `.githooks/` 移出归并——`.githooks/` 只留运行时：hooks + spec + 兜底二进制）。
 > 规则协议文档在 `rules/docs/`（播种到各仓 `.githooks/spec/docs/`）；issue/PR 操作见 `../github/GITHUB_ISSUE_PR.md`；开发流见 `../workflow/`；收尾流程见 `../closeout/closeout.md`。
 
 gate 是仓库自带的质量门禁：读 `.githooks/spec/*.yaml` 规则 → 调外部命令/LLM → 收 finding → 按严重度放行或拦截。

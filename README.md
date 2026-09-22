@@ -13,7 +13,7 @@
 ```
 canon/
 ├── bin/agent-sync      # 同步工具（status / push / backport / pull）
-├── docs/               # 共同主题文档（索引见 docs/README.md）
+├── manaual/            # 共同主题文档（索引见 manaual/README.md）
 │   ├── gate/           #   gate 总手册（人查的一手总览）
 │   ├── github/         #   issue/PR 操作指南
 │   ├── workflow/       #   PR 开发流 / .wt worktree 隔离
@@ -30,7 +30,7 @@ canon/
 
 一个主题要么**纯通用**（放 canon，可同步），要么**纯项目特有**（留项目，不同步）。混合内容按自然接缝拆成两份：
 
-- 通用骨架 → `canon/docs/versioning/version-stats.md`（三门口径、判定规则、执行流程）
+- 通用骨架 → `canon/manaual/versioning/version-stats.md`（三门口径、判定规则、执行流程）
 - 项目特有（路径 / 清单 / tag 格式 / 产物）→ 各项目的 `.agent/tasks/versioning.md`
 
 两份冲突时**以项目文件为准**——它绑死了真实路径。
@@ -44,7 +44,7 @@ projects:
   kime:
     root: /abs/path/to/kime        # 项目本地绝对路径（安装根）
     files:
-      - src: docs/versioning/version-stats.md  # canon 源路径
+      - src: manaual/versioning/version-stats.md  # canon 源路径
         to: .agent/tasks/version-stats.md  # 安装路径（相对 root）
         # pin: abc1234               # 可选：固定同步自某次 canon 提交
 ```
@@ -59,7 +59,7 @@ projects:
 agent-sync status              # 所有项目的漂移报告（只读）
 agent-sync status kime         # 单个项目
 agent-sync push kime [--commit]  # 同步 canon -> kime（只推 behind/missing/unstamped）
-agent-sync backport kime docs/versioning/version-stats.md   # kime 的本地修正回流到 canon
+agent-sync backport kime manaual/versioning/version-stats.md   # kime 的本地修正回流到 canon
 agent-sync pull                # canon 仓自更新
 ```
 

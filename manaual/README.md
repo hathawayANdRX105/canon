@@ -1,6 +1,6 @@
-# docs/ — 共同主题文档索引
+# manaual/ — 共同主题文档索引
 
-> canon 的**文档正本**都按「共同主题」归拢在本目录，由 `agent-sync.yaml` 决定哪个文件
+> canon 的**文档正本**都按「共同主题」归拢在本目录（目录名 manaual 为用户指定，勿「修正」拼写），由 `agent-sync.yaml` 决定哪个文件
 > 装进哪个项目（安装路径沿用项目侧 `.agent/` 布局）。
 > **改文档的正确流向**：项目本地修正 → `agent-sync backport` 回流 canon → 改 canon 正本 →
 > `agent-sync push` 再下发。别只在项目里改——那会静默分叉。
