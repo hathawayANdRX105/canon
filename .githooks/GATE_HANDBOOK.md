@@ -13,7 +13,7 @@ gate 是仓库自带的质量门禁：读 `.githooks/spec/*.yaml` 规则 → 调
 
 `gate check` 默认只跑 l1；`--sla l2` / `--sla l3` 解锁更高层。重规则设 `hooks: [merge]` 不拖日常提交。
 
-## 规则清单（19 条）
+## 规则清单（20 条）
 
 严重度列：`FAIL`=硬拦截，`WARN`=提示不拦，`INFO`=仅参考。
 
@@ -37,6 +37,7 @@ gate 是仓库自带的质量门禁：读 `.githooks/spec/*.yaml` 规则 → 调
 | `duplication` | l2 | merge | WARN | 跨文件 4+ 连续行重复块 |
 | `crg_impact` | l2 | merge | WARN | diff 跨 3+ crate 改动，提示耦合 |
 | `ferrite_oversize` | l3 | merge | INFO | 大文件/大函数参考分（wildtoken `fast-l`，带 `score`/`confidence`，不阻断） |
+| `review_chain` | l3 | pre-push/merge | INFO（harness 透传 FAIL/WARN/INFO） | 模型审查层三档降级：jev（`TYPESAFE_API_KEY`）→ 小模型（`REVIEW_LLM_*`）→ 无（INFO）；每个问题带 per-question `fail`/`warn` 阈值，p≥fail FAIL 硬拦；finding 带 `tier`/`confidence` extra |
 
 ## 怎么跑
 
@@ -84,6 +85,7 @@ stdout 必须是 finding JSON 数组：`{"id","severity","path","line","message"
 **原则：要不要拦截全部在 spec yaml 里配，不改代码。**
 
 - checklist 系（checklist_*.yaml）：改该文件的 `fail_severity`（如把 `slop_comment` 从 WARN 降 INFO）。
+- 模型审查开关（review_chain）：配环境变量选档——`TYPESAFE_API_KEY`(+`TYPESAFE_API_BASE`/`JEV_MODEL`)启用 jev，`REVIEW_LLM_BASE_URL`/`REVIEW_LLM_API_KEY`/`REVIEW_LLM_MODEL` 启用小模型降级，都不配则 INFO 跳过；问题集/阈值改 `.githooks/spec/harness/jev_questions_review.json`（每问题 `fail`/`warn`）。
 - 检查能力选择（`checks:` 白名单）：各 family yaml（github_*.yaml / cleanup_*.yaml / workspace_*.yaml / code_*.yaml）顶部可加 `checks: [ID或前缀]`——只启用列出的检查项；缺省 = 全部启用。
 - 家族严重度（`fail_severity`）：CL/WS 系 family yaml 的 `fail_severity: WARN|FAIL|INFO` 统一改本家族检查项严重度（INFO 不可被提升）。
 - github 系（github_issues.yaml / github_pull_requests.yaml / github_reviews.yaml）：改各文件的 `severity_overrides:` 段，按 `规则ID` 覆盖严重度，如 `IS-16: "WARN"`。检查开关也在这：`garbled_content_check: false` 直接关掉 IS-16，`ci_check_mode` / `done_when_check_mode` 控制 PR 检查是 FAIL 还是 WARN。
@@ -104,7 +106,7 @@ stdout 必须是 finding JSON 数组：`{"id","severity","path","line","message"
 | 项 | 工具 / 做法 | 状态 |
 |---|---|---|
 | 注释存在性门禁 | `RUSTFLAGS="-W missing_docs"`（public 59 处存量）；`clippy::missing_docs_in_private_items`（更严） | 存量清账前按 crate 灰度启用 |
-| 测试强度 | `cargo-mutants` nightly（验证 agent 测试是否真在检验，抓自证测试） | 待接入 |
+| 测试强度 | `cargo-mutants` nightly（验证 agent 测试是否真在检验，抓自证测试）；或先用 `review_chain` 加 Done-when 问题集（jev 逐条判 p(达成)，<0.85 不许关 issue）——轻量先行 | 轻量方案已就绪（jev 档可用） |
 | 质量曲线 | `gate check --json` 每次 commit 落 jsonl（clippy 数/LOC/CRG risk/findings 分布） | 待接入 |
 | 函数复杂度 | 已上线 `ccn` checklist（ccn 天花板 6 + ratchet 记账：`ccn_gate.py` 进 `rules/gate/harness/`，`ratchet.tsv` 进仓）；余 lizard 进 CI 镜像 | 已接入 |
 | AI slop 二进制 | `cargo install antislop` 进 CI 镜像（未装时 `antislop` 规则静默跳过） | 待接入 |

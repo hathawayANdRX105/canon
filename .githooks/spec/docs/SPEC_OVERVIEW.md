@@ -206,12 +206,13 @@
 | `duplication` | l2 | merge | WARN | 跨文件 4+ 连续行重复块（sh+awk, 零依赖） |
 | `crg_impact` | l2 | merge | WARN | diff 跨 3+ crate 改动 → 警告耦合 |
 | `ferrite_oversize` | l3 | merge | INFO | 大文件/大函数参考分（wildtoken `fast-l`；score/confidence，不阻断） |
+| `review_chain` | l3 | pre-push, merge | INFO（harness 透传） | 模型审查三档降级：jev（`TYPESAFE_API_KEY`）→ 小模型（`REVIEW_LLM_*`）→ 无（INFO）；per-question 阈值，p≥fail FAIL；`tier`/`confidence` extra |
 
 ### SLA 分层
 
 - **l1 结构层**：零 token，毫秒～分钟级（grep / clippy / 静态分析）。FAIL 硬门槛。
 - **l2 语义层**：轻量，秒级（影响面 / 重复检测）。FAIL 硬门槛。
-- **l3 LLM 层**：按需，分钟级（`ferrite_oversize` 用 wildtoken `fast-l`）。INFO + score，不阻断。深度审查自行 `ocr review --format json --audience agent`。
+- **l3 LLM 层**：按需，秒~分钟级（`review_chain` 三档降级：jev → 小模型 → 无；`ferrite_oversize` wildtoken `fast-l`）。INFO/score/confidence，不阻断；per-question fail 阈值命中时 FAIL。深度审查自行 `ocr review --format json --audience agent`。
 
 `gate check` 默认只跑 l1；`--sla l2` 或 `l3` 解锁更高层。
 l3 默认 hooks: [merge]，本地用 `gate check <l3-name> --sla l3` 触发。
