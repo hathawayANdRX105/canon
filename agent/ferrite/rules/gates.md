@@ -86,12 +86,12 @@ gate pr             # PR 预检
 
 ### 3.4 规则文档在哪
 
-- `.githooks/GATE_HANDBOOK.md`：完整手册。三层检查的意思：
+- 完整手册：canon 根目录 `GATE_HANDBOOK.md`（正本；各仓不单独维护）。三层检查的意思：
   **l1 结构层**（文件放哪、有没有写文档这类格式检查）、
   **l2 语义层**（依赖方向、命名这类代码语义检查）、
   **l3 LLM 层**（用大模型判断的深层问题，只在合并时跑）。
   共 16 条规则，每条标了触发时机和严重程度。
-- `.githooks/spec/SPEC_OVERVIEW.md`：规则对照清单（新增或修改规则后必须同步更新这个文件）。
+- 规则对照清单：canon `rules/docs/SPEC_OVERVIEW.md`（正本；新增或修改规则后必须同步更新，`gate init` 播种到本仓 `.githooks/spec/docs/`）。
 - `.githooks/spec/github_pr_gates.yaml`、`.githooks/spec/checklist_pr_*.yaml`：GitHub 相关的具体规则。
 - 手动跑某个检查：先看 `SPEC_OVERVIEW.md` 找规则名（如 `rust_todo_needs_issue`），
   再跑 `gate check <规则名> --sla l1`。

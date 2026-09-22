@@ -34,7 +34,7 @@
    - **二、维护者希望做什么事** —— 目标、期望做法、验收方式。
    - **三、可能的情况** —— 分支场景。用表格或分小节，每节给可直接执行的命令。
    - **四、约束事项（简略）** —— 硬约束和红线，一条一行。
-3. 引用别的文档一律写全路径（例如 `.agent/rules/dev-env.md`、`.githooks/GATE_HANDBOOK.md`），
+3. 引用别的文档一律写全路径（例如 `.agent/rules/dev-env.md`；gate 总手册正本在 canon 根 `GATE_HANDBOOK.md`，各仓 `.githooks/spec/docs/SPEC_OVERVIEW.md` 为播种副本），
    不要写「见 xxx.md」「见 §3.3」「见上表」这类要猜的指代。
 
 ## `tasks/` —— 任务书
