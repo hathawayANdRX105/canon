@@ -16,7 +16,7 @@ canon/
 ├── tasks/              # 共享任务书（通用骨架）
 ├── rules/              # 共享规范
 ├── skills/             # 共享 skill
-└── projects/<name>.yaml  # 分发 manifest
+└── agent-sync.yaml       # 分发单一配置（项目 = 路径 + 安装路径清单）
 ```
 
 ## 内容拆分原则（重要）
@@ -28,20 +28,23 @@ canon/
 
 两份冲突时**以项目文件为准**——它绑死了真实路径。
 
-## manifest 格式
+## 分发配置格式（agent-sync.yaml，单一文件）
 
-`projects/<项目名>.yaml`：
+一个项目 = 一条 `root`（安装根路径）+ 一份 `files` 安装清单（源路径 → 安装路径）：
 
 ```yaml
-root: /abs/path/to/project   # 项目本地绝对路径
-dest: .agent/tasks           # 文件落地的目录（可省，默认 .）
-
-# <canon 源路径> -> <项目内相对 dest 的路径>
-tasks/version-stats.md -> version-stats.md
-
-# 可选 pin：项目暂时挂旧版本
-# rules/foo.md -> foo.md @ abc1234
+projects:
+  kime:
+    root: /abs/path/to/kime        # 项目本地绝对路径（安装根）
+    files:
+      - src: tasks/version-stats.md  # canon 源路径
+        to: .agent/tasks/version-stats.md  # 安装路径（相对 root）
+        # pin: abc1234               # 可选：固定同步自某次 canon 提交
 ```
+
+**文件名映射约定**：默认 `to = <安装前缀>/<src 的 basename>`（保留源文件名，按前缀归位）；
+需要改名就显式写 `to`。这份清单是「哪份文档装到哪里」的唯一留存记录，
+`agent-sync status/push/backport` 全部以它为准，新增分发文档 = 加一行。
 
 ## 用法
 

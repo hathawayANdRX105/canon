@@ -1,0 +1,37 @@
+# agent-sync.yaml — 文档分发单一配置（替代旧 projects/*.yaml 目录）
+#
+# 一个项目 = 一个条目，只需要两类信息：
+#   root:  项目本地路径（安装根）
+#   files: 安装清单，每项 = {源路径 src: 指定, 安装路径 to: 指定}
+#
+# 文件名映射约定：
+#   默认映射  to = <dest 前缀>/<src 的 basename>，即保留源文件名、按安装前缀归位
+#   （当前所有项目 dest 前缀都是 .agent/tasks）；需要改名时显式写 to 覆盖。
+#   本清单就是「哪份文档装到哪里」的唯一留存记录：agent-sync status/push/
+#   backport 全部以它为准，新增分发文档 = 加一行。
+#
+# 可选字段：
+#   pin: <canon sha>  固定该文件同步自 canon 的某次提交（默认跟随 HEAD）
+#
+# 用法：agent-sync status|push|backport|pull（读此文件；旧 projects/ 目录已废弃）
+projects:
+  ferrite:
+    root: /home/hathaway/projects/ferrite
+    files:
+      - src: tasks/version-stats.md
+        to: .agent/tasks/version-stats.md
+  kime:
+    root: /home/hathaway/projects/kime
+    files:
+      - src: tasks/version-stats.md
+        to: .agent/tasks/version-stats.md
+  omenic:
+    root: /home/hathaway/projects/omenic
+    files:
+      - src: tasks/version-stats.md
+        to: .agent/tasks/version-stats.md
+  silverq:
+    root: /home/hathaway/projects/silverq
+    files:
+      - src: tasks/version-stats.md
+        to: .agent/tasks/version-stats.md

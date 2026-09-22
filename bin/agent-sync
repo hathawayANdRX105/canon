@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""agent-sync: 把 canon 仓的共享文档按 manifest 同步到各项目。
+"""agent-sync: 把 canon 仓的共享文档按 agent-sync.yaml 单一配置同步到各项目。
+
+配置：canon 根目录 agent-sync.yaml（项目 = root 安装根 + files 安装清单
+[src 源路径 / to 安装路径 / 可选 pin]；文件名映射约定见配置头部注释）。
 
 用法:
   agent-sync status [project]                     漂移报告（只读）
@@ -61,29 +64,38 @@ def canon_show(root, sha, src):
     return r.stdout if r.returncode == 0 else None
 
 
-def load_manifest(root, project):
-    path = os.path.join(root, 'projects', f'{project}.yaml')
+def load_config(root):
+    """读单一配置文件 agent-sync.yaml（PyYAML）。"""
+    import yaml
+    path = os.path.join(root, 'agent-sync.yaml')
     if not os.path.exists(path):
-        die(f"无 manifest: projects/{project}.yaml")
-    m = {'root': None, 'dest': '.', 'files': []}
+        die("无配置: agent-sync.yaml（旧 projects/ 目录已废弃，单一配置为准）")
     with open(path) as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith('#'):
-                continue
-            if line.startswith('root:'):
-                m['root'] = line[5:].strip()
-            elif line.startswith('dest:'):
-                m['dest'] = line[5:].strip()
-            elif '->' in line:
-                pin = None
-                if '@' in line:
-                    line, pin = line.rsplit('@', 1)
-                    pin = pin.strip()
-                src, dst = (p.strip() for p in line.split('->', 1))
-                m['files'].append((src, dst, pin))
+        try:
+            data = yaml.safe_load(f) or {}
+        except yaml.YAMLError as e:
+            die(f"agent-sync.yaml 解析失败: {e}")
+    return data
+
+
+def load_manifest(root, project):
+    """返回传统形状 {'root','dest','files':[(src,dst,pin)]}。
+
+    新配置里 dst 是完整安装相对路径（to），dest 恒为 ''；join 时自动忽略。
+    """
+    data = load_config(root)
+    projects = data.get('projects') or {}
+    p = projects.get(project)
+    if p is None:
+        die(f"agent-sync.yaml 无该项目: {project}（有: {', '.join(sorted(projects)) or '空'}）")
+    m = {'root': p.get('root'), 'dest': '', 'files': []}
     if not m['root']:
-        die(f"{project}.yaml 缺 root:")
+        die(f"{project} 缺 root:（安装根路径）")
+    for entry in (p.get('files') or []):
+        src, dst = entry.get('src'), entry.get('to')
+        if not src or not dst:
+            die(f"{project} 安装条目不完整（需 src + to）: {entry}")
+        m['files'].append((src, dst, entry.get('pin')))
     return m
 
 
@@ -139,13 +151,12 @@ def write_synced(dst_abs, remote, sha, content):
 
 
 def iter_projects(canon, only=None):
-    pdir = os.path.join(canon, 'projects')
-    names = sorted(p[:-5] for p in os.listdir(pdir) if p.endswith('.yaml'))
+    names = sorted((load_config(canon).get('projects') or {}).keys())
     if only:
         wanted = only if isinstance(only, (list, tuple)) else [only]
         missing = [w for w in wanted if w not in names]
         if missing:
-            die(f"无该项目 manifest: {', '.join(missing)}（有: {', '.join(names)}）")
+            die(f"agent-sync.yaml 无该项目: {', '.join(missing)}（有: {', '.join(names) or '空'}）")
         return [w for w in wanted if w in names]
     return names
 
@@ -224,7 +235,7 @@ def cmd_backport(canon, proj, src, commit=False):
     m = load_manifest(canon, proj)
     hit = [(s, d) for s, d, _ in m['files'] if s == src]
     if not hit:
-        die(f"{proj}.yaml 里没有 {src}")
+        die(f"agent-sync.yaml {proj} 里没有 {src}")
     _, dst = hit[0]
     dst_abs = os.path.join(m['root'], m['dest'], dst)
     if not os.path.exists(dst_abs):

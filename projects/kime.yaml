@@ -1,5 +1,0 @@
-# kime 试点
-root: /home/hathaway/projects/kime
-dest: .agent/tasks
-
-tasks/version-stats.md -> version-stats.md
