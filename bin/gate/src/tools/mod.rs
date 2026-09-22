@@ -2,6 +2,7 @@ pub mod audit;
 pub mod cleanup;
 pub mod code;
 pub mod docs_hygiene;
+pub mod done_when;
 pub mod gh_wrap;
 pub mod git;
 pub mod init;
