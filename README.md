@@ -13,15 +13,9 @@
 ```
 canon/
 ├── bin/agent-sync      # 同步工具（status / push / backport / pull）
-├── manaual/            # 共同主题文档（索引见 manaual/README.md）
-│   ├── gate/           #   gate 总手册（人查的一手总览）
-│   ├── github/         #   issue/PR 操作指南
-│   ├── workflow/       #   PR 开发流 / .wt worktree 隔离
-│   ├── closeout/       #   收尾任务书（四仓通用）
-│   ├── versioning/     #   版本口径（通用骨架 + silverq 项目真相源）
-│   ├── conventions/    #   代码/环境/测试约定 + gates 速查
-│   ├── skills/         #   项目 skill（分叉的以 <名>.<项目>.md 命名）
-│   └── templates/      #   任务模板与项目任务书
+├── tasks/              # 手动发给 agent 的任务书（closeout / feature-dev-handbook / version-stats）
+├── manual/             # 人查手册（gate / github / pr-dev-workflow / worktree，不分发）
+├── specs/              # 默认 spec 与工具使用（rules / skills / templates，索引见 specs/README.md）
 ├── rules/              # gate 规则包正本（quality/code/cleanup/github/workspace/harness/docs）
 └── agent-sync.yaml     # 分发单一配置（项目 = 路径 + 安装路径清单）
 ```
@@ -30,7 +24,7 @@ canon/
 
 一个主题要么**纯通用**（放 canon，可同步），要么**纯项目特有**（留项目，不同步）。混合内容按自然接缝拆成两份：
 
-- 通用骨架 → `canon/manaual/versioning/version-stats.md`（三门口径、判定规则、执行流程）
+- 版本口径唯一正本 → `canon/tasks/version-stats.md`（通用篇 + silverq 项目篇合并，勿再建项目副本）
 - 项目特有（路径 / 清单 / tag 格式 / 产物）→ 各项目的 `.agent/tasks/versioning.md`
 
 两份冲突时**以项目文件为准**——它绑死了真实路径。
@@ -44,7 +38,7 @@ projects:
   kime:
     root: /abs/path/to/kime        # 项目本地绝对路径（安装根）
     files:
-      - src: manaual/versioning/version-stats.md  # canon 源路径
+      - src: tasks/version-stats.md  # canon 源路径
         to: .agent/tasks/version-stats.md  # 安装路径（相对 root）
         # pin: abc1234               # 可选：固定同步自某次 canon 提交
 ```
@@ -59,7 +53,7 @@ projects:
 agent-sync status              # 所有项目的漂移报告（只读）
 agent-sync status kime         # 单个项目
 agent-sync push kime [--commit]  # 同步 canon -> kime（只推 behind/missing/unstamped）
-agent-sync backport kime manaual/versioning/version-stats.md   # kime 的本地修正回流到 canon
+agent-sync backport kime tasks/version-stats.md   # kime 的本地修正回流到 canon
 agent-sync pull                # canon 仓自更新
 ```
 

@@ -10,88 +10,93 @@
 #   本清单就是「哪份文档装到哪里」的唯一留存记录：agent-sync status/push/
 #   backport 全部以它为准，新增分发文档 = 加一行。
 #
-# 源布局按「共同主题」归拢在 canon/manaual/<主题>/ 下 (gate / github / workflow /
-# closeout / versioning / conventions / skills / templates); 安装路径沿用项目
-# 侧 .agent/ 布局不变; 项目间有分叉的文档以 <名>.<项目>.md 命名按项目分发。
+# canon 源布局三类, 互不重复:
+#   tasks/   手动发给 agent 的任务书(closeout / feature-dev-handbook / version-stats)
+#   manual/  人查手册(gate / github / pr-dev-workflow / worktree, 不分发)
+#   specs/   默认spec与工具使用(rules / skills / templates, 见 specs/README.md)
+# 安装路径沿用项目侧 .agent/ 布局; 分叉文档以 <名>.<项目>.md 命名按项目分发。
 #
 # 可选字段：
 #   pin: <canon sha>  固定该文件同步自 canon 的某次提交（默认跟随 HEAD）
 #
 # 用法：agent-sync status|push|backport|pull（读此文件；旧 projects/ 目录已废弃）
 projects:
-  # 共同主题文件: 四仓都装
-  #   docs/versioning/version-stats.md -> .agent/tasks/version-stats.md
-  #   docs/closeout/closeout.md       -> .agent/tasks/closeout.md
-  # 项目特有: 只装标注的项目 (分叉文档以 <主题>/<名>.<项目>.md 命名)
+  # 共同任务书(手动发给 agent): 四仓都装 .agent/tasks/
   ferrite:
     root: /home/hathaway/projects/ferrite
     files:
-      - src: manaual/versioning/version-stats.md
-        to: .agent/tasks/version-stats.md
-      - src: manaual/closeout/closeout.md
+      - src: tasks/closeout.md
         to: .agent/tasks/closeout.md
-      - src: manaual/conventions/agent-readme.md
+      - src: tasks/feature-dev-handbook.md
+        to: .agent/tasks/feature-dev-handbook.md
+      - src: tasks/version-stats.md
+        to: .agent/tasks/version-stats.md
+      - src: specs/rules/agent-readme.md
         to: .agent/README.md
-      - src: manaual/conventions/conventions.md
+      - src: specs/rules/conventions.md
         to: .agent/rules/conventions.md
-      - src: manaual/conventions/dev-env.md
+      - src: specs/rules/dev-env.md
         to: .agent/rules/dev-env.md
-      - src: manaual/conventions/gates.md
+      - src: specs/rules/gates.md
         to: .agent/rules/gates.md
-      - src: manaual/conventions/pr-workflow.md
+      - src: specs/rules/pr-workflow.md
         to: .agent/rules/pr-workflow.md
-      - src: manaual/conventions/testing-ci.md
+      - src: specs/rules/testing-ci.md
         to: .agent/rules/testing-ci.md
-      - src: manaual/conventions/web-lanes.md
+      - src: specs/rules/web-lanes.md
         to: .agent/rules/web-lanes.md
-      - src: manaual/skills/ui-validation/ui-validation.ferrite.md
+      - src: specs/skills/ui-validation.ferrite.md
         to: .agent/skills/ui-validation/SKILL.md
-      - src: manaual/skills/refactor-workflow/refactor-workflow.ferrite.md
+      - src: specs/skills/refactor-workflow.ferrite.md
         to: .agent/skills/refactor-workflow/SKILL.md
-      - src: manaual/skills/scaffold-dsh/scaffold-dsh.md
+      - src: specs/skills/scaffold-dsh.md
         to: .agent/skills/scaffold-dsh/SKILL.md
-      - src: manaual/skills/gate-checklist/gate-checklist.md
+      - src: specs/skills/gate-checklist.md
         to: .agent/skills/gate-checklist/SKILL.md
-      - src: manaual/skills/ainotation-web/ainotation-web.md
+      - src: specs/skills/ainotation-web.md
         to: .agent/skills/ainotation-web/SKILL.md
-      - src: manaual/templates/TEMPLATE.md
+      - src: specs/templates/template.md
         to: .agent/tasks/TEMPLATE.md
-      - src: manaual/templates/dev.md
+      - src: specs/templates/dev.md
         to: .agent/tasks/dev.md
-      - src: manaual/templates/dev-web-lane.md
+      - src: specs/templates/dev-web-lane.md
         to: .agent/tasks/dev-web-lane.md
-      - src: manaual/templates/webfix-lane.md
+      - src: specs/templates/webfix-lane.md
         to: .agent/tasks/webfix-lane.md
-      - src: manaual/templates/closeout-pr.md
+      - src: specs/templates/closeout-pr.md
         to: .agent/tasks/closeout-pr.md
   kime:
     root: /home/hathaway/projects/kime
     files:
-      - src: manaual/versioning/version-stats.md
-        to: .agent/tasks/version-stats.md
-      - src: manaual/closeout/closeout.md
+      - src: tasks/closeout.md
         to: .agent/tasks/closeout.md
+      - src: tasks/feature-dev-handbook.md
+        to: .agent/tasks/feature-dev-handbook.md
+      - src: tasks/version-stats.md
+        to: .agent/tasks/version-stats.md
   omenic:
     root: /home/hathaway/projects/omenic
     files:
-      - src: manaual/versioning/version-stats.md
-        to: .agent/tasks/version-stats.md
-      - src: manaual/closeout/closeout.md
+      - src: tasks/closeout.md
         to: .agent/tasks/closeout.md
-      - src: manaual/templates/task-templates-handbook.md
+      - src: tasks/feature-dev-handbook.md
+        to: .agent/tasks/feature-dev-handbook.md
+      - src: tasks/version-stats.md
+        to: .agent/tasks/version-stats.md
+      - src: specs/templates/task-templates-handbook.md
         to: .agent/task-templates-handbook.md
-      - src: manaual/skills/ui-validation/ui-validation.omenic.md
+      - src: specs/skills/ui-validation.omenic.md
         to: .agent/skills/ui-validation/SKILL.md
-      - src: manaual/skills/refactor-workflow/refactor-workflow.omenic.md
+      - src: specs/skills/refactor-workflow.omenic.md
         to: .agent/skills/refactor-workflow/SKILL.md
-      - src: manaual/skills/scaffold-dsh/scaffold-dsh.md
+      - src: specs/skills/scaffold-dsh.md
         to: .agent/skills/scaffold-dsh/SKILL.md
   silverq:
     root: /home/hathaway/projects/silverq
     files:
-      - src: manaual/versioning/version-stats.md
-        to: .agent/tasks/version-stats.md
-      - src: manaual/closeout/closeout.md
+      - src: tasks/closeout.md
         to: .agent/tasks/closeout.md
-      - src: manaual/versioning/silverq.md
-        to: .agent/tasks/versioning.md
+      - src: tasks/feature-dev-handbook.md
+        to: .agent/tasks/feature-dev-handbook.md
+      - src: tasks/version-stats.md
+        to: .agent/tasks/version-stats.md

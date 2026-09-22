@@ -2,7 +2,7 @@
 
 本指南指导 agent 开发多步 PR 工作（依赖感知、隔离、委派、验证、审查、清理）。
 检查由 `.githooks/hooks` 强制（pre-commit/pre-push/merge）。
-规则见 `../gate/GATE_HANDBOOK.md`；收尾全流程（审查/修复/PR 记录/清场/资源释放）见 `../closeout/closeout.md`。
+规则见 `gate.md`；任务书在 `../tasks/`：功能开发七问见 `feature-dev-handbook.md`，收尾全流程（审查/修复/PR 记录/清场/资源释放）见 `closeout.md`。
 
 ## 工作流
 

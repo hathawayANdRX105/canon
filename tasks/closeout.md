@@ -1,4 +1,4 @@
-<!-- canon: manaual/closeout/closeout.md — 收尾任务书。来源: dotfiles deskctl snippets(tasks/closeout, closeout-pr, dev) + ferrite/omenic/kime/silverq 各仓 .agent 文档收录。 -->
+<!-- canon: tasks/closeout.md — 收尾任务书。来源: dotfiles deskctl snippets(tasks/closeout, closeout-pr, dev) + ferrite/omenic/kime/silverq 各仓 .agent 文档收录。 -->
 # 项目收尾任务书（closeout）
 
 > **什么时候读**：项目/PR 收尾阶段——功能开发完、要审查、修问题、合 PR、清场的时候。
