@@ -126,7 +126,13 @@ def classify(canon, sha_head, remote, src, dst_abs, pin):
     head12 = sha_head
     pristine = canon_show(canon, want, src)
     if pristine is None:
-        return ('stale-sha', f'戳 @{s or want[:7]} 在 canon 本地不存在，先 agent-sync pull')
+        # 两种可能: (a) 戳的 sha 真不在本地历史 -> stale-sha, 提示 pull;
+        # (b) canon 侧源路径改过名(docs/->manaual/ 等), 该 sha 下没有这个路径
+        #     -> 不是漂移: 回退与「当前 HEAD 正本」比内容, unstamped/unknown 由内容裁决
+        sha_exists = sh('git', '-C', canon, 'cat-file', '-e', want, check=False).strip() == ''
+        if s and not sha_exists:
+            return ('stale-sha', f'戳 @{s} 在 canon 本地不存在，先 agent-sync pull')
+        pristine = canon_show(canon, sha_head, src) or ''
     local_clean = strip_stamp(local)
     if s is None:
         if local_clean == pristine:
