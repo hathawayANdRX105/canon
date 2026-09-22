@@ -1,6 +1,6 @@
 # .wt 分支目录工作隔离规范
 
-> 布局约定与坑见 `tasks/closeout.md` 第九节（worktree 硬规则）与 `GATE_HANDBOOK.md`。
+> 布局约定与坑见 `../closeout/closeout.md` 第九节（worktree 硬规则）与 `../gate/GATE_HANDBOOK.md`。
 
 ## 原则
 所有开发/子代理改动必须在 `.wt/<编号>-<分支名>` worktree 中进行，根目录工作树不被修改污染。防止多 agent 共享工作区时的重叠冲突（Epic #185 事故：另一 agent 分支被 checkout，spec 值被覆盖导致 sub-issue 挂错 parent）。
