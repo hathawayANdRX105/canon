@@ -87,7 +87,7 @@ canon 管规范的**存储、分发与执行**，是 gate 的**唯一源码正�
 
 | 检查族 | 配置文件 | 可配项 |
 |---|---|---|
-| checklist 引擎（16 条） | `checklist_*.yaml` | `fail_severity`（拦不拦）、`hooks`（何时跑）、`enabled`、`timeout`、`optional` |
+| checklist 引擎（20 条） | `checklist_*.yaml` | `fail_severity`（拦不拦）、`hooks`（何时跑）、`enabled`、`timeout`、`optional` |
 | issue 合规 | `github_issues.yaml` | `severity_overrides:` 按规则 ID 定严重度；`garbled_content_check` / `labels_section_forbidden` / `title_must_be_chinese` 等开关直接启停检查；`required_headings` / `forbidden_keywords` / `keyword_label_suggestions` 等参数 |
 | PR 合规 | `github_pull_requests.yaml` | 同上 + `ci_check_mode` / `done_when_check_mode`（FAIL / WARN 切换拦截级别） |
 | review 合规 | `github_reviews.yaml` | `severity_overrides:` + 检查参数 |
@@ -136,6 +136,24 @@ gate check hardcoded_secret --json   # 机器可读输出（含 score/confidence
 ```
 
 退出码：存在 FAIL 级 finding → 1（拦截 git 操作）；否则 0。严重度可用 `.githooks/spec/severity_overrides.yaml` 按 rule_id 覆盖。
+
+### 模型审查层（review_chain / DWJ）的环境配置
+
+`review_chain`（pre-push/merge 的语义审查）与 `done_when_judge`（issue close 的 Done-when 逐条评审）共用三档降级：**jev → 小模型 → 无**，两者互斥只跑一个；都不配时模型层出 INFO，确定性工具检查（ccn/duplication/antislop/slop_comment）永远照跑。
+
+```bash
+# jev 档（TypeSafe System One，校准概率，首选）
+export TYPESAFE_API_KEY=...            # 官方 api.typesafe.ai 用 Bearer；自建网关可能只认 x-api-key，harness 双发
+export TYPESAFE_API_BASE=https://api.typesafe.ai
+export JEV_MODEL=jev-latest
+
+# 小模型档（jev 不可用时降级，OpenAI 兼容 /v1/chat/completions）
+export REVIEW_LLM_BASE_URL=http://localhost:3000
+export REVIEW_LLM_API_KEY=...
+export REVIEW_LLM_MODEL=qwen-plus
+```
+
+per-question 阈值、问题集分别在 `rules/gate/harness/jev_questions_review.json` / `jev_questions_done_when.json`；close 路径总开关在 `github_issues.yaml` 的 `done_when_judge.enabled`。
 
 ### 新规则包怎么进 canon
 

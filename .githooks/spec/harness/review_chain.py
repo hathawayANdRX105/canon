@@ -30,6 +30,11 @@ import urllib.request
 
 TIMEOUT = {"jev": 55, "llm": 120}
 
+# Docs guidance: "include only the context relevant to the current
+# questions" — a full merge-base diff (hundreds of KB) is context rot and
+# trips upstream body-size limits (observed: jev API 400 on 269KB state).
+MAX_STATE_CHARS = 24000
+
 
 def post(url: str, headers: dict, body: dict, timeout: int):
     req = urllib.request.Request(
@@ -182,8 +187,14 @@ def main() -> int:
     except Exception:
         state = raw.strip()
     questions = load_questions(qpath, d_fail, d_warn, state)
-    payload = json.dumps(state) if isinstance(state, dict) else state
+    if isinstance(state, dict):
+        # JSON state: keep the head (items array lives there).
+        payload = json.dumps(state)[:MAX_STATE_CHARS]
+    else:
+        # Diff string: chronological, so the tail carries the latest changes.
+        payload = state[-MAX_STATE_CHARS:] if len(state) > MAX_STATE_CHARS else state
 
+    reasons = []
     for tier, run in (("jev", run_jev), ("small-llm", run_small_llm)):
         findings, err = run(payload, questions, d_fail, d_warn)
         if findings is not None:
@@ -191,6 +202,7 @@ def main() -> int:
             json.dump(findings, sys.stdout)
             return 0
         if err:
+            reasons.append(err)
             print(f"review_chain: {err}", file=sys.stderr)
 
     # No model tier: deterministic tool gates still cover the code-level checks.
@@ -202,8 +214,9 @@ def main() -> int:
                 "path": "",
                 "line": 0,
                 "message": (
-                    "no model tier available (jev key / REVIEW_LLM_* unset) — "
-                    "deterministic tool gates (ccn, duplication, antislop, slop_comment) still apply"
+                    "no model tier available — "
+                    + "; ".join(reasons)
+                    + "；确定性工具检查 (ccn, duplication, antislop, slop_comment) 仍生效"
                 ),
                 "tier": "none",
             }
