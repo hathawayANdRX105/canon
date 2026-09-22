@@ -2,7 +2,7 @@
 //!
 //! The engine (`engine` module) contains zero detection logic: every rule
 //! lives in `checklist_*.yaml` under `<repo>/.githooks/spec/` and runs an
-//! external harness command. canon (`rules/gate/`) is the source of truth
+//! external harness command. canon (`rules/`) is the source of truth
 //! for the default rules pack; `gate init` seeds a repo with it. The
 //! `tools`/`rules` modules carry the gh-workflow policy layer (issue/PR
 //! compliance, merge orchestration, gh command interception).
@@ -222,7 +222,7 @@ mod tests {
     #[test]
     fn loads_real_spec_and_counts_required_headings() {
         // ponytail: crate lives at <repo>/bin/gate, so the repo root is two
-        // ancestors up; the default rules pack ships at canon/rules/gate.
+        // ancestors up; the default rules pack ships at canon/rules.
         let path = Path::new(env!("CARGO_MANIFEST_DIR"))
             .ancestors()
             .nth(2)

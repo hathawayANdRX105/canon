@@ -647,7 +647,6 @@ mod spec_smoke {
             .nth(2)
             .unwrap()
             .join("rules")
-            .join("gate")
             .join("github")
             .join(name);
         serde_yaml::from_str(&std::fs::read_to_string(p).unwrap()).unwrap()

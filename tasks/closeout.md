@@ -38,7 +38,7 @@
 ```bash
 # 1. gate spec 齐全（缺review_chain三件套就播种，只加不覆盖）
 ls .githooks/spec/harness/review_chain.py .githooks/spec/quality/checklist_review_chain.yaml
-gate init --rules-dir ~/projects/canon/rules/gate   # 缺文件时
+gate init --rules-dir ~/projects/canon/rules   # 缺文件时
 
 # 2. jev key 在环境里（fish conf.d/api_key.fish 已持久化；新 shell 自动加载）
 echo $TYPESAFE_API_KEY   # 空则 source ~/.config/fish/conf.d/api_key.fish
@@ -73,7 +73,7 @@ Rust 项目加 `clippy`；按语言加减。FAIL 清零；duplication 的 brace 
 | 已合并/审历史范围 | `GATE_BASE=<base_sha> gate check review_chain` |
 | 自动（推送即跑） | `git push` → pre-push hook 自动执行 |
 
-问题集与阈值（`rules/gate/harness/jev_questions_review.json`， per-question confidence-gated routing）：
+问题集与阈值（`rules/harness/jev_questions_review.json`， per-question confidence-gated routing）：
 
 | 问题 | fail 阈值 | 命中 |
 |---|---|---|

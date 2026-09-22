@@ -117,6 +117,6 @@ stdout 必须是 finding JSON 数组：`{"id","severity","path","line","message"
 | 注释存在性门禁 | `RUSTFLAGS="-W missing_docs"`（public 59 处存量）；`clippy::missing_docs_in_private_items`（更严） | 存量清账前按 crate 灰度启用 |
 | 测试强度 | `cargo-mutants` nightly（验证 agent 测试是否真在检验，抓自证测试）；轻量方案已落地：`done_when_judge`（close 时 jev 逐条判 p(未达标)，≥0.85 硬拦） | 轻量方案已上线；mutants 待接入 |
 | 质量曲线 | `gate check --json` 每次 commit 落 jsonl（clippy 数/LOC/CRG risk/findings 分布） | 待接入 |
-| 函数复杂度 | 已上线 `ccn` checklist（ccn 天花板 6 + ratchet 记账：`ccn_gate.py` 进 `rules/gate/harness/`，`ratchet.tsv` 进仓）；余 lizard 进 CI 镜像 | 已接入 |
+| 函数复杂度 | 已上线 `ccn` checklist（ccn 天花板 6 + ratchet 记账：`ccn_gate.py` 进 `rules/harness/`，`ratchet.tsv` 进仓）；余 lizard 进 CI 镜像 | 已接入 |
 | AI slop 二进制 | `cargo install antislop` 进 CI 镜像（未装时 `antislop` 规则静默跳过） | 待接入 |
 | 模块循环依赖 | `cargo-modules dependencies --lib --acyclic`（工具未装） | 待装 |

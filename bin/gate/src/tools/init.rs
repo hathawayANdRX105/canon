@@ -135,25 +135,31 @@ pub fn install(rules_dir: Option<&Path>) -> anyhow::Result<()> {
             println!("  rules: {} new file(s) from {}", n, dir.display());
         }
         None => println!(
-            "  rules: pack not found — point --rules-dir at canon/rules/gate, or run agent-sync"
+            "  rules: pack not found — point --rules-dir at canon/rules, or run agent-sync"
         ),
     }
 
     Ok(())
 }
 
-/// A dir is a rules pack when it holds at least one `checklist_*.yaml`.
+/// A dir is a rules pack when it holds at least one `checklist_*.yaml`
+/// (flat or under `quality/` — canon's layout was flattened from
+/// `rules/gate/*` to `rules/*` at 2026-09-23).
 fn is_pack(dir: &Path) -> bool {
-    fs::read_dir(dir).is_ok_and(|mut it| {
-        it.any(|e| {
-            e.ok()
-                .is_some_and(|e| e.file_name().to_string_lossy().starts_with("checklist_"))
+    fn has_checklist(d: &Path) -> bool {
+        fs::read_dir(d).is_ok_and(|mut it| {
+            it.any(|e| {
+                e.ok()
+                    .is_some_and(|e| e.file_name().to_string_lossy().starts_with("checklist_"))
+            })
         })
-    })
+    }
+    has_checklist(dir) || (dir.join("quality").is_dir() && has_checklist(&dir.join("quality")))
 }
 
-/// Look for `rules/gate` near the binary (canon checkout: target/debug →
-/// bin/gate → bin → canon) then near cwd.
+/// Look for the rules pack near the binary (canon checkout: target/debug →
+/// bin/gate → bin → canon) then near cwd. New layout: `rules/`; legacy
+/// checkout: `rules/gate/`.
 fn find_rules_pack() -> Option<PathBuf> {
     let mut starts = Vec::new();
     if let Ok(exe) = std::env::current_exe()
@@ -167,9 +173,11 @@ fn find_rules_pack() -> Option<PathBuf> {
     for start in starts {
         let mut dir = start;
         loop {
-            let cand = dir.join("rules/gate");
-            if is_pack(&cand) {
-                return Some(cand);
+            for rel in ["rules", "rules/gate"] {
+                let cand = dir.join(rel);
+                if is_pack(&cand) {
+                    return Some(cand);
+                }
             }
             if !dir.pop() {
                 break;

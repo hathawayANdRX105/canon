@@ -99,7 +99,7 @@ canon 管规范的**存储、分发与执行**，是 gate 的**唯一源码正�
 **分层**：
 - `bin/gate/src/engine.rs` — checklist 引擎，**零检测逻辑**：按 scope 收集 payload（staged diff / 全量 diff / 变更文件）→ 喂给 yaml 声明的外部 harness 命令 → 解析 finding JSON 聚合放行或拦截。加规则/改规则/删规则全部是 yaml 操作，不动二进制
 - `bin/gate/src/rules/` + `tools/` — gh 工作流策略层（issue/PR/review 合规、merge 编排、gh 命令拦截），检测逻辑由 `github_*.yaml` 驱动
-- `rules/gate/` — 默认规则包正本（37 份：checklist ×16 + code/cleanup/workspace/github 系 + dispatch + 协议文档）
+- `rules/` — 默认规则包正本（43 份：quality checklist ×17 + code/cleanup/workspace/github 系 + harness 4 件套 + docs 4 份 + dispatch/severity_overrides）
 
 与 omenic 内嵌版的差异（去硬编码）：
 
@@ -122,7 +122,7 @@ cd bin/gate && cargo build --release    # 产物 target/release/gate
 cd <目标仓库> && ~/projects/canon/bin/gate/target/release/gate init
 ```
 
-`gate init` 做四件事：装二进制到 `~/.local/bin/`（**gate + gh 两个名字**，gh 用于拦截 issue/PR 命令）→ 设 `core.hooksPath=.githooks/hooks` → 写三个 hook 脚本（pre-commit / pre-push / merge，带 PATH→仓内二进制的兜底查找）→ 从 `rules/gate/`（自动探测 canon 仓，或 `--rules-dir` 指定）播种规则到 `.githooks/spec/`，**已存在的文件绝不覆盖**。
+`gate init` 做四件事：装二进制到 `~/.local/bin/`（**gate + gh 两个名字**，gh 用于拦截 issue/PR 命令）→ 设 `core.hooksPath=.githooks/hooks` → 写三个 hook 脚本（pre-commit / pre-push / merge，带 PATH→仓内二进制的兜底查找）→ 从 `rules/`（自动探测 canon 仓，或 `--rules-dir` 指定）播种规则到 `.githooks/spec/`，**已存在的文件绝不覆盖**。
 
 ### 用法
 
@@ -153,10 +153,10 @@ export REVIEW_LLM_API_KEY=...
 export REVIEW_LLM_MODEL=qwen-plus
 ```
 
-per-question 阈值、问题集分别在 `rules/gate/harness/jev_questions_review.json` / `jev_questions_done_when.json`；close 路径总开关在 `github_issues.yaml` 的 `done_when_judge.enabled`。
+per-question 阈值、问题集分别在 `rules/harness/jev_questions_review.json` / `jev_questions_done_when.json`；close 路径总开关在 `github_issues.yaml` 的 `done_when_judge.enabled`。
 
 ### 新规则包怎么进 canon
 
-1. 规则 yaml 放 `canon/rules/gate/quality/checklist_<名字>.yaml`（schema 见 `rules/gate/docs/CHECKLIST_SPEC.md`）
-2. 各项目 manifest（`projects/<name>.yaml`）加一行把 `rules/gate/quality/checklist_<名字>.yaml` 分发到该仓 `.githooks/spec/`
+1. 规则 yaml 放 `canon/rules/quality/checklist_<名字>.yaml`（schema 见 `rules/docs/CHECKLIST_SPEC.md`）
+2. 各项目 manifest（`agent-sync.yaml` / gate 规则包）加一行把 `rules/quality/checklist_<名字>.yaml` 分发到该仓 `.githooks/spec/`
 3. `agent-sync push <项目>` 下发
