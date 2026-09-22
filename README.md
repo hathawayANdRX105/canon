@@ -13,14 +13,16 @@
 ```
 canon/
 ├── bin/agent-sync      # 同步工具（status / push / backport / pull）
-├── tasks/              # 共享任务书（closeout / version-stats，四仓通用）
-├── agent/              # 各项目 .agent 文档正本（agent/ferrite|omenic|silverq/…）
+├── docs/               # 共同主题文档（索引见 docs/README.md）
+│   ├── gate/           #   gate 总手册（人查的一手总览）
+│   ├── github/         #   issue/PR 操作指南
+│   ├── workflow/       #   PR 开发流 / .wt worktree 隔离
+│   ├── closeout/       #   收尾任务书（四仓通用）
+│   ├── versioning/     #   版本口径（通用骨架 + silverq 项目真相源）
+│   ├── conventions/    #   代码/环境/测试约定 + gates 速查
+│   ├── skills/         #   项目 skill（分叉的以 <名>.<项目>.md 命名）
+│   └── templates/      #   任务模板与项目任务书
 ├── rules/              # gate 规则包正本（quality/code/cleanup/github/workspace/harness/docs）
-├── skills/             # 共享 skill
-├── GATE_HANDBOOK.md    # gate 总手册（人查的一手总览）
-├── GITHUB_ISSUE_PR.md  # GitHub issue/PR 操作指南
-├── PR_DEV_WORKFLOW.md  # PR 开发工作流指南
-├── WORKFLOW.md         # .wt worktree 隔离规范
 └── agent-sync.yaml     # 分发单一配置（项目 = 路径 + 安装路径清单）
 ```
 
