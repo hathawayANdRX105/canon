@@ -219,7 +219,9 @@ pub fn run() -> Vec<Finding> {
 pub fn run_in(base: &Path) -> Vec<Finding> {
     let mut findings = Vec::new();
 
-    let config_path = base.join(".githooks/spec/cleanup_docs_hygiene.yaml");
+    let spec_dir = base.join(".githooks/spec");
+    let config_path = crate::shared::find_spec_file(&spec_dir, "cleanup_docs_hygiene.yaml")
+        .unwrap_or_else(|| spec_dir.join("cleanup_docs_hygiene.yaml"));
     let cfg = match load_yaml(config_path.to_str().unwrap_or("")) {
         Ok(v) => v,
         Err(_) => {
