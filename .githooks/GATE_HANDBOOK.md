@@ -84,12 +84,20 @@ stdout 必须是 finding JSON 数组：`{"id","severity","path","line","message"
 **原则：要不要拦截全部在 spec yaml 里配，不改代码。**
 
 - checklist 系（checklist_*.yaml）：改该文件的 `fail_severity`（如把 `slop_comment` 从 WARN 降 INFO）。
+- 检查能力选择（`checks:` 白名单）：各 family yaml（github_*.yaml / cleanup_*.yaml / workspace_*.yaml / code_*.yaml）顶部可加 `checks: [ID或前缀]`——只启用列出的检查项；缺省 = 全部启用。
+- 家族严重度（`fail_severity`）：CL/WS 系 family yaml 的 `fail_severity: WARN|FAIL|INFO` 统一改本家族检查项严重度（INFO 不可被提升）。
 - github 系（github_issues.yaml / github_pull_requests.yaml / github_reviews.yaml）：改各文件的 `severity_overrides:` 段，按 `规则ID` 覆盖严重度，如 `IS-16: "WARN"`。检查开关也在这：`garbled_content_check: false` 直接关掉 IS-16，`ci_check_mode` / `done_when_check_mode` 控制 PR 检查是 FAIL 还是 WARN。
+- gh 拦截闸门（GT-* 现在产出 Finding，可覆盖/可关）：
+  - `github_issues.yaml` 开关：`close_requires_comment`（GT-COMMENT）/ `close_done_when_gate`（GT-04）/ `epic_sub_issue_gate`（GT-06）/ `merge_fixes_gate`（GT-05）——false = 整块跳过
+  - `github_pull_requests.yaml` 开关：`merge_requires_body`（GT-BODY）/ `merge_checkbox_gate`（GT-CHK）/ `merge_title_gate`（CM-01/02 squash 标题）
+  - `github_reviews.yaml`：`merge_review.required: false` 关掉 RV-07 的 CRG+ocr 强制；`merge_review.ocr_timeout_secs` 调 ocr 超时
+  - 严重度降级：GT-*/CM-*/RV-07 在 `dispatch.yaml` 的 `severity_overrides:` 段或全局 `severity_overrides.yaml` 按 ID 覆盖（如 `GT-06: "WARN"`）
+  - 数据解析/子查询失败仍 fail-closed 硬拦（安全属性，不可配）
 - commit 检查（CM-01/02/03）：`dispatch.yaml` 的 `severity_overrides:` 段。
 - 全仓统一兜底：`.githooks/spec/severity_overrides.yaml`（全局最后发言权，按 `规则ID` 覆盖一切来源的 finding）。
 - 单条放行：`git commit --no-verify`（不推荐，绕过全部钩子）。
 
-规则 yaml 缺失时 gate 直接 FAIL 报错（`gate.setup`），不会静默放行——「没有规范」本身是错误状态。
+规则 yaml 缺失或写坏（键名拼错）时 gate 直接 FAIL 报错（`gate.setup`），不会静默放行——「没有规范/规范坏掉」本身是错误状态。
 
 ## 路线图（已知短板，未启用）
 
