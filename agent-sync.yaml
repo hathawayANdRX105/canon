@@ -20,18 +20,26 @@ projects:
     files:
       - src: tasks/version-stats.md
         to: .agent/tasks/version-stats.md
+      - src: tasks/closeout.md
+        to: .agent/tasks/closeout.md
   kime:
     root: /home/hathaway/projects/kime
     files:
       - src: tasks/version-stats.md
         to: .agent/tasks/version-stats.md
+      - src: tasks/closeout.md
+        to: .agent/tasks/closeout.md
   omenic:
     root: /home/hathaway/projects/omenic
     files:
       - src: tasks/version-stats.md
         to: .agent/tasks/version-stats.md
+      - src: tasks/closeout.md
+        to: .agent/tasks/closeout.md
   silverq:
     root: /home/hathaway/projects/silverq
     files:
       - src: tasks/version-stats.md
         to: .agent/tasks/version-stats.md
+      - src: tasks/closeout.md
+        to: .agent/tasks/closeout.md
