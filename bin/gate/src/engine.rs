@@ -595,13 +595,31 @@ fn spec_stem_name(path: &PathBuf) -> Option<String> {
 }
 
 pub fn run_named(names: &[String], max_sla: SlaLevel) -> Vec<Finding> {
+    let mut findings = Vec::new();
     let specs = match spec_dir() {
         Some(dir) => find_specs(&dir),
         None => {
-            eprintln!("no .githooks/ found — run `gate init` in the repo root");
-            return vec![];
+            // Fail-closed on the manual path too: no spec = hard FAIL, not a
+            // quiet ALL PASS.
+            findings.push(Finding::new(
+                "gate.setup",
+                Severity::Fail,
+                "no .githooks/ found — run `gate init` in the repo root",
+            ));
+            return findings;
         }
     };
+    if specs.is_empty() {
+        findings.push(Finding::new(
+            "gate.setup",
+            Severity::Fail,
+            &format!(
+                "no checklist_*.yaml under {} — seed a rules pack (`gate init`) or fix the path",
+                spec_dir().unwrap_or_default().display()
+            ),
+        ));
+        return findings;
+    }
     if names.is_empty() {
         for (path, s) in &specs {
             match s {
@@ -613,9 +631,8 @@ pub fn run_named(names: &[String], max_sla: SlaLevel) -> Vec<Finding> {
                 ),
             }
         }
-        return vec![];
+        return findings;
     }
-    let mut findings = Vec::new();
     for name in names {
         // A broken spec is a setup failure, not an unknown name: match the
         // requested name against broken specs' file stems first.
