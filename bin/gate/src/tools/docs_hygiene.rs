@@ -251,6 +251,8 @@ pub fn run_in(base: &Path) -> Vec<Finding> {
         check_file(&file, base, &cfg, &mut findings);
     }
 
+    crate::shared::apply_family_severity(&mut findings, Some(&cfg));
+    crate::shared::apply_check_allowlist(&mut findings, Some(&cfg));
     findings
 }
 

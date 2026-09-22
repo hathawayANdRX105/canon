@@ -91,7 +91,7 @@ struct HarnessSpec {
 }
 
 #[derive(Debug)]
-struct ChecklistSpec {
+pub struct ChecklistSpec {
     name: String,
     enabled: bool,
     hooks: Vec<String>,
@@ -142,19 +142,21 @@ struct FindingJson {
 // Spec loading
 // ---------------------------------------------------------------------------
 
-fn load_spec(path: &std::path::Path) -> Option<ChecklistSpec> {
-    let v = match load_yaml(path.to_str()?) {
+fn load_spec(path: &std::path::Path) -> Result<ChecklistSpec, String> {
+    let v = match load_yaml(path.to_str().unwrap_or("")) {
         Ok(v) => v,
         Err(e) => {
-            eprintln!("checklist: skip (yaml parse fail {}): {e}", path.display());
-            return None;
+            // Fail-closed: a broken spec must not silently drop the rule —
+            // the error is surfaced as a hard gate.setup finding at run time.
+            return Err(format!("yaml parse fail {}: {e}", path.display()));
         }
     };
     let raw: RawSpec = match serde_yaml::from_value(v) {
         Ok(r) => r,
         Err(e) => {
-            eprintln!("checklist: deserialize fail {}: {e}", path.display());
-            return None;
+            // `deny_unknown_fields`: a typo in any key drops the whole spec.
+            // That used to be a silent no-op; now it is a loud error.
+            return Err(format!("spec deserialize fail {}: {e}", path.display()));
         }
     };
     let name = path
@@ -174,7 +176,7 @@ fn load_spec(path: &std::path::Path) -> Option<ChecklistSpec> {
         .as_deref()
         .and_then(Severity::parse)
         .unwrap_or(Severity::Warn);
-    Some(ChecklistSpec {
+    Ok(ChecklistSpec {
         name,
         enabled: raw.enabled.unwrap_or(true),
         // No default hooks: an explicit `hooks:` list is the single routing
@@ -192,7 +194,7 @@ fn load_spec(path: &std::path::Path) -> Option<ChecklistSpec> {
     })
 }
 
-fn find_specs(spec_dir: &std::path::Path) -> Vec<(PathBuf, ChecklistSpec)> {
+pub fn find_specs(spec_dir: &std::path::Path) -> Vec<(PathBuf, Result<ChecklistSpec, String>)> {
     fn walk(dir: &std::path::Path, out: &mut Vec<PathBuf>, depth: u8) {
         if depth > 3 {
             return;
@@ -216,7 +218,10 @@ fn find_specs(spec_dir: &std::path::Path) -> Vec<(PathBuf, ChecklistSpec)> {
     paths.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
     paths
         .into_iter()
-        .filter_map(|path| load_spec(&path).map(|spec| (path, spec)))
+        .map(|path| {
+            let spec = load_spec(&path);
+            (path, spec)
+        })
         .collect()
 }
 
@@ -555,7 +560,23 @@ pub fn run_all(scope: HookScope) -> Vec<Finding> {
         )];
     }
     let mut findings = Vec::new();
-    for (_, spec) in &specs {
+    for (path, spec) in &specs {
+        let spec = match spec {
+            Ok(s) => s,
+            Err(e) => {
+                // Fail-closed: a broken spec (typo / missing key) must block,
+                // not silently drop its rule.
+                findings.push(Finding::new(
+                    "gate.setup",
+                    Severity::Fail,
+                    &format!(
+                        "checklist {} broken, rule disabled: {e} — fix the yaml",
+                        path.file_name().unwrap_or_default().to_string_lossy()
+                    ),
+                ));
+                continue;
+            }
+        };
         eprintln!("--- checklist: {} ---", spec.name);
         findings.extend(run_one(spec, scope, false));
     }
@@ -564,6 +585,15 @@ pub fn run_all(scope: HookScope) -> Vec<Finding> {
 
 /// `gate check [names...]` — manual run on Merge scope regardless of the
 /// `hooks:` filter. No names → list what is available. SLA filter applies.
+/// Display name of a checklist spec from its file stem
+/// (`checklist_ccn.yaml` → `ccn`); `None` for non-conforming names.
+fn spec_stem_name(path: &PathBuf) -> Option<String> {
+    path.file_stem()
+        .and_then(|s| s.to_str())
+        .and_then(|s| s.strip_prefix("checklist_"))
+        .map(str::to_string)
+}
+
 pub fn run_named(names: &[String], max_sla: SlaLevel) -> Vec<Finding> {
     let specs = match spec_dir() {
         Some(dir) => find_specs(&dir),
@@ -573,26 +603,57 @@ pub fn run_named(names: &[String], max_sla: SlaLevel) -> Vec<Finding> {
         }
     };
     if names.is_empty() {
-        for (_, s) in &specs {
-            if s.sla > max_sla {
-                continue;
+        for (path, s) in &specs {
+            match s {
+                Ok(s) if s.sla <= max_sla => eprintln!("{}", s.name),
+                Ok(_) => {}
+                Err(e) => eprintln!(
+                    "{} (broken spec: {e})",
+                    spec_stem_name(path).unwrap_or_else(|| "?".to_string())
+                ),
             }
-            eprintln!("{}", s.name);
         }
         return vec![];
     }
     let mut findings = Vec::new();
     for name in names {
-        match specs.iter().find(|(_, s)| &s.name == name) {
-            Some((_, spec)) => {
+        // A broken spec is a setup failure, not an unknown name: match the
+        // requested name against broken specs' file stems first.
+        if let Some((path, Err(e))) = specs
+            .iter()
+            .find(|(p, s)| s.is_err() && spec_stem_name(p).as_deref() == Some(name.as_str()))
+        {
+            findings.push(Finding::new(
+                "gate.setup",
+                Severity::Fail,
+                &format!(
+                    "checklist {} broken: {e} — fix the yaml",
+                    path.file_name().unwrap_or_default().to_string_lossy()
+                ),
+            ));
+            continue;
+        }
+        match specs
+            .iter()
+            .find(|(_, s)| s.as_ref().ok().is_some_and(|s| &s.name == name))
+        {
+            Some((_path, Ok(spec))) => {
                 eprintln!("--- checklist: {} ---", spec.name);
                 findings.extend(run_one(spec, HookScope::Merge, true));
             }
+            Some((path, Err(e))) => findings.push(Finding::new(
+                "gate.setup",
+                Severity::Fail,
+                &format!(
+                    "checklist {} broken: {e} — fix the yaml",
+                    path.file_name().unwrap_or_default().to_string_lossy()
+                ),
+            )),
             None => eprintln!(
                 "unknown checklist: {name} (available: {})",
                 specs
                     .iter()
-                    .map(|(_, s)| s.name.as_str())
+                    .filter_map(|(_, s)| s.as_ref().ok().map(|s| s.name.as_str()))
                     .collect::<Vec<_>>()
                     .join(", ")
             ),
@@ -619,6 +680,7 @@ mod tests {
     #[test]
     fn spec_parses_defaults() {
         let s = spec("harness: {command: sh, args: []}");
+
         assert_eq!(s.mode, Mode::Diff);
         assert_eq!(s.base_severity, Severity::Warn);
         assert_eq!(s.sla, SlaLevel::L1);
@@ -627,6 +689,21 @@ mod tests {
             s.hooks.is_empty(),
             "no implicit hooks — yaml is the only router"
         );
+    }
+    #[test]
+    fn broken_spec_is_loud_not_silent() {
+        // A typo'd key used to drop the whole spec silently (fail-open).
+        // It must now surface as an Err so run_all can hard-block on it.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("checklist_bad.yaml");
+        std::fs::write(&path, "harness: {command: sh}\nbad_key: 1\n").unwrap();
+        let specs = find_specs(dir.path());
+        assert_eq!(specs.len(), 1);
+        assert!(
+            specs[0].1.is_err(),
+            "typo'd key must fail loudly, not silently skip"
+        );
+        assert!(specs[0].1.as_ref().unwrap_err().contains("deserialize"));
     }
 
     #[test]
