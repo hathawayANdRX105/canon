@@ -1,3 +1,5 @@
+.githooks/spec/harness/ccn_gate.py::cmd_judge	22
+.githooks/spec/harness/ccn_gate.py::find_over	7
 bin/gate/src/engine.rs::findings_from_stdout	8
 bin/gate/src/engine.rs::run_named	7
 bin/gate/src/engine.rs::run_one	19
@@ -42,3 +44,5 @@ bin/gate/src/tools/tests_check.rs::glob_to_regex	7
 bin/gate/src/tools/tests_check.rs::run_in	14
 bin/gate/src/tools/workspace.rs::run_file_placement	14
 bin/gate/src/tools/workspace.rs::run_tree_hygiene	16
+rules/gate/harness/ccn_gate.py::cmd_judge	22
+rules/gate/harness/ccn_gate.py::find_over	7
