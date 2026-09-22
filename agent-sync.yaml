@@ -22,6 +22,40 @@ projects:
         to: .agent/tasks/version-stats.md
       - src: tasks/closeout.md
         to: .agent/tasks/closeout.md
+      - src: agent/ferrite/README.md
+        to: .agent/README.md
+      - src: agent/ferrite/rules/conventions.md
+        to: .agent/rules/conventions.md
+      - src: agent/ferrite/rules/dev-env.md
+        to: .agent/rules/dev-env.md
+      - src: agent/ferrite/rules/gates.md
+        to: .agent/rules/gates.md
+      - src: agent/ferrite/rules/pr-workflow.md
+        to: .agent/rules/pr-workflow.md
+      - src: agent/ferrite/rules/testing-ci.md
+        to: .agent/rules/testing-ci.md
+      - src: agent/ferrite/rules/web-lanes.md
+        to: .agent/rules/web-lanes.md
+      - src: agent/ferrite/skills/ainotation-web/SKILL.md
+        to: .agent/skills/ainotation-web/SKILL.md
+      - src: agent/ferrite/skills/gate-checklist/SKILL.md
+        to: .agent/skills/gate-checklist/SKILL.md
+      - src: agent/ferrite/skills/refactor-workflow/SKILL.md
+        to: .agent/skills/refactor-workflow/SKILL.md
+      - src: agent/ferrite/skills/scaffold-dsh/SKILL.md
+        to: .agent/skills/scaffold-dsh/SKILL.md
+      - src: agent/ferrite/skills/ui-validation/SKILL.md
+        to: .agent/skills/ui-validation/SKILL.md
+      - src: agent/ferrite/tasks/TEMPLATE.md
+        to: .agent/tasks/TEMPLATE.md
+      - src: agent/ferrite/tasks/closeout-pr.md
+        to: .agent/tasks/closeout-pr.md
+      - src: agent/ferrite/tasks/dev-web-lane.md
+        to: .agent/tasks/dev-web-lane.md
+      - src: agent/ferrite/tasks/dev.md
+        to: .agent/tasks/dev.md
+      - src: agent/ferrite/tasks/webfix-lane.md
+        to: .agent/tasks/webfix-lane.md
   kime:
     root: /home/hathaway/projects/kime
     files:
@@ -36,6 +70,14 @@ projects:
         to: .agent/tasks/version-stats.md
       - src: tasks/closeout.md
         to: .agent/tasks/closeout.md
+      - src: agent/omenic/skills/refactor-workflow/SKILL.md
+        to: .agent/skills/refactor-workflow/SKILL.md
+      - src: agent/omenic/skills/scaffold-dsh/SKILL.md
+        to: .agent/skills/scaffold-dsh/SKILL.md
+      - src: agent/omenic/skills/ui-validation/SKILL.md
+        to: .agent/skills/ui-validation/SKILL.md
+      - src: agent/omenic/task-templates-handbook.md
+        to: .agent/task-templates-handbook.md
   silverq:
     root: /home/hathaway/projects/silverq
     files:
@@ -43,3 +85,5 @@ projects:
         to: .agent/tasks/version-stats.md
       - src: tasks/closeout.md
         to: .agent/tasks/closeout.md
+      - src: agent/silverq/tasks/versioning.md
+        to: .agent/tasks/versioning.md
