@@ -13,10 +13,15 @@
 ```
 canon/
 ├── bin/agent-sync      # 同步工具（status / push / backport / pull）
-├── tasks/              # 共享任务书（通用骨架）
-├── rules/              # 共享规范
+├── tasks/              # 共享任务书（closeout / version-stats，四仓通用）
+├── agent/              # 各项目 .agent 文档正本（agent/ferrite|omenic|silverq/…）
+├── rules/              # gate 规则包正本（quality/code/cleanup/github/workspace/harness/docs）
 ├── skills/             # 共享 skill
-└── agent-sync.yaml       # 分发单一配置（项目 = 路径 + 安装路径清单）
+├── GATE_HANDBOOK.md    # gate 总手册（人查的一手总览）
+├── GITHUB_ISSUE_PR.md  # GitHub issue/PR 操作指南
+├── PR_DEV_WORKFLOW.md  # PR 开发工作流指南
+├── WORKFLOW.md         # .wt worktree 隔离规范
+└── agent-sync.yaml     # 分发单一配置（项目 = 路径 + 安装路径清单）
 ```
 
 ## 内容拆分原则（重要）
