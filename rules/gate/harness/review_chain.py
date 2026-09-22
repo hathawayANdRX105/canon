@@ -130,19 +130,62 @@ def run_small_llm(diff: str, questions: dict, d_fail: float, d_warn: float):
     return out, None
 
 
+def load_questions(qpath: str, d_fail: float, d_warn: float, state):
+    """Question set construction.
+
+    Two modes:
+    - review mode (state is a diff string): every top-level entry with a
+      "type" is a static question from the file.
+    - done-when mode (state is a JSON object with done_when_items): each
+      acceptance item becomes its own atomic question (`item_N`, threshold
+      from `default_fail`/`default_warn` in the file), plus any static
+      questions the file defines (evidence sufficiency, verdict).
+    """
+    with open(qpath) as fh:
+        qfile = json.load(fh)
+
+    if not isinstance(state, dict) or "done_when_items" not in state:
+        return {k: v for k, v in qfile.items() if isinstance(v, dict) and "type" in v}
+
+    i_fail = float(qfile.get("default_fail", d_fail))
+    i_warn = float(qfile.get("default_warn", d_warn))
+    questions = {}
+    for i, item in enumerate(state["done_when_items"]):
+        questions[f"item_{i}"] = {
+            "type": "noul",
+            "instructions": (
+                f"Is this acceptance item satisfied by the evidence? Item: `{item}` "
+                "Judge only what the evidence shows, not what it claims."
+            ),
+            "criteria": {"true": "evidence demonstrates the item is done", "false": "not demonstrated"},
+            "fail": i_fail,
+            "warn": i_warn,
+        }
+    for k, v in qfile.items():
+        if isinstance(v, dict) and "type" in v:
+            questions[k] = v
+    return questions
+
+
 def main() -> int:
     qpath = sys.argv[1] if len(sys.argv) > 1 else ""
     d_fail = float(sys.argv[2]) if len(sys.argv) > 2 else 0.8
     d_warn = float(sys.argv[3]) if len(sys.argv) > 3 else 0.5
-    diff = sys.stdin.read().strip()
-    if not qpath or not diff:
+    raw = sys.stdin.read()
+    if not qpath or not raw.strip():
         print("[]")
         return 0
-    with open(qpath) as fh:
-        questions = json.load(fh)
+    try:
+        state = json.loads(raw)
+        if not isinstance(state, dict):
+            state = raw.strip()
+    except Exception:
+        state = raw.strip()
+    questions = load_questions(qpath, d_fail, d_warn, state)
+    payload = json.dumps(state) if isinstance(state, dict) else state
 
     for tier, run in (("jev", run_jev), ("small-llm", run_small_llm)):
-        findings, err = run(diff, questions, d_fail, d_warn)
+        findings, err = run(payload, questions, d_fail, d_warn)
         if findings is not None:
             print(f"review_chain: tier={tier}", file=sys.stderr)
             json.dump(findings, sys.stdout)

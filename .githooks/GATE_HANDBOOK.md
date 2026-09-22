@@ -90,7 +90,7 @@ stdout 必须是 finding JSON 数组：`{"id","severity","path","line","message"
 - 家族严重度（`fail_severity`）：CL/WS 系 family yaml 的 `fail_severity: WARN|FAIL|INFO` 统一改本家族检查项严重度（INFO 不可被提升）。
 - github 系（github_issues.yaml / github_pull_requests.yaml / github_reviews.yaml）：改各文件的 `severity_overrides:` 段，按 `规则ID` 覆盖严重度，如 `IS-16: "WARN"`。检查开关也在这：`garbled_content_check: false` 直接关掉 IS-16，`ci_check_mode` / `done_when_check_mode` 控制 PR 检查是 FAIL 还是 WARN。
 - gh 拦截闸门（GT-* 现在产出 Finding，可覆盖/可关）：
-  - `github_issues.yaml` 开关：`close_requires_comment`（GT-COMMENT）/ `close_done_when_gate`（GT-04）/ `epic_sub_issue_gate`（GT-06）/ `merge_fixes_gate`（GT-05）——false = 整块跳过
+  - `github_issues.yaml` 开关：`close_requires_comment`（GT-COMMENT）/ `close_done_when_gate`（GT-04）/ `done_when_judge.enabled`（DWJ 模型评审，见下）/ `epic_sub_issue_gate`（GT-06）/ `merge_fixes_gate`（GT-05）——false = 整块跳过
   - `github_pull_requests.yaml` 开关：`merge_requires_body`（GT-BODY）/ `merge_checkbox_gate`（GT-CHK）/ `merge_title_gate`（CM-01/02 squash 标题）
   - `github_reviews.yaml`：`merge_review.required: false` 关掉 RV-07 的 CRG+ocr 强制；`merge_review.ocr_timeout_secs` 调 ocr 超时
   - 严重度降级：GT-*/CM-*/RV-07 在 `dispatch.yaml` 的 `severity_overrides:` 段或全局 `severity_overrides.yaml` 按 ID 覆盖（如 `GT-06: "WARN"`）
@@ -101,12 +101,21 @@ stdout 必须是 finding JSON 数组：`{"id","severity","path","line","message"
 
 规则 yaml 缺失或写坏（键名拼错）时 gate 直接 FAIL 报错（`gate.setup`），不会静默放行——「没有规范/规范坏掉」本身是错误状态。
 
+## DWJ：Done-when 模型评审（issue close 时）
+
+`gh issue close` 在 GT-04（checkbox 全勾的机械门）过后，把 **Done when 每一条** 拿给模型评审是否真被证据满足——和 `review_chain` 同一套三档降级（jev → 小模型 → 跳过），证据 = 关联 PR diff，缺失时退化为 `--comment` 文本。
+
+- 配置：`github_issues.yaml` → `done_when_judge:`（`enabled` / `command` / `args` / `timeout_secs`）；问题集 = `harness/jev_questions_done_when.json`（`default_fail: 0.85`）
+- 语义：某条 p(未达标) ≥ 0.85 → **FAIL 硬拦**；否则 WARN/INFO 带 `tier`/`confidence` extra
+- 降级：harness 缺失/超时/输出不可解析/两个模型档都不可用 → `DWJ-SKIPPED` INFO，**永不因基础设施阻断**——GT-04 机械门 + 工具检查仍是兜底
+- 三档互斥与 review_chain 相同：jev 在就只跑 jev，小模型只兜底
+
 ## 路线图（已知短板，未启用）
 
 | 项 | 工具 / 做法 | 状态 |
 |---|---|---|
 | 注释存在性门禁 | `RUSTFLAGS="-W missing_docs"`（public 59 处存量）；`clippy::missing_docs_in_private_items`（更严） | 存量清账前按 crate 灰度启用 |
-| 测试强度 | `cargo-mutants` nightly（验证 agent 测试是否真在检验，抓自证测试）；或先用 `review_chain` 加 Done-when 问题集（jev 逐条判 p(达成)，<0.85 不许关 issue）——轻量先行 | 轻量方案已就绪（jev 档可用） |
+| 测试强度 | `cargo-mutants` nightly（验证 agent 测试是否真在检验，抓自证测试）；轻量方案已落地：`done_when_judge`（close 时 jev 逐条判 p(未达标)，≥0.85 硬拦） | 轻量方案已上线；mutants 待接入 |
 | 质量曲线 | `gate check --json` 每次 commit 落 jsonl（clippy 数/LOC/CRG risk/findings 分布） | 待接入 |
 | 函数复杂度 | 已上线 `ccn` checklist（ccn 天花板 6 + ratchet 记账：`ccn_gate.py` 进 `rules/gate/harness/`，`ratchet.tsv` 进仓）；余 lizard 进 CI 镜像 | 已接入 |
 | AI slop 二进制 | `cargo install antislop` 进 CI 镜像（未装时 `antislop` 规则静默跳过） | 待接入 |
