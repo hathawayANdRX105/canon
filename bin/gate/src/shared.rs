@@ -496,6 +496,62 @@ pub fn cfg_str(cfg: Option<&YamlValue>, key: &str) -> Option<String> {
 }
 
 // ---------------------------------------------------------------------------
+// Capability selection: `checks:` allowlist + family `fail_severity`
+// ---------------------------------------------------------------------------
+
+/// `cfg.fail_severity` as a Severity; absent key keeps the historic WARN.
+pub fn cfg_fail_severity(cfg: &YamlValue) -> Severity {
+    cfg.get("fail_severity")
+        .and_then(|v| v.as_str())
+        .and_then(Severity::parse)
+        .unwrap_or(Severity::Warn)
+}
+
+/// Remap WARN-class findings to `cfg.fail_severity`. INFO/FAIL are untouched
+/// (INFO can never be promoted — same one-way rule as severity overrides).
+pub fn apply_family_severity(findings: &mut Vec<Finding>, cfg: Option<&YamlValue>) {
+    let Some(cfg) = cfg.filter(|c| !c.is_null()) else {
+        return;
+    };
+    let sev = cfg_fail_severity(cfg);
+    if sev == Severity::Warn {
+        return;
+    }
+    for f in findings.iter_mut() {
+        if f.severity == Severity::Warn {
+            f.severity = sev;
+        }
+    }
+}
+
+/// `checks:` capability allowlist — when the family yaml lists a `checks:`
+/// sequence, only findings whose rule_id matches an entry (exact or prefix,
+/// e.g. `CL` disables every CL-* check) are retained. Omitted key = all
+/// capabilities enabled (backward compatible).
+pub fn apply_check_allowlist(findings: &mut Vec<Finding>, cfg: Option<&YamlValue>) {
+    let Some(cfg) = cfg.filter(|c| !c.is_null()) else {
+        return;
+    };
+    let list: Vec<String> = cfg
+        .get("checks")
+        .and_then(|v| v.as_sequence())
+        .map(|seq| {
+            seq.iter()
+                .filter_map(|v| v.as_str().map(String::from))
+                .collect()
+        })
+        .unwrap_or_default();
+    if list.is_empty() {
+        return;
+    }
+    let keep = |f: &Finding| {
+        list.iter()
+            .any(|c| c == &f.rule_id || f.rule_id.starts_with(c.as_str()))
+    };
+    findings.retain(keep);
+}
+
+// ---------------------------------------------------------------------------
 // External command runner
 // ---------------------------------------------------------------------------
 

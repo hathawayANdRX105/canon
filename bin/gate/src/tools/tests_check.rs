@@ -176,8 +176,9 @@ fn run_in(base: &Path) -> Vec<Finding> {
             ));
         }
 
+        let mut lang_findings: Vec<Finding> = Vec::new();
         for file in files {
-            all_findings.extend(check_file(
+            lang_findings.extend(check_file(
                 file,
                 lang,
                 naming_re.as_ref(),
@@ -186,6 +187,9 @@ fn run_in(base: &Path) -> Vec<Finding> {
                 &required_helpers,
             ));
         }
+        crate::shared::apply_family_severity(&mut lang_findings, Some(&cfg));
+        crate::shared::apply_check_allowlist(&mut lang_findings, Some(&cfg));
+        all_findings.extend(lang_findings);
     }
 
     all_findings

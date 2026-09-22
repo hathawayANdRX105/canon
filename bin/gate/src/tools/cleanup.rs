@@ -319,5 +319,8 @@ pub fn run(dry_run: bool) -> Vec<Finding> {
         ));
     }
 
+    crate::shared::apply_family_severity(&mut findings, Some(&yaml));
+    crate::shared::apply_check_allowlist(&mut findings, Some(&yaml));
+
     findings
 }

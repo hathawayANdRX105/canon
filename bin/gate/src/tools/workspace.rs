@@ -162,6 +162,8 @@ pub fn run_tree_hygiene(target: &str) -> Vec<Finding> {
     if findings.is_empty() {
         findings.push(Finding::new("tree", Severity::Info, "tree hygiene OK"));
     }
+    crate::shared::apply_family_severity(&mut findings, Some(&cfg));
+    crate::shared::apply_check_allowlist(&mut findings, Some(&cfg));
     findings
 }
 
@@ -276,6 +278,8 @@ pub fn run_file_placement(target: &str) -> Vec<Finding> {
             "file placement OK",
         ));
     }
+    crate::shared::apply_family_severity(&mut findings, Some(&cfg));
+    crate::shared::apply_check_allowlist(&mut findings, Some(&cfg));
     findings
 }
 

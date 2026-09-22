@@ -242,6 +242,19 @@ pub fn check_content(
     state: &str,
     cfg: Option<&YamlValue>,
 ) -> Vec<Finding> {
+    let mut out = check_content_impl(title, body, labels, mode, state, cfg);
+    crate::shared::apply_check_allowlist(&mut out, cfg);
+    out
+}
+
+fn check_content_impl(
+    title: &str,
+    body: &str,
+    labels: &[&str],
+    mode: &str,
+    state: &str,
+    cfg: Option<&YamlValue>,
+) -> Vec<Finding> {
     let mut findings: Vec<Finding> = Vec::new();
 
     // No spec ⇒ loud gate.setup FAIL. Never fall back to values baked into

@@ -153,6 +153,20 @@ pub fn check_content(
     draft: bool,
     cfg: Option<&YamlValue>,
 ) -> Vec<Finding> {
+    let mut out = check_content_impl(title, body, labels, head_ref, state, draft, cfg);
+    crate::shared::apply_check_allowlist(&mut out, cfg);
+    out
+}
+
+fn check_content_impl(
+    title: &str,
+    body: &str,
+    labels: &[&str],
+    head_ref: &str,
+    state: &str,
+    draft: bool,
+    cfg: Option<&YamlValue>,
+) -> Vec<Finding> {
     // No spec ⇒ loud gate.setup FAIL. Never fall back to values baked into
     // code: a repo without its rules pack must not pass green. An empty
     // (null) spec is just as missing as an absent one.

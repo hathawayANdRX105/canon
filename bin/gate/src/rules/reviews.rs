@@ -124,6 +124,12 @@ fn stray_subheadings(body: &str, marker: &str, crg_text: &str) -> usize {
 /// of non-empty comment body strings (Python normalizes `comments` dicts to
 /// `bodies` first — callers pass the pre-extracted bodies).
 pub fn run(comment_bodies: &[String], cfg: &YamlValue) -> Vec<Finding> {
+    let mut out = run_impl(comment_bodies, cfg);
+    crate::shared::apply_check_allowlist(&mut out, Some(cfg));
+    out
+}
+
+fn run_impl(comment_bodies: &[String], cfg: &YamlValue) -> Vec<Finding> {
     // An empty (null) spec is just as missing as an absent one: never
     // silently green.
     if cfg.is_null() {
