@@ -83,7 +83,14 @@ pub fn run(args: &[String]) -> i32 {
     // 2. ocr AI review
     println!("--- ocr AI 审查 ---");
     println!("（正在运行，LLM 可能需要几十秒...）");
-    let ocr_raw = run_ocr();
+    let cfg = crate::shared::load_spec_yaml("github_reviews.yaml");
+    let timeout = cfg
+        .as_ref()
+        .and_then(|c| c.get("merge_review"))
+        .and_then(|m| m.get("ocr_timeout_secs"))
+        .and_then(|v| v.as_u64())
+        .unwrap_or(600);
+    let ocr_raw = run_ocr(timeout);
     let ocr_text = format_ocr_results(&ocr_raw);
     println!("{ocr_text}");
     println!();
@@ -157,9 +164,11 @@ pub fn run_crg() -> String {
 
 /// Run `ocr review --format json --audience agent`, return stdout.
 ///
-/// Uses a 600s timeout (matching the Python `_run_ocr`). If the binary is
-/// missing, returns an error string instead of panicking.
-pub fn run_ocr() -> String {
+/// `timeout_secs` bounds the LLM call (default 600 when omitted at call
+/// sites); the merge path feeds it from `github_reviews.yaml
+/// merge_review.ocr_timeout_secs`. If the binary is missing, returns an
+/// error string instead of panicking.
+pub fn run_ocr(timeout_secs: u64) -> String {
     use std::sync::mpsc;
     let (tx, rx) = mpsc::channel();
     let cmd_args: Vec<String> = ["ocr", "review", "--format", "json", "--audience", "agent"]
@@ -173,7 +182,7 @@ pub fn run_ocr() -> String {
             .output();
         let _ = tx.send(result);
     });
-    match rx.recv_timeout(std::time::Duration::from_secs(600)) {
+    match rx.recv_timeout(std::time::Duration::from_secs(timeout_secs)) {
         Ok(Ok(o)) => {
             let stdout = String::from_utf8_lossy(&o.stdout).trim().to_string();
             if !stdout.is_empty() {

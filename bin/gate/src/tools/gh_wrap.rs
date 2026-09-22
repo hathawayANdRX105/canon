@@ -492,14 +492,82 @@ pub fn intercept_issue_create(args: &[String]) -> i32 {
     0
 }
 
-/// GT-04 + GT-04b + GT-06: issue close
+/// Load `dispatch.yaml` for gate-block severity overrides.
+fn load_dispatch_cfg() -> Option<YamlValue> {
+    crate::tools::git::find_githooks_dir()
+        .map(|d| d.join("spec/dispatch.yaml"))
+        .and_then(|p| crate::shared::load_yaml(p.to_str().unwrap_or("")).ok())
+        .filter(|v| !v.is_null())
+}
+
+/// Policy switch: `cfg.<key>` defaults to enabled (true) when absent.
+fn gate_switch(cfg: Option<&YamlValue>, key: &str) -> bool {
+    crate::shared::cfg_bool(cfg, key).unwrap_or(true)
+}
+
+/// Final decision for a gh gate block: dispatch-level + global severity
+/// overrides, print, log; Some(1) = blocked, None = proceed.
+/// Fail-closed data errors never reach here — they hard-return 1 above.
+fn gate_block(
+    action: &str,
+    target: &str,
+    findings: &mut Vec<Finding>,
+    dispatch: Option<&YamlValue>,
+) -> Option<i32> {
+    crate::shared::apply_severity_overrides(findings, dispatch);
+    crate::shared::apply_global_overrides(findings);
+    let fails: Vec<&Finding> = findings
+        .iter()
+        .filter(|f| f.severity == Severity::Fail)
+        .collect();
+    for f in findings.iter().filter(|f| f.severity == Severity::Warn) {
+        println!("闸门 WARN [{}]: {}", f.rule_id, f.msg);
+    }
+    if fails.is_empty() {
+        return None;
+    }
+    for f in &fails {
+        println!("闸门 [{}]: {}", f.rule_id, f.msg);
+    }
+    log(
+        action,
+        target,
+        "REJECT",
+        &format!(
+            "blocked: {}",
+            fails
+                .iter()
+                .map(|f| f.rule_id.as_str())
+                .collect::<Vec<_>>()
+                .join(",")
+        ),
+    );
+    Some(1)
+}
+
+/// GT-COMMENT + GT-04 + GT-04b + GT-06: issue close
+///
+/// Policy blocks are Findings — severity overridable via dispatch.yaml /
+/// global severity_overrides.yaml, and switchable off via github_issues.yaml
+/// (`close_requires_comment` / `epic_sub_issue_gate` / `close_done_when_gate`).
+/// Fail-closed data errors (JSON parse / sub-issue query failure) still
+/// hard-block: refusing on uncertainty is a safety property, not policy.
 pub fn intercept_issue_close(args: &[String]) -> i32 {
+    let issue_cfg = crate::shared::load_spec_yaml("github_issues.yaml");
+    if issue_cfg.is_none() {
+        println!("闸门 WARN: 缺少 .githooks/spec/github_issues.yaml，Done when 关闭闸门失效");
+    }
+
+    let mut findings: Vec<Finding> = Vec::new();
+
+    // GT-COMMENT: close requires --comment (switch: close_requires_comment)
     let has_comment = args.iter().any(|a| a.starts_with("--comment") || a == "-c");
-    if !has_comment {
-        println!("闸门: gh issue close 必须带 --comment 说明关闭原因，例如：");
-        println!("  gh issue close <N> --comment \"Agent 🤖 - Note: 原因说明\"");
-        log("ISSUE_CLOSE", "?", "REJECT", "missing --comment");
-        return 1;
+    if !has_comment && gate_switch(issue_cfg.as_ref(), "close_requires_comment") {
+        findings.push(Finding::new(
+            "GT-COMMENT",
+            Severity::Fail,
+            "gh issue close 必须带 --comment 说明关闭原因，例如：gh issue close <N> --comment \"Agent 🤖 - Note: 原因说明\"",
+        ));
     }
 
     let issue_num = args
@@ -526,7 +594,7 @@ pub fn intercept_issue_close(args: &[String]) -> i32 {
                         "ISSUE_CLOSE",
                         &format!("#{num}"),
                         "REJECT",
-                        "issue JSON parse failed",
+                        "issue JSON parse failed (fail-closed)",
                     );
                     return 1;
                 }
@@ -542,24 +610,20 @@ pub fn intercept_issue_close(args: &[String]) -> i32 {
                 })
                 .unwrap_or_default();
 
-            // GT-06 (#199): epic close with open sub-issues must be blocked.
-            // Fail-closed: a sub_issues query failure also blocks (Err path),
-            // and the query is a single jq call (no per-sub N+1).
-            if is_epic(&labels) {
+            // GT-06 (switch: epic_sub_issue_gate): epic close with open
+            // sub-issues must be blocked. Query failure stays fail-closed.
+            if is_epic(&labels) && gate_switch(issue_cfg.as_ref(), "epic_sub_issue_gate") {
                 match query_open_subs(&repo, num) {
                     Ok(open_subs) => {
                         if let Some(block) = gt06_open_sub_block(&labels, &open_subs) {
-                            println!(
-                                "闸门: #{num} 是 epic，但有 sub-issue 未关闭: #{}",
-                                block.join(", #")
-                            );
-                            log(
-                                "ISSUE_CLOSE",
-                                &format!("#{num}"),
-                                "REJECT",
-                                &format!("epic with open subs: {}", block.join(",")),
-                            );
-                            return 1;
+                            findings.push(Finding::new(
+                                "GT-06",
+                                Severity::Fail,
+                                &format!(
+                                    "#{num} 是 epic，但有 sub-issue 未关闭: #{}",
+                                    block.join(", #")
+                                ),
+                            ));
                         }
                     }
                     Err(e) => {
@@ -570,42 +634,34 @@ pub fn intercept_issue_close(args: &[String]) -> i32 {
                             "ISSUE_CLOSE",
                             &format!("#{num}"),
                             "REJECT",
-                            &format!("sub query failed: {e}"),
+                            &format!("sub query failed (fail-closed): {e}"),
                         );
                         return 1;
                     }
                 }
             }
-            // GT-04: only Done when checkboxes gate close (Implementation Order
-            // progress boxes and other lists must not block). The heading
-            // name comes from github_issues.yaml; without the spec the gate
-            // is inert — warn loudly instead of silently allowing.
-            let issue_cfg = crate::shared::load_spec_yaml("github_issues.yaml");
-            if issue_cfg.is_none() {
-                println!(
-                    "闸门 WARN: 缺少 .githooks/spec/github_issues.yaml，Done when 关闭闸门失效"
-                );
-            }
-            let unticked = gt04_unticked_done_when(body, issue_cfg.as_ref());
-            if !unticked.is_empty() {
-                println!(
-                    "闸门: #{num} Done when 有 checkbox 未全部勾选，未勾 {} 项：",
-                    unticked.len()
-                );
-                for item in unticked.iter().take(5) {
-                    println!("  - [ ] {item}");
+            // GT-04 (switch: close_done_when_gate): only Done when
+            // checkboxes gate close (Implementation Order progress boxes and
+            // other lists must not block). Heading name from github_issues.yaml.
+            if gate_switch(issue_cfg.as_ref(), "close_done_when_gate") {
+                let unticked = gt04_unticked_done_when(body, issue_cfg.as_ref());
+                if !unticked.is_empty() {
+                    println!(
+                        "闸门: #{num} Done when 有 checkbox 未全部勾选，未勾 {} 项：",
+                        unticked.len()
+                    );
+                    for item in unticked.iter().take(5) {
+                        println!("  - [ ] {item}");
+                    }
+                    findings.push(Finding::new(
+                        "GT-04",
+                        Severity::Fail,
+                        &format!("#{num} Done when 有 {} 个 checkbox 未勾选", unticked.len()),
+                    ));
                 }
-                log(
-                    "ISSUE_CLOSE",
-                    &format!("#{num}"),
-                    "REJECT",
-                    &format!("checkbox {} unticked", unticked.len()),
-                );
-                return 1;
             }
 
-            // GT-04b: epic exempt (completion signal is GT-06 all-subs-closed);
-            // non-epic without linked PR → WARN only (demoted from FAIL).
+            // GT-04b: epic exempt; non-epic without linked PR → WARN only.
             if !is_epic(&labels) {
                 let (rc4, tl, _) = run_gh(&[
                     "api".to_string(),
@@ -626,6 +682,18 @@ pub fn intercept_issue_close(args: &[String]) -> i32 {
                 }
             }
         }
+    }
+
+    let dispatch = load_dispatch_cfg();
+    if gate_block(
+        "ISSUE_CLOSE",
+        &format!("#{}", issue_num.as_deref().unwrap_or_default()),
+        &mut findings,
+        dispatch.as_ref(),
+    )
+    .is_some()
+    {
+        return 1;
     }
 
     let mut full = vec!["issue".to_string(), "close".to_string()];
@@ -723,14 +791,28 @@ pub fn intercept_pr_create(args: &[String]) -> i32 {
     0
 }
 
-/// GT-05 + GT-07: pr merge
+/// GT-BODY + GT-CHK + GT-05 + GT-06 + CM-01/02 + GT-07: pr merge
+///
+/// Policy blocks are Findings — severities overridable via dispatch.yaml /
+/// global severity_overrides.yaml, and the blocks themselves switchable via
+/// github_pull_requests.yaml (`merge_requires_body` / `merge_checkbox_gate` /
+/// `merge_title_gate`) and github_issues.yaml (`merge_fixes_gate` /
+/// `epic_sub_issue_gate`). Fail-closed data errors still hard-block:
+/// refusing on uncertainty is a safety property, not policy.
 pub fn intercept_pr_merge(args: &[String]) -> i32 {
+    let pr_cfg = crate::shared::load_spec_yaml("github_pull_requests.yaml");
+    let issue_cfg = crate::shared::load_spec_yaml("github_issues.yaml");
+
+    let mut findings: Vec<Finding> = Vec::new();
+
+    // GT-BODY (switch: merge_requires_body)
     let has_body = args.iter().any(|a| a.starts_with("--body") || a == "-b");
-    if !has_body {
-        println!("闸门: gh pr merge 必须带 --body 说明合并原因，例如：");
-        println!("  gh pr merge <N> --squash --body \"Agent 🤖 - Merge: 原因说明\"");
-        log("PR_MERGE", "?", "REJECT", "missing --body");
-        return 1;
+    if !has_body && gate_switch(pr_cfg.as_ref(), "merge_requires_body") {
+        findings.push(Finding::new(
+            "GT-BODY",
+            Severity::Fail,
+            "gh pr merge 必须带 --body 说明合并原因，例如：gh pr merge <N> --squash --body \"Agent 🤖 - Merge: 原因说明\"",
+        ));
     }
 
     let pr_num = args
@@ -749,22 +831,23 @@ pub fn intercept_pr_merge(args: &[String]) -> i32 {
             None,
         );
         if rc == 0 && !body.trim().is_empty() {
-            let (all_ticked, unticked) = check_all_checkboxes(body.trim());
-            if !all_ticked {
-                println!(
-                    "闸门: PR #{num} 有 checkbox 未全部勾选，未勾 {} 项：",
-                    unticked.len()
-                );
-                for item in unticked.iter().take(5) {
-                    println!("  - [ ] {item}");
+            // GT-CHK (switch: merge_checkbox_gate)
+            if gate_switch(pr_cfg.as_ref(), "merge_checkbox_gate") {
+                let (all_ticked, unticked) = check_all_checkboxes(body.trim());
+                if !all_ticked {
+                    println!(
+                        "闸门: PR #{num} 有 checkbox 未全部勾选，未勾 {} 项：",
+                        unticked.len()
+                    );
+                    for item in unticked.iter().take(5) {
+                        println!("  - [ ] {item}");
+                    }
+                    findings.push(Finding::new(
+                        "GT-CHK",
+                        Severity::Fail,
+                        &format!("PR #{num} 有 {} 个 checkbox 未勾选", unticked.len()),
+                    ));
                 }
-                log(
-                    "PR_MERGE",
-                    &format!("PR #{num}"),
-                    "REJECT",
-                    &format!("checkbox {} unticked", unticked.len()),
-                );
-                return 1;
             }
 
             let fixes = extract_fixes(body.trim());
@@ -787,41 +870,37 @@ pub fn intercept_pr_merge(args: &[String]) -> i32 {
                         "PR_MERGE",
                         &format!("PR #{num}"),
                         "REJECT",
-                        &format!("issue #{fn_} fetch failed (rc={rc2})"),
+                        &format!("issue #{fn_} fetch failed (fail-closed, rc={rc2})"),
                     );
                     return 1;
                 }
-                {
-                    let parsed: serde_json::Value = match serde_json::from_str(&issue_data) {
-                        Ok(v) => v,
-                        Err(e) => {
-                            println!(
-                                "闸门: 关联 issue #{fn_} 数据解析失败，为安全起见拒绝合并: {e}"
-                            );
-                            log(
-                                "PR_MERGE",
-                                &format!("PR #{num}"),
-                                "REJECT",
-                                &format!("issue #{fn_} JSON parse failed"),
-                            );
-                            return 1;
-                        }
-                    };
-                    let issue_body = parsed.get("body").and_then(|b| b.as_str()).unwrap_or("");
-                    let labels: Vec<String> = parsed
-                        .get("labels")
-                        .and_then(|l| l.as_array())
-                        .map(|arr| {
-                            arr.iter()
-                                .filter_map(|v| v.as_str().map(String::from))
-                                .collect()
-                        })
-                        .unwrap_or_default();
-                    // GT-05: epic Fixes targets are exempt from the checkbox
-                    // check — IS-11 forbids Done when on epics, and GT-06
-                    // below guards epic completion via open sub-issues. The
-                    // Done when heading name comes from github_issues.yaml.
-                    let issue_cfg = crate::shared::load_spec_yaml("github_issues.yaml");
+                let parsed: serde_json::Value = match serde_json::from_str(&issue_data) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        println!("闸门: 关联 issue #{fn_} 数据解析失败，为安全起见拒绝合并: {e}");
+                        log(
+                            "PR_MERGE",
+                            &format!("PR #{num}"),
+                            "REJECT",
+                            &format!("issue #{fn_} JSON parse failed (fail-closed)"),
+                        );
+                        return 1;
+                    }
+                };
+                let issue_body = parsed.get("body").and_then(|b| b.as_str()).unwrap_or("");
+                let labels: Vec<String> = parsed
+                    .get("labels")
+                    .and_then(|l| l.as_array())
+                    .map(|arr| {
+                        arr.iter()
+                            .filter_map(|v| v.as_str().map(String::from))
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                // GT-05 (switch: merge_fixes_gate): epic Fixes targets are
+                // exempt from the checkbox check — IS-11 forbids Done when on
+                // epics, and GT-06 below guards epic completion via open subs.
+                if gate_switch(issue_cfg.as_ref(), "merge_fixes_gate") {
                     let unticked =
                         gt05_unticked_issue_boxes(&labels, issue_body, issue_cfg.as_ref());
                     if !unticked.is_empty() {
@@ -829,86 +908,82 @@ pub fn intercept_pr_merge(args: &[String]) -> i32 {
                             "闸门: PR #{num} 关联 issue #{fn_} Done when 有 checkbox 未全部勾选，未勾 {} 项：",
                             unticked.len()
                         );
-                        log(
-                            "PR_MERGE",
-                            &format!("PR #{num}"),
-                            "REJECT",
-                            &format!("issue #{fn_} checkbox {} unticked", unticked.len()),
-                        );
-                        return 1;
+                        findings.push(Finding::new(
+                            "GT-05",
+                            Severity::Fail,
+                            &format!(
+                                "PR #{num} 关联 issue #{fn_} Done when 有 {} 个 checkbox 未勾选",
+                                unticked.len()
+                            ),
+                        ));
                     }
+                }
 
-                    // GT-06 (#199): only when the Fixes target is an epic do we
-                    // need the open-sub check. Non-epic targets skip the
-                    // sub_issues query entirely (no extra API call, and a
-                    // transient sub-query failure can't block a non-epic merge).
-                    if is_epic(&labels) {
-                        match query_open_subs(&repo, &fn_) {
-                            Ok(open_subs) => {
-                                if let Some(block) = gt06_open_sub_block(&labels, &open_subs) {
-                                    println!(
-                                        "闸门: 合并会关闭 epic #{fn_}，但存在 open sub-issue #{}",
+                // GT-06 (switch: epic_sub_issue_gate): only epic targets need
+                // the open-sub check. Query failure stays fail-closed.
+                if is_epic(&labels) && gate_switch(issue_cfg.as_ref(), "epic_sub_issue_gate") {
+                    match query_open_subs(&repo, &fn_) {
+                        Ok(open_subs) => {
+                            if let Some(block) = gt06_open_sub_block(&labels, &open_subs) {
+                                findings.push(Finding::new(
+                                    "GT-06",
+                                    Severity::Fail,
+                                    &format!(
+                                        "合并会关闭 epic #{fn_}，但存在 open sub-issue #{}",
                                         block.join(", #")
-                                    );
-                                    log(
-                                        "PR_MERGE",
-                                        &format!("PR #{num}"),
-                                        "REJECT",
-                                        &format!("epic #{fn_} with open subs: {}", block.join(",")),
-                                    );
-                                    return 1;
-                                }
+                                    ),
+                                ));
                             }
-                            Err(e) => {
-                                println!(
-                                    "闸门: 无法确认 epic #{fn_} 的 sub-issues，为安全起见拒绝合并: {e}"
-                                );
-                                log(
-                                    "PR_MERGE",
-                                    &format!("PR #{num}"),
-                                    "REJECT",
-                                    &format!("epic #{fn_} sub query failed: {e}"),
-                                );
-                                return 1;
-                            }
+                        }
+                        Err(e) => {
+                            println!(
+                                "闸门: 无法确认 epic #{fn_} 的 sub-issues，为安全起见拒绝合并: {e}"
+                            );
+                            log(
+                                "PR_MERGE",
+                                &format!("PR #{num}"),
+                                "REJECT",
+                                &format!("epic #{fn_} sub query failed (fail-closed): {e}"),
+                            );
+                            return 1;
                         }
                     }
                 }
             }
 
-            // squash title conventional commit (CM-01/02)
+            // squash title conventional commit (CM-01/CM-02, switch: merge_title_gate)
             let merge_title = extract_merge_title(args, &repo, num);
-            if !merge_title.is_empty() {
+            if !merge_title.is_empty() && gate_switch(pr_cfg.as_ref(), "merge_title_gate") {
                 let conv = Regex::new(r"^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?!?:\s+\S+").unwrap();
                 if !conv.is_match(&merge_title) {
-                    println!("闸门: merge 标题非 conventional commit 格式: '{merge_title}'");
-                    log(
-                        "PR_MERGE",
-                        &format!("PR #{num}"),
-                        "REJECT",
-                        &format!(
-                            "title not CC: {}",
-                            crate::shared::truncate_utf8(&merge_title, 60)
-                        ),
-                    );
-                    return 1;
+                    findings.push(Finding::new(
+                        "CM-01",
+                        Severity::Fail,
+                        &format!("merge 标题非 conventional commit 格式: '{merge_title}'"),
+                    ));
                 }
                 let cjk = Regex::new(r"[\u4e00-\u9fff]").unwrap();
                 if cjk.is_match(&merge_title) {
-                    println!("闸门: merge 标题含 CJK（应为英文）: '{merge_title}'");
-                    log(
-                        "PR_MERGE",
-                        &format!("PR #{num}"),
-                        "REJECT",
-                        &format!(
-                            "title CJK: {}",
-                            crate::shared::truncate_utf8(&merge_title, 60)
-                        ),
-                    );
-                    return 1;
+                    findings.push(Finding::new(
+                        "CM-02",
+                        Severity::Fail,
+                        &format!("merge 标题含 CJK（应为英文）: '{merge_title}'"),
+                    ));
                 }
             }
         }
+    }
+
+    let dispatch = load_dispatch_cfg();
+    if gate_block(
+        "PR_MERGE",
+        &format!("PR #{}", pr_num.as_deref().unwrap_or_default()),
+        &mut findings,
+        dispatch.as_ref(),
+    )
+    .is_some()
+    {
+        return 1;
     }
 
     let merge_reason = extract_merge_body(args);

@@ -188,6 +188,28 @@ fn check_pr_review(repo: &str, pr_num: u32) -> Vec<Finding> {
         println!("PR #{} 无文件改动，无需审查。", pr_num);
         return vec![rv07_decide(0, "", "")];
     }
+    // merge_review.required=false skips the whole check (config-driven, no
+    // code edit needed to turn RV-07 off for a repo).
+    let review_cfg = crate::shared::load_spec_yaml("github_reviews.yaml");
+    let mr_cfg = review_cfg.as_ref().and_then(|c| c.get("merge_review"));
+    let required = mr_cfg
+        .and_then(|m| m.get("required"))
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true);
+    if !required {
+        println!(
+            "RV-07 已在 github_reviews.yaml 关闭 (merge_review.required: false)，跳过 CRG + ocr"
+        );
+        return vec![Finding::new(
+            "RV-07",
+            Severity::Info,
+            "CRG + ocr disabled via merge_review.required=false",
+        )];
+    }
+    let ocr_timeout = mr_cfg
+        .and_then(|m| m.get("ocr_timeout_secs"))
+        .and_then(|v| v.as_u64())
+        .unwrap_or(600);
 
     println!("PR #{} 有 {} 个文件改动，必须审查：", pr_num, file_count);
     if let Some(files) = pr_files.as_array() {
@@ -206,7 +228,7 @@ fn check_pr_review(repo: &str, pr_num: u32) -> Vec<Finding> {
     let crg_out = crate::tools::review::run_crg();
     println!("{}", crate::shared::truncate_utf8(&crg_out, 1200));
 
-    let ocr_out = crate::tools::review::run_ocr();
+    let ocr_out = crate::tools::review::run_ocr(ocr_timeout);
     println!("{}", crate::shared::truncate_utf8(&ocr_out, 1500));
 
     vec![rv07_decide(file_count, &crg_out, &ocr_out)]
