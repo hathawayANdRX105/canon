@@ -13,7 +13,7 @@ gate 是仓库自带的质量门禁：读 `.githooks/spec/*.yaml` 规则 → 调
 
 `gate check` 默认只跑 l1；`--sla l2` / `--sla l3` 解锁更高层。重规则设 `hooks: [merge]` 不拖日常提交。
 
-## 规则清单（16 条）
+## 规则清单（19 条）
 
 严重度列：`FAIL`=硬拦截，`WARN`=提示不拦，`INFO`=仅参考。
 
@@ -21,7 +21,9 @@ gate 是仓库自带的质量门禁：读 `.githooks/spec/*.yaml` 规则 → 调
 |---|---|---|---|---|
 | `hardcoded_secret` | l1 | pre-commit/push/merge | WARN | 硬编码密钥/密码/Token（PCRE，5 语言） |
 | `stale_api` | l1 | pre-commit/push/merge | WARN | 废弃 Rust API（`uninitialized`/`try!`/`ONCE_INIT`） |
-| `slop_comment` | l1 | pre-commit/push/merge | WARN | AI 风格注释（`Step 1:`/`This function`/`该函数`…） |
+| `slop_comment` | l1 | pre-commit/push/merge | WARN | AI 风格注释（步骤/叙述/拖延语/含糊语，如 `Step 1:`/`该函数`/`for now`/`临时`/`hopefully`/`估计`） |
+| `ccn` | l1 | pre-commit/merge | **FAIL** | 函数 ccn 超天花板(默认 6)：新违规/恶化硬拦；存量记账 `ratchet.tsv` 容忍且只许降（`seed` 一次后记账进仓）；lizard 缺失静默跳过 |
+| `antislop` | l1 | pre-commit/push/merge | WARN（harness 映射 HIGH→FAIL） | AI slop 五类（Placeholder/Deferral/Hedging/Stub/命名，`antislop` 二进制；缺失静默跳过） |
 | `rust_no_process_cmd` | l1 | pre-commit/push/merge | **FAIL** | HTTP 走 reqwest，禁 subprocess 拉 curl/wget |
 | `rust_tests_in_tests_dir` | l1 | pre-commit/push/merge | **FAIL** | 测试放同层 `tests/`，禁在 `src/` 留 `#[test]` |
 | `rust_no_dead_code_allow` | l1 | pre-commit/push/merge | WARN | 合并前清理 `#[allow(dead_code)]`（同行带 `//` 理由放行） |
@@ -96,5 +98,6 @@ stdout 必须是 finding JSON 数组：`{"id","severity","path","line","message"
 | 注释存在性门禁 | `RUSTFLAGS="-W missing_docs"`（public 59 处存量）；`clippy::missing_docs_in_private_items`（更严） | 存量清账前按 crate 灰度启用 |
 | 测试强度 | `cargo-mutants` nightly（验证 agent 测试是否真在检验，抓自证测试） | 待接入 |
 | 质量曲线 | `gate check --json` 每次 commit 落 jsonl（clippy 数/LOC/CRG risk/findings 分布） | 待接入 |
-| 函数复杂度 | `clippy::cognitive-complexity`（本机 rustc 1.98 已有，restriction 组） | 待定阈值 |
+| 函数复杂度 | 已上线 `ccn` checklist（ccn 天花板 6 + ratchet 记账：`ccn_gate.py` 进 `rules/gate/harness/`，`ratchet.tsv` 进仓）；余 lizard 进 CI 镜像 | 已接入 |
+| AI slop 二进制 | `cargo install antislop` 进 CI 镜像（未装时 `antislop` 规则静默跳过） | 待接入 |
 | 模块循环依赖 | `cargo-modules dependencies --lib --acyclic`（工具未装） | 待装 |

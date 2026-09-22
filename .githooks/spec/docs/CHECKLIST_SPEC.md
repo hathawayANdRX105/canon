@@ -1,6 +1,6 @@
 # Checklist Spec — 项目级 LLM 检查清单
 
-`.githooks/spec/checklist_*.yaml` 走的是和 `code_*.yaml` 同构的「读 yaml → 调外部 harness → 收 finding JSON」管道；唯一区别是把 lint 命令换成 agent harness（任意可执行文件）。
+`.githooks/spec/quality/checklist_*.yaml` 走的是和 `code/code_*.yaml` 同构的「读 yaml → 调外部 harness → 收 finding JSON」管道；唯一区别是把 lint 命令换成 agent harness（任意可执行文件）。
 
 ## 设计目标
 
@@ -15,7 +15,7 @@
 .githooks/
 ├── spec/
 │   ├── dispatch.yaml          # hook → topic（已有；加 checklist topic）
-│   ├── checklist_*.yaml       # 检查清单（新增；glob 自动发现）
+│   ├── quality/checklist_*.yaml  # 检查清单（新增；glob 自动发现，递归）
 │   └── ...
 ```
 
@@ -37,7 +37,7 @@ match:
 
 # 模式:diff(快,省 token)/ file(深,全文)/ grep(静态检查,零 LLM)
 #  - diff: 传 git diff 给 harness
-#  - file: 每个变更文件单独传一次
+#  - file: 一次调用传全部命中的变更文件, 按 "===== FILE: rel =====" 标记分隔
 #  - grep: harness 收空 stdin,自己跑 grep/find/ripgrep,findings 自带 path/line
 mode: diff                     # diff | file | grep,默认 diff
 
@@ -83,13 +83,13 @@ gate 根据 `mode` 给 harness 三种输入之一：
 
 **`mode: diff`**（默认）
 - stdin = `git diff <scope>` 的完整输出（unified diff）
-- argv = `[..., "--checklist", "<name>", "--scope", "<pre-commit|pre-push|merge>"]`
+- argv = yaml 里 `harness.args` 原样；gate 不追加任何参数（旧文档曾写 `--checklist/--scope/--path`，实现里没有）
 - 适用：行号级别检查、增量评审、风格校验
 
-**`mode: file`**(每个变更文件一次)
-- stdin = 该文件完整内容
-- argv = `[..., "--checklist", "<name>", "--path", "<repo-relative-path>", "--scope", "..."]`
-- 适用:架构放置、模块分层、API 设计一致性(需要全局上下文)
+**`mode: file`**（一次调用，全部变更文件）
+- stdin = 所有命中 match 的变更文件按 `\n===== FILE: <rel> =====\n` 拼接后的完整内容（见 engine.rs Mode::File）
+- harness 自行解析标记把 finding 归因到文件；stdout 仍是整体一个 finding JSON 数组
+- 适用:函数级检查(ccn 天花板/ratchet)、架构放置、模块分层、API 设计一致性(需要全文上下文)
 
 **`mode: grep`**(v2 新增,零 LLM)
 - stdin = 空 (harness 自己跑 grep/find,无需 gate 喂数据)

@@ -191,7 +191,9 @@
 |---|---|---|---|---|
 | `hardcoded_secret` | l1 | pre-commit, pre-push, merge | WARN | 硬编码密钥/密码/Token（PCRE, 5 语言） |
 | `stale_api` | l1 | pre-commit, pre-push, merge | WARN | 废弃 Rust API（uninitialized/try!/ONCE_INIT） |
-| `slop_comment` | l1 | pre-commit, pre-push, merge | WARN | AI 风格注释（Step 1:/This function/该函数…, 5 语言） |
+| `slop_comment` | l1 | pre-commit, pre-push, merge | WARN | AI 风格注释（步骤/叙述/拖延语 for now·临时·凑合/含糊语 hopefully·估计，5 语言） |
+| `ccn` | l1 | pre-commit, merge | FAIL | 函数 ccn 天花板(6) + ratchet 记账：新违规/恶化硬拦，存量 ratchet.tsv 容忍且只许降；lizard 缺失静默跳过 |
+| `antislop` | l1 | pre-commit, pre-push, merge | WARN（HIGH→FAIL） | AI slop 五类（Placeholder/Deferral/Hedging/Stub/命名），antislop 二进制；缺失静默跳过 |
 | `rust_no_process_cmd` | l1 | pre-commit, pre-push, merge | FAIL | HTTP 调用走 reqwest, 不要 subprocess curl/wget |
 | `rust_no_dead_code_allow` | l1 | pre-commit, pre-push, merge | WARN | 合并前清理 #[allow(dead_code)] |
 | `rust_no_empty_module` | l1 | pre-commit, pre-push, merge | WARN | 微型空文件, 考虑合并到上层 mod |
