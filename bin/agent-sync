@@ -14,11 +14,12 @@
 """
 import os
 import re
+import shutil
 import sys
 import subprocess
 import datetime
 
-STAMP_RE = re.compile(r'^<!-- canon: .*?@ ([0-9a-f]{7,40})')
+STAMP_RE = re.compile(r'^(?:<!-- canon: |# canon: ).*?@ ([0-9a-f]{7,40})')
 
 SYMBOL = {
     'in-sync': '✓', 'behind': '↓', 'unstamped': '↓', 'missing': '+',
@@ -111,8 +112,20 @@ def read_stamp(text):
     return None
 
 
-def stamp_line(remote, sha):
-    return f"<!-- canon: {remote} @ {sha[:7]} (synced {datetime.date.today().isoformat()}) -->"
+CODE_EXTS = {".py", ".sh", ".bash", ".zsh", ".fish", ".yaml", ".yml", ".toml", ".lua", ".rb", ".pl"}
+
+
+def is_code_file(dst_abs, content):
+    """代码文件用 # 行注释打戳(.py/.sh 等的 <!-- --> 是语法毒药);
+    其余(markdown/html)保持原 HTML 注释。带 shebang 的文件必是代码。"""
+    if content.startswith('#!'):
+        return True
+    return os.path.splitext(dst_abs)[1].lower() in CODE_EXTS
+
+
+def stamp_line(remote, sha, code=False):
+    head = f"canon: {remote} @ {sha[:7]} (synced {datetime.date.today().isoformat()})"
+    return f"# {head}" if code else f"<!-- {head} -->"
 
 
 def classify(canon, sha_head, remote, src, dst_abs, pin):
@@ -152,8 +165,16 @@ def classify(canon, sha_head, remote, src, dst_abs, pin):
 
 def write_synced(dst_abs, remote, sha, content):
     os.makedirs(os.path.dirname(dst_abs), exist_ok=True)
+    code = is_code_file(dst_abs, content)
+    stamp = stamp_line(remote, sha, code=code)
+    if code and content.startswith('#!'):
+        # shebang 必须留在第 1 行(否则内核 exec 失效),戳插到它后面。
+        first_nl = content.index('\n') + 1
+        content = content[:first_nl] + stamp + '\n' + content[first_nl:]
+    else:
+        content = stamp + '\n' + content
     with open(dst_abs, 'w') as f:
-        f.write(stamp_line(remote, sha) + '\n' + content)
+        f.write(content)
 
 
 def iter_projects(canon, only=None):
@@ -209,6 +230,9 @@ def cmd_push(canon, only=None, commit=False, force=False):
             if state in PUSHABLE or (state in ('unknown', 'diverged') and force):
                 content = canon_show(canon, head, src)
                 write_synced(dst_abs, remote, head, content)
+                src_abs = os.path.join(canon, src)
+                if os.path.exists(src_abs):
+                    shutil.copymode(src_abs, dst_abs)  # 保留 +x 等权限位
                 verb = {'missing': '创建', 'behind': '更新', 'unstamped': '补戳',
                         'unknown': '强制覆盖', 'diverged': '强制覆盖'}[state]
                 print(f"  ↓ {verb}     {dst}  (canon @{head[:7]})")

@@ -121,6 +121,19 @@ def main() -> int:
             state = raw
         if not str(state)[:1]:
             die("state 为空")
+        # 本地预检(SKILL.md 经验上限):state 拉低准确率(context rot),
+        # 超限远端直接 400,不如本地报错并给拆分建议。
+        state_chars = len(state if isinstance(state, str) else json.dumps(state, ensure_ascii=False))
+        question_chars = max(
+            (len(str(q.get("instructions", ""))) for q in (questions.values() if isinstance(questions, dict) else [])),
+            default=0,
+        )
+        if state_chars > 24_000 or state_chars + question_chars > 30_000:
+            die(
+                f"state 过大:state {state_chars} 字符 + 最长问题 {question_chars} 字符 "
+                f"(经验上限:state ≤ 24k,state+最长问题 ≤ 30k)。"
+                f"先过滤无关材料(context rot 只会拉低准确率),或拆成多次调用。"
+            )
         body = {"model": MODEL, "state": state, "questions": questions}
     else:
         die(__doc__)

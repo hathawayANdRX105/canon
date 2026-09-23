@@ -50,12 +50,12 @@ Jev 是 TypeSafe 的 System One 模型：输入 **state**（文本/JSON）+ 一�
 
 ```bash
 # 1) 验连通鉴权（顺手排除 env 问题）
-.agent/skills/jev/ask.py --check          # ✓ jev-1.13.0 连通正常
+python3 .agent/skills/jev/ask.py --check          # ✓ jev-1.13.0 连通正常
 
-# 2) 写问题集 questions.json（noul/choice/score 混装都行），见下节"如何问问题"
+# 2) 写问题集 questions.json（见下节"如何问问题"）
 # 3) state 从文件或 stdin 进，answers JSON 出：
-echo "$diff" | .agent/skills/jev/ask.py questions.json
-.agent/skills/jev/ask.py questions.json state.json
+echo "$diff" | python3 .agent/skills/jev/ask.py questions.json
+python3 .agent/skills/jev/ask.py questions.json state.json
 ```
 
 **裸 HTTP**（没有脚本时）：
@@ -86,7 +86,7 @@ curl -s "$TYPESAFE_API_BASE/v1/systemone" \
 **限制**（jev-1.13.0）：单请求 64k tokens，**state + 最长问题 ≤ 32k**；1200 req/min；
 250k tokens/s；choice ≤255 项，score 2–10 级。超限 429/400。
 state 只放本题需要的材料——**无关内容拉低准确率（context rot）**。本仓实测 269KB state 直接 400，
-经验上限 24000 字符。
+经验上限 24000 字符——**ask.py 已内置本地预检**，超限直接报错并给拆分建议，不会白打一次远端。
 
 ## 三种问题类型
 
