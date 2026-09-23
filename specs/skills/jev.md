@@ -10,9 +10,11 @@ description: >
 
 # jev — System One 决策模型使用
 
-Jev 是 TypeSafe 的 System One 模型：输入 **state**（文本/JSON）+ 一组**类型化问题**，
-一次并行返回带校准概率的结构化答案。**不生成文本、不解释、不写代码**——它是软件里的
-"聪明 if 语句"，不是聊天/编码 LLM。控制流、算术、副作用全在代码（或 agent）手里。
+Jev 是 TypeSafe 的 System One 模型：输入 **state**（文本/JSON）+ 一组**类型化问题**，一次并行返回带校准概率的结构化答案。**不生成文本、不解释、不写代码**——它是软件里的"聪明 if 语句"，不是聊天/编码 LLM。控制流、算术、副作用全在代码（或 agent）手里。
+
+> 术语解释：System One / System Two 来自心理学的双过程理论——System One 是**快速直觉
+> 判断**（看一眼就有答案），System Two 是**慢速多步推理**（分析、权衡、规划）。jev 模拟
+> 前者；需要后者的活交给常规聊天模型。
 
 **官方文档（真源，页面加 `.md` 可取 markdown）**：<https://docs.typesafe.ai/llms.txt>
 
@@ -33,8 +35,7 @@ Jev 是 TypeSafe 的 System One 模型：输入 **state**（文本/JSON）+ 一�
 | `TYPESAFE_API_KEY` | `sk-...`（本机已配在 `~/.config/fish/conf.d/api_key.fish`） | 官方 key 或网关 key |
 | `TYPESAFE_API_BASE` | `https://api.knox.chat`（网关）/ 不设则默认 `https://api.typesafe.ai` | knox 网关只授权 jev 模型 |
 
-**模型名不走环境变量，直接写死在脚本常量里**：请求体 `"model": "jev-latest"`（别名，当前指向
-`jev-1.13.0`；调过阈值要可复现就写死版本号）。
+**模型名不走环境变量，直接写死在脚本常量里**：请求体 `"model": "jev-latest"`（别名，当前指向 `jev-1.13.0`；调过阈值要可复现就写死版本号）。
 
 > **模型不可用怎么办**：jev 下线/改名/被网关拒绝时，**ask.py 会自动抓最新模型重试**——
 > `GET $TYPESAFE_API_BASE/v1/models`，从返回里挑最新的 `jev-*`（优先 `jev-latest`
@@ -46,8 +47,7 @@ Jev 是 TypeSafe 的 System One 模型：输入 **state**（文本/JSON）+ 一�
 
 新机器配置（fish）：`set -gx TYPESAFE_API_KEY sk-...; set -gx TYPESAFE_API_BASE https://...`，重开 shell。bash 用 `export` 同名两个。验证：`echo $TYPESAFE_API_KEY` 非空。
 
-**推荐走脚本**（随本 skill 分发：canon 在 `specs/skills/jev-ask.py`，装到项目后是
-`.agent/skills/jev/ask.py`；stdlib 零依赖，自动双发 Bearer+x-api-key 兼容网关）：
+**推荐走脚本**（随本 skill 分发：canon 在 `specs/skills/jev-ask.py`，装到项目后是 `.agent/skills/jev/ask.py`；stdlib 零依赖，自动双发 Bearer+x-api-key 兼容网关）：
 
 ```bash
 # 1) 验连通鉴权（顺手排除 env 问题）
@@ -71,8 +71,7 @@ curl -s "$TYPESAFE_API_BASE/v1/systemone" \
   }'
 ```
 
-**认证坑**：官方 api.typesafe.ai 认 `Authorization: Bearer`；中转网关（knox.chat 等）认
-`x-api-key`，只发 Bearer 会 401 Invalid token。脚本两头都发，手动 curl 也建议双发。
+**认证坑**：官方 api.typesafe.ai 认 `Authorization: Bearer`；中转网关（knox.chat 等）认 `x-api-key`，只发 Bearer 会 401 Invalid token。脚本两头都发，手动 curl 也建议双发。
 
 **一次调用长这样**（真实输出，三类型混发）：
 
@@ -84,10 +83,7 @@ curl -s "$TYPESAFE_API_BASE/v1/systemone" \
              "legend": {"0": "rough", "1": "acceptable", "2": "polished"}}}
 ```
 
-**限制**（jev-1.13.0）：单请求 64k tokens，**state + 最长问题 ≤ 32k**；1200 req/min；
-250k tokens/s；choice ≤255 项，score 2–10 级。超限 429/400。
-state 只放本题需要的材料——**无关内容拉低准确率（context rot）**。本仓实测 269KB state 直接 400，
-经验上限 24000 字符——**ask.py 已内置本地预检**，超限直接报错并给拆分建议，不会白打一次远端。
+**限制**（jev-1.13.0）：单请求 64k tokens，**state + 最长问题 ≤ 32k**；1200 req/min；250k tokens/s；choice ≤255 项，score 2–10 级。超限 429/400。state 只放本题需要的材料——**无关内容拉低准确率（context rot）**。本仓实测 269KB state 直接 400，经验上限 24000 字符——**ask.py 已内置本地预检**，超限直接报错并给拆分建议，不会白打一次远端。
 
 ## 三种问题类型
 
@@ -97,30 +93,45 @@ state 只放本题需要的材料——**无关内容拉低准确率（context r
 | `choice` | 固定选项挑一个 | `choice` + `probabilities`（全选项分布）+ `confidence` |
 | `score` | 有序等级打分 | `score`（概率加权，可落在级间）+ `legend` + `probabilities` + `confidence` |
 
-选型：是非→noul；无序分类→choice；程度/频谱→score（levels 必须是具体情境描述，每级自足可判——不参照其它级也能判断）。
-noul 0.5 = "是/否各半"，**不是**"中等程度"——要测程度用 score。
+选型：是非→noul；无序分类→choice；程度/频谱→score（levels 必须是具体情境描述，每级自足可判——不参照其它级也能判断）。noul 0.5 = "是/否各半"，**不是**"中等程度"——要测程度用 score。
 
 ## 如何问问题（写 instructions 的规矩）
 
-1. **一题一个"专家看一眼就能答"的判断**。"这条消息急吗？"好；"分析并给出最佳行动"坏——那是
-   System 2，拆开。
-2. **字面执行**。Jev 照字面答，不猜意图。范围词、否定、隐含条件全写明。你发现答错后想解释的
-   那句话，就是该写进 instructions 的另一半。
-3. **完整写进 instructions**。问题 ID（key）不发给模型，ID 里有的信息 instructions 里也要有。
-4. **criteria 与 instructions 对齐**，别说反（true 映射"否"会显著变差）。边界情况写进 criteria。
-5. **不问模型能精确算的**：计数、算术、日期先后/间隔、hex 比较——代码算好喂结论或命名分桶。
-   抽取（哪年、几号）可以问，比较（谁早）留给代码。
-6. instructions/criteria/state 都可以是结构化 JSON（对象放定义、问题放一个字段、数据按名引用
-   `` `field.path` ``），比塞长字符串清楚。
+**总原则：一次调用里，每个问题都要简单到"扫一眼就有答案"。** 需要动脑推理的复杂问题 jev 答不了——先拆成若干个一眼能答的小问题，答案的组合与决策交给你的代码。
 
-7. **选项集必须覆盖时序/边界变体，不只是理想路径**。同一个提交入口有三种调用时序：agent 空闲、
-   流式中、需排队；state 里只给理想形态，jev 会给低置信选择，而正确答案在没列出的变体里
-   （实测：注入机制三选一 0.53，漏掉 followUp 排队变体，集成测试抓出 AgentBusyError 竞态）。
-8. **state 必须写进每个选项的副作用事实**。漏一个会改变判断的事实（如"戳插在 shebang 前
-   会让内核 exec 失效"），jev 就在不完整选项空间里给你 0.31 置信的错误选择——它只能在你
-   给的选项里挑。
-9. **state 放真实踩坑证据，不放抽象描述**：具体报错文本（`SyntaxError: invalid decimal
-   literal`）、实测数字（269KB state → 400）、复现步骤。有证据的判断校准得明显更准。
+1. **一题只问一个简单判断。**
+   - 好问题："这条消息急吗？"——答案就是"是"或"否"。
+   - 坏问题："分析这条消息并给出最佳行动。"——这是完整的多步推理，jev 干不了。
+   - 遇到坏问题就拆成小问题（"有截止时间吗？""涉及钱吗？""有人在等吗？"），组合判断由代码做。
+
+2. **jev 完全照字面理解，不会猜你的意图。** 你写"不要包含测试文件"，它就只查测试文件；
+   如果你心里其实想排除的是所有文档，它不会替你想到。发现它答错后，你脑子里解释的那句话
+   （"哦我是想排除文档类"）就该直接写进问题里。
+
+3. **判断标准要完整写进问题本身。** 问题 ID（key）不会发给模型，只发 instructions——
+   所以 key 里包含的信息，instructions 里也要有。
+
+4. **instructions 和 criteria 必须说同一件事，别互相矛盾。** criteria 是"每个选项算什么"
+   的定义：instructions 问"是否紧急"，criteria 的 true 却写"不紧急"，jev 会糊涂，准确率
+   明显下降。什么算、什么不算这些边界情况也写进 criteria。
+
+5. **能精确计算的别问。** 数量、算术、日期先后——代码算好，把结论喂给 jev 或直接写进
+   state。但"抽取"（哪一年、什么日期）可以问，"比较"（谁更早）留给代码。
+
+6. **instructions/criteria/state 都可以写成结构化 JSON**，对象放定义、数据按名字引用
+   （`` `field.path` ``），比一长串文字清楚。
+
+7. **选项必须覆盖所有时序/边界情况，不能只给理想情况。** 例：同一个操作在"agent 空闲 /
+   正在输出 / 需要排队"三种时机下行为不同——state 只描述空闲时怎么调，jev 就只能在不完整
+   的选项里挑，给出低置信度答案，而正确答案在没列出的选项里。实测：三选一给了 0.53，漏掉
+   "排队"选项，后来集成测试抓出报错。
+
+8. **state 里要写清每个选项的副作用。** 漏掉一个影响判断的事实，jev 就只能在残缺的选项里
+   选，给出低置信度的错误答案。实测：漏掉"标记会插到脚本第一行导致无法执行"这个事实，
+   jev 以 0.31 置信度选错了实现方式。
+
+9. **state 里放真实踩到的证据：具体报错原文、实测数字、复现步骤。** 别写"它有时会失败"
+   这种抽象描述——"269KB 的 state 直接返回 400"这种证据，让判断准得多。
 
 ## 拆分问题（原子化 + 组合）
 
@@ -182,10 +193,7 @@ noul 0.5 = "是/否各半"，**不是**"中等程度"——要测程度用 score
 
 ## 本仓接入（gate 的 l3 语义层）
 
-`rules/harness/review_chain.py`：读问题 yaml → 调 jev → 按每题 `fail`/`warn` 阈值出
-FAIL/WARN/INFO finding；jev 不可用时降级 `REVIEW_LLM_BASE_URL`/`REVIEW_LLM_MODEL` 的小 LLM
-问同一套题。问题文件即 Python dict：`{qid: {type, instructions, criteria?, fail?, warn?}}`；
-choice 题 bad 选项以 `_bad` 结尾命名，harness 汇总其概率为 p(issue)。
+`rules/harness/review_chain.py`：读问题 yaml → 调 jev → 按每题 `fail`/`warn` 阈值出FAIL/WARN/INFO finding；jev 不可用时降级 `REVIEW_LLM_BASE_URL`/`REVIEW_LLM_MODEL` 的小 LLM问同一套题。问题文件即 Python dict：`{qid: {type, instructions, criteria?, fail?, warn?}}`；choice 题 bad 选项以 `_bad` 结尾命名，harness 汇总其概率为 p(issue)。
 
 ```bash
 TYPESAFE_API_KEY=... TYPESAFE_API_BASE=https://api.knox.chat JEV_MODEL=jev-latest \
