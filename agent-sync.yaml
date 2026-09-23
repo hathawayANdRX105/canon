@@ -125,3 +125,42 @@ projects:
         to: .agent/skills/jev/SKILL.md
       - src: specs/skills/jev-ask.py
         to: .agent/skills/jev/ask.py
+  deskctl:
+    root: /home/hathaway/projects/deskctl
+    files:
+      - src: tasks/closeout.md
+        to: .agent/tasks/closeout.md
+      - src: tasks/feature-dev-handbook.md
+        to: .agent/tasks/feature-dev-handbook.md
+      - src: tasks/version-stats.md
+        to: .agent/tasks/version-stats.md
+      - src: specs/skills/jev.md
+        to: .agent/skills/jev/SKILL.md
+      - src: specs/skills/jev-ask.py
+        to: .agent/skills/jev/ask.py
+  gugu:
+    root: /home/hathaway/projects/gugu
+    files:
+      - src: tasks/closeout.md
+        to: .agent/tasks/closeout.md
+      - src: tasks/feature-dev-handbook.md
+        to: .agent/tasks/feature-dev-handbook.md
+      - src: tasks/version-stats.md
+        to: .agent/tasks/version-stats.md
+      - src: specs/skills/jev.md
+        to: .agent/skills/jev/SKILL.md
+      - src: specs/skills/jev-ask.py
+        to: .agent/skills/jev/ask.py
+  new-api:
+    root: /home/hathaway/projects/new-api
+    files:
+      - src: tasks/closeout.md
+        to: .agent/tasks/closeout.md
+      - src: tasks/feature-dev-handbook.md
+        to: .agent/tasks/feature-dev-handbook.md
+      - src: tasks/version-stats.md
+        to: .agent/tasks/version-stats.md
+      - src: specs/skills/jev.md
+        to: .agent/skills/jev/SKILL.md
+      - src: specs/skills/jev-ask.py
+        to: .agent/skills/jev/ask.py
