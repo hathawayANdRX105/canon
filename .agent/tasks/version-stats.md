@@ -1,1 +1,1 @@
-../../../tasks/version-stats.md
+../../tasks/version-stats.md

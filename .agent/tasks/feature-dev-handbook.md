@@ -1,1 +1,1 @@
-../../../tasks/feature-dev-handbook.md
+../../tasks/feature-dev-handbook.md
