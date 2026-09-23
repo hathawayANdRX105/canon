@@ -4,7 +4,7 @@
 用法:
   jev-ask.py questions.json state.txt      # state 为文件（文本或 JSON）
   cat diff.patch | jev-ask.py questions.json   # state 从 stdin
-  jev-ask.py --check                       # 只验连通与鉴权（发一个 1-题 ping）
+  jev-ask.py --check                       # 只验连通与鉴权（发一个单题 ping）
 
 环境变量:
   TYPESAFE_API_KEY    必填。官方 key 或网关 key
