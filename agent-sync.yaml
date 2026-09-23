@@ -63,6 +63,10 @@ projects:
         to: .agent/tasks/webfix-lane.md
       - src: specs/templates/closeout-pr.md
         to: .agent/tasks/closeout-pr.md
+      - src: specs/skills/jev.md
+        to: .agent/skills/jev/SKILL.md
+      - src: specs/skills/jev-ask.py
+        to: .agent/skills/jev/ask.py
   kime:
     root: /home/hathaway/projects/kime
     files:
@@ -72,6 +76,10 @@ projects:
         to: .agent/tasks/feature-dev-handbook.md
       - src: tasks/version-stats.md
         to: .agent/tasks/version-stats.md
+      - src: specs/skills/jev.md
+        to: .agent/skills/jev/SKILL.md
+      - src: specs/skills/jev-ask.py
+        to: .agent/skills/jev/ask.py
   omenic:
     root: /home/hathaway/projects/omenic
     files:
@@ -87,6 +95,10 @@ projects:
         to: .agent/skills/refactor-workflow/SKILL.md
       - src: specs/skills/scaffold-dsh.md
         to: .agent/skills/scaffold-dsh/SKILL.md
+      - src: specs/skills/jev.md
+        to: .agent/skills/jev/SKILL.md
+      - src: specs/skills/jev-ask.py
+        to: .agent/skills/jev/ask.py
   silverq:
     root: /home/hathaway/projects/silverq
     files:
@@ -96,6 +108,10 @@ projects:
         to: .agent/tasks/feature-dev-handbook.md
       - src: tasks/version-stats.md
         to: .agent/tasks/version-stats.md
+      - src: specs/skills/jev.md
+        to: .agent/skills/jev/SKILL.md
+      - src: specs/skills/jev-ask.py
+        to: .agent/skills/jev/ask.py
   oh-my-pi:
     root: /home/hathaway/projects/oh-my-pi
     files:
@@ -105,3 +121,7 @@ projects:
         to: .agent/tasks/feature-dev-handbook.md
       - src: tasks/version-stats.md
         to: .agent/tasks/version-stats.md
+      - src: specs/skills/jev.md
+        to: .agent/skills/jev/SKILL.md
+      - src: specs/skills/jev-ask.py
+        to: .agent/skills/jev/ask.py
