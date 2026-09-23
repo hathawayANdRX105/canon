@@ -26,15 +26,24 @@ Jev 是 TypeSafe 的 System One 模型：输入 **state**（文本/JSON）+ 一�
 
 ## 调用（变量 + 脚本 + 裸 HTTP）
 
-**环境变量三个**（判断走哪里、用哪把钥匙、哪个模型）：
+**环境变量两个**（判断走哪里、用哪把钥匙）：
 
 | 变量 | 值 | 说明 |
 |---|---|---|
 | `TYPESAFE_API_KEY` | `sk-...`（本机已配在 `~/.config/fish/conf.d/api_key.fish`） | 官方 key 或网关 key |
 | `TYPESAFE_API_BASE` | `https://api.knox.chat`（网关）/ 不设则默认 `https://api.typesafe.ai` | knox 网关只授权 jev 模型 |
-| `JEV_MODEL` | `jev-latest` | 也接受版本号 `jev-1.13.0`（调好的阈值建议钉版本） |
 
-新机器配置（fish）：`set -gx TYPESAFE_API_KEY sk-...; set -gx TYPESAFE_API_BASE https://...; set -gx JEV_MODEL jev-latest`，重开 shell。bash 用 `export` 同名三个。验证：`echo $TYPESAFE_API_KEY` 非空。
+**模型不搞变量，直接开放写死**：请求体 `"model": "jev-latest"`（别名，当前指向
+`jev-1.13.0`；调过阈值要可复现就写死版本号）。
+
+> **模型不可用怎么办**：jev 下线/改名/被网关拒绝时，**自己抓新的模型用**——
+> `GET $TYPESAFE_API_BASE/v1/models`，从返回里挑最新的 `jev-*`（优先 `jev-latest`
+> 别名，否则取版本号最大的 `jev-1.x.y`），把 model 字段换掉重发。注意两种返回形状：
+> 官方是 `models[].name`，网关（OpenRouter 风格）是 `data[].id`。
+> **`jev-ask.py` 已内置这步**：HTTP 400/404 或报错提 model 时自动抓最新重试一次，
+> stderr 会打 `改用抓到的最新模型 jev-x.y.z 重试`。
+
+新机器配置（fish）：`set -gx TYPESAFE_API_KEY sk-...; set -gx TYPESAFE_API_BASE https://...`，重开 shell。bash 用 `export` 同名两个。验证：`echo $TYPESAFE_API_KEY` 非空。
 
 **推荐走脚本**（随本 skill 分发：canon 在 `specs/skills/jev-ask.py`，装到项目后是
 `.agent/skills/jev/ask.py`；stdlib 零依赖，自动双发 Bearer+x-api-key 兼容网关）：
