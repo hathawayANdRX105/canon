@@ -237,7 +237,7 @@ ocr review -c <task_commit_2_sha>
 
 真实用户路径跑一遍：
 - CLI 命令 / 真实 URL / 真实进程
-- UI 截图或 ariaSnapshot 对照（ui-validation skill）
+- UI 截图或 ariaSnapshot 对照
 - 发现问题 → 更新 PR 任务清单 → 回阶段 2 修
 
 通过后在 PR 写一条 "smoke 验证通过 / 方法 / 结果" comment。

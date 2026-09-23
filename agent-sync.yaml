@@ -45,8 +45,6 @@ projects:
         to: .agent/rules/testing-ci.md
       - src: specs/rules/web-lanes.md
         to: .agent/rules/web-lanes.md
-      - src: specs/skills/ui-validation.ferrite.md
-        to: .agent/skills/ui-validation/SKILL.md
       - src: specs/skills/refactor-workflow.ferrite.md
         to: .agent/skills/refactor-workflow/SKILL.md
       - src: specs/skills/scaffold-dsh.md
@@ -85,8 +83,6 @@ projects:
         to: .agent/tasks/version-stats.md
       - src: specs/templates/task-templates-handbook.md
         to: .agent/task-templates-handbook.md
-      - src: specs/skills/ui-validation.omenic.md
-        to: .agent/skills/ui-validation/SKILL.md
       - src: specs/skills/refactor-workflow.omenic.md
         to: .agent/skills/refactor-workflow/SKILL.md
       - src: specs/skills/scaffold-dsh.md

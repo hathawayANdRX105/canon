@@ -16,8 +16,6 @@
 
 ## 分叉待决（信息保留，不擅自统一）
 
-- `skills/ui-validation. ferrite.md` vs `ui-validation.omenic.md`：omenic 版更新（web Dioxus +
-  TUI ratatui 双覆盖）；ferrite 版旧口径（纯 web + 显式「gate 不强制」）。
 - `skills/refactor-workflow.ferrite.md` vs `.omenic.md`：仅第 1 步读的 README 位置不同
   （仓根 vs 所属域目录），反映两仓 crate 布局差异。
 
