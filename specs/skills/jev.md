@@ -5,7 +5,7 @@ description: >
   事实验证——不生成文本。覆盖三种问题类型（noul/choice/score）、如何把复杂判断
   拆成原子问题、如何用置信度设阈值分流，以及本仓 harness（review_chain.py）的
   接入方式。写代码调 Jev API、设计问题集、或想用"快速结构化判断"替代
-  LLM prompt-and-parse 时用本 skill。
+  LLM prompt-and-parse 时用本 skill。随附零依赖调用脚本（jev-ask.py）。
 ---
 
 # jev — System One 决策模型使用
@@ -24,30 +24,60 @@ Jev 是 TypeSafe 的 System One 模型：输入 **state**（文本/JSON）+ 一�
 | 毫秒级在线判断（~100ms，$0.042/MTok 输入，输出免费） | 需要书面理由的审计（Jev 只给概率不给 rationale） |
 | 替代"LLM 返 JSON 再 parse"的脆弱环节 | 一次性的多步复杂推理（用正常 LLM） |
 
-## 调用
+## 调用（变量 + 脚本 + 裸 HTTP）
+
+**环境变量三个**（判断走哪里、用哪把钥匙、哪个模型）：
+
+| 变量 | 值 | 说明 |
+|---|---|---|
+| `TYPESAFE_API_KEY` | `sk-...`（本机已配在 `~/.config/fish/conf.d/api_key.fish`） | 官方 key 或网关 key |
+| `TYPESAFE_API_BASE` | `https://api.knox.chat`（网关）/ 不设则默认 `https://api.typesafe.ai` | knox 网关只授权 jev 模型 |
+| `JEV_MODEL` | `jev-latest` | 也接受版本号 `jev-1.13.0`（调好的阈值建议钉版本） |
+
+新机器配置（fish）：`set -gx TYPESAFE_API_KEY sk-...; set -gx TYPESAFE_API_BASE https://...; set -gx JEV_MODEL jev-latest`，重开 shell。bash 用 `export` 同名三个。验证：`echo $TYPESAFE_API_KEY` 非空。
+
+**推荐走脚本**（随本 skill 分发：canon 在 `specs/skills/jev-ask.py`，装到项目后是
+`.agent/skills/jev/ask.py`；stdlib 零依赖，自动双发 Bearer+x-api-key 兼容网关）：
 
 ```bash
-POST https://api.typesafe.ai/v1/systemone
-Authorization: Bearer $TYPESAFE_API_KEY
+# 1) 验连通鉴权（顺手排除 env 问题）
+.agent/skills/jev/ask.py --check          # ✓ jev-1.13.0 连通正常
+
+# 2) 写问题集 questions.json（noul/choice/score 混装都行），见下节"如何问问题"
+# 3) state 从文件或 stdin 进，answers JSON 出：
+echo "$diff" | .agent/skills/jev/ask.py questions.json
+.agent/skills/jev/ask.py questions.json state.json
 ```
+
+**裸 HTTP**（没有脚本时）：
+
+```bash
+curl -s "$TYPESAFE_API_BASE/v1/systemone" \
+  -H "Authorization: Bearer $TYPESAFE_API_KEY" -H "x-api-key: $TYPESAFE_API_KEY" \
+  -H "Content-Type: application/json" -d '{
+    "model": "jev-latest",
+    "state": "Help! My payouts have been failing for 3 days.",
+    "questions": {"is_urgent": {"type": "noul", "instructions": "Does this convey urgency?"}}
+  }'
+```
+
+**认证坑**：官方 api.typesafe.ai 认 `Authorization: Bearer`；中转网关（knox.chat 等）认
+`x-api-key`，只发 Bearer 会 401 Invalid token。脚本两头都发，手动 curl 也建议双发。
+
+**一次调用长这样**（真实输出，三类型混发）：
 
 ```json
-{
-  "state": {"diff": "...", "context": "..."},
-  "model": "jev-latest",
-  "questions": {
-    "has_secret": {"type": "noul", "instructions": "Does the diff add a hardcoded secret?", "criteria": {"true": "key/password/token literal in added lines", "false": "no credential-like literals added"}}
-  }
-}
+{"is_doc": {"type": "noul", "noul": 0.89},
+ "kind":  {"type": "choice", "choice": "prose", "confidence": 0.98,
+           "probabilities": {"prose": 0.98, "code": 0.01, "config": 0.01}},
+ "quality": {"type": "score", "score": 0.67, "confidence": 0.32,
+             "legend": {"0": "rough", "1": "acceptable", "2": "polished"}}}
 ```
 
-- 环境变量：`TYPESAFE_API_KEY`；可选 `TYPESAFE_API_BASE`（默认官方）、`JEV_MODEL`（默认 `jev-latest`）。
-- **网关注意**：官方 api.typesafe.ai 用 `Authorization: Bearer`；中转网关（如 api.knox.chat）
-  认 `x-api-key` 头，Bearer 会 401。harness 同时发两个头，两头都兼容。
-- 限制（jev-1.13.0）：单请求 64k tokens，**state + 最长问题 ≤ 32k**；1200 req/min；
-  250k tokens/s；choice ≤255 项，score 2–10 级。超限 429/400。
-- state 只放本题需要的材料——**无关内容拉低准确率（context rot）**。本仓实测 269KB state 直接 400，
-  harness 上限 24000 字符。
+**限制**（jev-1.13.0）：单请求 64k tokens，**state + 最长问题 ≤ 32k**；1200 req/min；
+250k tokens/s；choice ≤255 项，score 2–10 级。超限 429/400。
+state 只放本题需要的材料——**无关内容拉低准确率（context rot）**。本仓实测 269KB state 直接 400，
+经验上限 24000 字符。
 
 ## 三种问题类型
 
