@@ -21,7 +21,7 @@
 #
 # 用法：agent-sync status|push|backport|pull（读此文件；旧 projects/ 目录已废弃）
 projects:
-  # 共同任务书(手动发给 agent): 四仓都装 .agent/tasks/
+  # 共同任务书(手动发给 agent): 五仓都装 .agent/tasks/
   ferrite:
     root: /home/hathaway/projects/ferrite
     files:
@@ -93,6 +93,15 @@ projects:
         to: .agent/skills/scaffold-dsh/SKILL.md
   silverq:
     root: /home/hathaway/projects/silverq
+    files:
+      - src: tasks/closeout.md
+        to: .agent/tasks/closeout.md
+      - src: tasks/feature-dev-handbook.md
+        to: .agent/tasks/feature-dev-handbook.md
+      - src: tasks/version-stats.md
+        to: .agent/tasks/version-stats.md
+  oh-my-pi:
+    root: /home/hathaway/projects/oh-my-pi
     files:
       - src: tasks/closeout.md
         to: .agent/tasks/closeout.md
