@@ -126,6 +126,8 @@ projects:
     files:
       - src: specs/agents/deskctl.md
         to: AGENTS.md
+      - src: specs/rules/gates.md
+        to: .agent/rules/gates.md
       - src: tasks/closeout.md
         to: .agent/tasks/closeout.md
       - src: tasks/feature-dev-handbook.md
