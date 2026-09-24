@@ -116,3 +116,21 @@ TODO / FIXME 注释也必须带 issue 号，写成 `// TODO(#123): ...`。
 - FAIL 必须清零才能继续；WARN 每条都要处理或说明理由。
 - 不绕过 `.githooks/` 的拦截，不绕过 `hooks/merge --dry-run` 预检。
 - 占位符用 `todo!()` / `unimplemented!()` 并带 issue 号；TODO 注释同样要带。
+
+## 五、发现的处置纪律（gate / jev / review）
+
+自动检查产出的是**发现**，不是判决。每条 finding（`FAIL` / `WARN`、`jev` L3 发现、
+CRG / `ocr review` 意见）都必须被显式处置：
+
+1. **先读规范再改代码**：拿 finding 先查规则原文（见 3.4 的正本路径），确认这条发现
+   要求什么，再动代码。读规则仍判定不了 → 记为待裁决写进交付记录，不猜、不忽略。
+2. **修根因**：让规则约束成立，不是让检查不再报。
+3. **禁止糊弄式修复**——以下无论是否让闸门变绿，一律违规：
+   改/删 `.githooks/spec` 规则或降 `fail_severity`；`--no-verify`；`head`/`tail`/`grep -v`
+   截断输出后当没看见；`#[allow(...)]`/`# noqa` 压制；建空文件/空目录占位；给无断言测试
+   塞 `assert!(true)`；拆分/改名只为躲匹配范围。
+4. **逐条留痕**：修复写 `规则 ID → 根因 → 改法(file:line)`；驳回写 `规则 ID + 理由 + 依据`
+   交维护者裁决。落点 = PR 正文 `## Delivery record` 或 issue 交付评论。沉默即违规。
+5. **WARN ≠ 可忽略**：与 `FAIL` 同等处置。
+
+完整版与判例见 canon `specs/agents/_discipline.md`。

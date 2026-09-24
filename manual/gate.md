@@ -28,7 +28,7 @@ gate 是仓库自带的质量门禁：读 `.githooks/spec/*.yaml` 规则 → 调
 | `ccn` | l1 | pre-commit/merge | **FAIL** | 函数 ccn 超天花板(默认 6)：新违规/恶化硬拦；存量记账 `ratchet.tsv` 容忍且只许降（`seed` 一次后记账进仓）；lizard 缺失静默跳过 |
 | `antislop` | l1 | pre-commit/push/merge | WARN（harness 映射 HIGH→FAIL） | AI slop 五类（Placeholder/Deferral/Hedging/Stub/命名，`antislop` 二进制；缺失静默跳过） |
 | `rust_no_process_cmd` | l1 | pre-commit/push/merge | **FAIL** | HTTP 走 reqwest，禁 subprocess 拉 curl/wget |
-| `rust_tests_in_tests_dir` | l1 | pre-commit/push/merge | **FAIL** | 测试放同层 `tests/`，禁在 `src/` 留 `#[test]` |
+| `rust_tests_in_tests_dir` | l1 | pre-commit/push/merge | WARN | 测试放同层 `tests/`（架构偏好规则，降级为提示：存量大仓/bin 单测放 `src/` 会全仓命中，agent 只会学会忽略） |
 | `rust_no_dead_code_allow` | l1 | pre-commit/push/merge | WARN | 合并前清理 `#[allow(dead_code)]`（同行带 `//` 理由放行） |
 | `rust_no_empty_module` | l1 | pre-commit/push/merge | WARN | 微型空文件（≤2 行且无实现） |
 | `rust_no_cfg_test_in_tests_dir` | l1 | pre-commit/push/merge | WARN | `tests/` 里不需要 `#[cfg(test)]` |
@@ -103,6 +103,37 @@ stdout 必须是 finding JSON 数组：`{"id","severity","path","line","message"
 - 单条放行：`git commit --no-verify`（不推荐，绕过全部钩子）。
 
 规则 yaml 缺失或写坏（键名拼错）时 gate 直接 FAIL 报错（`gate.setup`），不会静默放行——「没有规范/规范坏掉」本身是错误状态。
+
+### 严重度取谁说了算（降级时必读）
+
+每条 checklist finding 的最终严重度 = `min(yaml fail_severity, harness 报告的 severity)`
+（序：`FAIL < WARN < INFO`，取更严的一档；见 `engine.rs` `merge_severity`）。
+**含义：只把 yaml 的 `fail_severity` 从 FAIL 改成 WARN 是无效降级**——只要 harness 的
+输出 JSON 里还写着 `severity: "FAIL"`，finding 依然硬拦。降级必须同时改两处：
+1. 该规则的 `fail_severity:`
+2. harness 命令输出 JSON 里的 `severity` 字段（`checklist_*.yaml` 的 jq 片段里写死）
+
+已降级记录：`rust_tests_in_tests_dir` FAIL→WARN（架构偏好规则；`bin/*/src/*.rs` 的内嵌
+单测在存量大仓会全仓命中，agent 只会学会忽略；finding 仍打印，仍需按
+`specs/agents/_discipline.md` 逐条处置）。
+
+### 拦截点全清单（26 处）
+
+| 类别 | 位置 | 规则 | 可否配置 |
+|---|---|---|---|
+| 数据错误 | `engine.rs` run_all/run_named | `gate.setup`（无 `.githooks/`、无 `checklist_*.yaml`、yaml 损坏） | **否**，fail-closed 硬拦 |
+| 数据错误 | `shared.rs` `load_spec_yaml` | 缺 `dispatch.yaml` / `github_*.yaml`（pre-commit、pre-push、merge） | **否**，fail-closed |
+| git commit | `pre_commit.rs:113` / `:118` / `:141` | `CM-01` 非 conventional / `CM-02` 标题含 CJK / `CM-03` commit type 与 PR type 不一致 | 是（`dispatch.yaml` `severity_overrides`） |
+| git push | `pre_commit.rs` 之后的 l1/l2 链 | 任一 checklist `FAIL`（含 `code_*` 六条工具链、`checklist_ccn`、`rust_no_process_cmd`） | 是（yaml + `severity_overrides.yaml`） |
+| git merge | `merge.rs:140-170` | `RV-07` CRG/ocr 强制（`merge_review.required`） | 是（`github_reviews.yaml` 开关 + override） |
+| git merge | `cleanup.rs:47-90` | `CL-01` 分支已合并/孤儿/临时前缀需清理 | 是（`cleanup_branch_cleanup.yaml`） |
+| gh issue create | `gh_wrap.rs:371-553` | `GT-01`/`GT-03` 标题/正文/label/父子关联（映射 `IS-*`） | 是（`github_issues.yaml` + override） |
+| gh issue close | `gh_wrap.rs:555-731` | `GT-04` Done when 未勾 / `GT-05` 缺 Fixes / `GT-06` epic 子 issue / `GT-07` 关联 PR | 是（同上，含 `done_when_judge`） |
+| gh pr create | `gh_wrap.rs:733-805` | `GT-02` PR 标题/正文/head/label（映射 `PR-*`） | 是（`github_pull_requests.yaml` + override） |
+| gh pr merge | `gh_wrap.rs:807-950` | PR 内容复检 + 关联 issue 的 GT-04/05/06 | 部分（正文类可覆盖；数据解析失败仍 fail-closed） |
+| 旁路审计 | `audit.rs:140-145` | 打印 `IS-*`/`PR-*` 的 FAIL finding（不改变退出码语义） | 是 |
+
+**原则**：policy 类（可配）才是降级候选；数据错误类（fail-closed）是安全属性，不动。
 
 ## DWJ：Done-when 模型评审（issue close 时）
 
