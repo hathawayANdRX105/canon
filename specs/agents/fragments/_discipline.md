@@ -6,9 +6,9 @@
 ## 先读规范，再改代码
 
 1. 拿到 finding，先读规则原文，确认这条发现到底要求什么：
-   - gate 规则总览：`.githooks/GATE_HANDBOOK.md`
+   - gate 规则总览：`.githooks/GATE_HANDBOOK.md`（无则 `canon/manual/gate.md`）
    - 单条规则的参数（匹配范围 / 严重度 / harness）：`.githooks/spec/**/<rule>.yaml`
-   - 项目适配说明（本仓为什么这么定）：`.agent/rules/gates.md`（无此文件则看 `canon/manual/gate.md`）
+   - 项目适配说明（本仓为什么这么定）：`.agent/rules/gates.md`
 2. 不确定 finding 是否成立时，读完规则仍不能判定 → **记为待裁决**并在交付记录里写明，
    不要凭猜测改代码，也不要直接忽略。
 
@@ -16,6 +16,12 @@
 
 - finding 指向的**约束**是根因。修代码使约束成立，而不是让检查不再报。
 - 修完自问：这条约束在本仓还成立吗？下次同类改动还会不会触发？
+
+## 完整读输出，不截断
+
+- 拦截信息**逐条读完**再动手。`| head -5`、`| tail`、`grep -v` 会吞掉后面的 finding，
+  让人误以为已经修完。
+- 报告里出现「N checks passed」时，确认 N 覆盖了你改动的部分。
 
 ## 禁止糊弄式修复
 
@@ -38,3 +44,9 @@
 - 驳回 → 必须写 `规则 ID + 不修理由 + 依据`，由维护者裁决。沉默即违规。
 - 交付记录落点：PR 正文 `## Delivery record` 段，或 issue 的交付评论。
 - WARN 与 FAIL 同等对待。WARN 只是不拦，不是可忽略。
+
+## 规范层级
+
+- `.githooks/` 是 gate 领地：agent 不改规则。
+- `.agent/rules/`、`specs/rules/` 是规范正本：发现规则与现实冲突 → 提 issue，不自行改写。
+- 本纪律与各仓既有条款冲突时，以本纪律为准（它更严格）。

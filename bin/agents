@@ -73,17 +73,33 @@ def render(body, params, project, warns):
 
 
 def section(body, title):
-    """把片段正文包成二级章节。片段自带一级/二级标题的，丢弃并用配置标题，
-    其余内部标题各降一级，避免两层二级标题。"""
+    """把片段正文包成 `## <title>` 小节。
+
+    片段自带的首个 H1/H2 标题视为「本片段标题」，丢弃并用配置标题替代。
+    剩余标题按**片段自身的最低标题层级**归一化，整体下移到 H3 之下 ——
+    片段里有 H1 就降两级，只有 H2 就降一级。保证内部任何标题都严格
+    嵌在 `## <title>` 之下，不会与它同级。
+    """
     lines = body.splitlines()
+    # 去掉片段自身的首个标题
     start = 0
     if lines and re.match(r"^#{1,2} ", lines[0]):
         start = 1
         while start < len(lines) and not lines[start].strip():
             start += 1
+    rest = lines[start:]
+    # 片段内最小标题层级（至少 2；没有标题则不处理）
+    lvls = [len(m.group(1)) for l in rest if (m := re.match(r"^(#{1,6}) ", l))]
+    base = min(lvls) if lvls else 2
+    shift = max(0, 3 - base)          # 最小层级 → H3
+    def demote(l):
+        m = re.match(r"^(#{1,6})( .*)$", l)
+        if not m:
+            return l
+        n = min(len(m.group(1)) + shift, 6)
+        return "#" * n + m.group(2)
     out = [f"## {title}", ""]
-    for l in lines[start:]:
-        out.append("#" + l if l.startswith("#") else l)
+    out += [demote(l) for l in rest]
     return "\n".join(out).rstrip()
 
 
