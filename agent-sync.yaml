@@ -25,8 +25,6 @@ projects:
   ferrite:
     root: /home/hathaway/projects/ferrite
     files:
-      - src: specs/agents/ferrite.md
-        to: AGENTS.md
       - src: tasks/closeout.md
         to: .agent/tasks/closeout.md
       - src: tasks/feature-dev-handbook.md
@@ -70,8 +68,6 @@ projects:
   kime:
     root: /home/hathaway/projects/kime
     files:
-      - src: specs/agents/kime.md
-        to: AGENTS.md
       - src: tasks/closeout.md
         to: .agent/tasks/closeout.md
       - src: specs/rules/workflow-state.md
@@ -81,8 +77,6 @@ projects:
   omenic:
     root: /home/hathaway/projects/omenic
     files:
-      - src: specs/agents/omenic.md
-        to: AGENTS.md
       - src: tasks/closeout.md
         to: .agent/tasks/closeout.md
       - src: tasks/feature-dev-handbook.md
@@ -100,8 +94,6 @@ projects:
   silverq:
     root: /home/hathaway/projects/silverq
     files:
-      - src: specs/agents/silverq.md
-        to: AGENTS.md
       - src: tasks/closeout.md
         to: .agent/tasks/closeout.md
       - src: specs/rules/workflow-state.md
@@ -113,8 +105,6 @@ projects:
   oh-my-pi:
     root: /home/hathaway/projects/oh-my-pi
     files:
-      - src: specs/agents/oh-my-pi.md
-        to: AGENTS.md
       - src: tasks/closeout.md
         to: .agent/tasks/closeout.md
       - src: tasks/feature-dev-handbook.md
@@ -124,8 +114,6 @@ projects:
   deskctl:
     root: /home/hathaway/projects/deskctl
     files:
-      - src: specs/agents/deskctl.md
-        to: AGENTS.md
       - src: specs/rules/gates.md
         to: .agent/rules/gates.md
       - src: tasks/closeout.md
@@ -137,8 +125,6 @@ projects:
   gugu:
     root: /home/hathaway/projects/gugu
     files:
-      - src: specs/agents/gugu.md
-        to: AGENTS.md
       - src: tasks/closeout.md
         to: .agent/tasks/closeout.md
       - src: tasks/feature-dev-handbook.md
@@ -148,8 +134,6 @@ projects:
   new-api:
     root: /home/hathaway/projects/new-api
     files:
-      - src: specs/agents/new-api.md
-        to: AGENTS.md
       - src: tasks/closeout.md
         to: .agent/tasks/closeout.md
       - src: tasks/feature-dev-handbook.md
@@ -159,40 +143,24 @@ projects:
   herdr:
     root: /home/hathaway/projects/herdr
     files:
-      - src: specs/agents/herdr.md
-        to: AGENTS.md
   dotfiles:
     root: /home/hathaway/projects/dotfiles
     files:
-      - src: specs/agents/dotfiles.md
-        to: AGENTS.md
   claude-code:
     root: /home/hathaway/projects/claude-code
     files:
-      - src: specs/agents/claude-code.md
-        to: AGENTS.md
   ainotation:
     root: /home/hathaway/projects/ainotation
     files:
-      - src: specs/agents/ainotation.md
-        to: AGENTS.md
   sentinel:
     root: /home/hathaway/projects/sentinel
     files:
-      - src: specs/agents/sentinel.md
-        to: AGENTS.md
   tolaria:
     root: /home/hathaway/projects/tolaria
     files:
-      - src: specs/agents/tolaria.md
-        to: AGENTS.md
   novel:
     root: /home/hathaway/projects/novel
     files:
-      - src: specs/agents/novel.md
-        to: AGENTS.md
   algorchemy:
     root: /home/hathaway/projects/algorchemy
     files:
-      - src: specs/agents/algorchemy.md
-        to: AGENTS.md

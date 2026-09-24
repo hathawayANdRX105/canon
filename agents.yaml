@@ -1,0 +1,117 @@
+# agents.yaml — 项目 AGENTS.md 的章节组合计划（canon 正本）
+#
+# 模型：canon 持有全部内容，各项目 AGENTS.md 是**生成物**。
+#   specs/agents/fragments/   共享章节（跨项目复用，改一处全体受益）
+#   specs/agents/local/<项目>  项目独有内容（架构约定、目录规则、坑）
+# 这里声明每个项目「包含哪些章节、什么顺序、什么参数」。
+#
+# include 条目：
+#   - _discipline            共享片段（fragments/ 下）
+#   - local/deskctl          项目独有片段（local/ 下，名字可省 = 当前项目）
+#   - {fragment: x, title: Y} 显式指定标题
+# 片段里的 {{param}} 由该项目 params 替换；缺参数会报警，不静默填空。
+#
+# 用法：bin/agents list | show <项目> | build <项目> | push <项目> | status
+#
+# 改动纪律：共享章节改 fragments/；项目独有改 local/<项目>.md；
+# 改完 `bin/agents push <项目>` 重新生成，再提交项目仓。
+
+defaults:
+  titles:
+    _discipline: 发现处置纪律
+    project-structure: 本仓结构
+    architecture: 目录与架构
+    code-style: 代码风格
+    build-verify: 构建与验证
+    git-workflow: 提交与 PR
+    tools: 工具与命令
+    subagents: 子代理与并行
+
+# 每个项目的 include = [项目独有内容] + 共享章节（按此顺序组装）。
+# 共享片段按需引用，不必全带；项目特殊要求可在项目级 titles 覆盖标题。
+projects:
+  oh-my-pi:
+    root: /home/hathaway/projects/oh-my-pi
+    titles: {local/: oh-my-pi 开发约定}
+    include: [local/, _discipline, code-style, build-verify, git-workflow, tools]
+
+  herdr:
+    root: /home/hathaway/projects/herdr
+    titles: {local/: herdr 约定}
+    include: [local/, _discipline, code-style, build-verify, git-workflow]
+
+  dotfiles:
+    root: /home/hathaway/projects/dotfiles
+    titles: {local/: dotfiles 约定}
+    include: [local/, _discipline, code-style, git-workflow, tools]
+
+  new-api:
+    root: /home/hathaway/projects/new-api
+    titles: {local/: new-api 约定}
+    include: [local/, _discipline, code-style, build-verify, git-workflow]
+
+  silverq:
+    root: /home/hathaway/projects/silverq
+    titles: {local/: silverq 约定}
+    include: [local/, _discipline, code-style, git-workflow]
+
+  kime:
+    root: /home/hathaway/projects/kime
+    titles: {local/: kime 约定}
+    include: [local/, _discipline, code-style, build-verify, git-workflow]
+
+  ferrite:
+    root: /home/hathaway/projects/ferrite
+    titles: {local/: ferrite 约定}
+    include: [local/, _discipline, code-style, build-verify, git-workflow, tools, subagents]
+
+  claude-code:
+    root: /home/hathaway/projects/claude-code
+    titles: {local/: claude-code 约定}
+    include: [local/, _discipline, code-style, build-verify, git-workflow, tools, subagents]
+
+  ainotation:
+    root: /home/hathaway/projects/ainotation
+    titles: {local/: ainotation 约定}
+    include: [local/, _discipline, code-style, build-verify, git-workflow]
+
+  omenic:
+    root: /home/hathaway/projects/omenic
+    titles: {local/: omenic 约定}
+    include: [local/, _discipline, code-style, build-verify, git-workflow, subagents]
+
+  gugu:
+    root: /home/hathaway/projects/gugu
+    titles: {local/: gugu 约定}
+    include: [local/, _discipline, code-style, build-verify, git-workflow]
+
+  deskctl:
+    root: /home/hathaway/projects/deskctl
+    titles: {local/: deskctl 约定}
+    include: [local/, _discipline, code-style, build-verify, git-workflow]
+
+  algorchemy:
+    root: /home/hathaway/projects/algorchemy
+    titles: {local/: algorchemy 约定}
+    include: [local/, _discipline, code-style, git-workflow]
+
+  sentinel:
+    root: /home/hathaway/projects/sentinel
+    titles: {local/: sentinel 约定}
+    include: [local/, _discipline, code-style, git-workflow]
+
+  tolaria:
+    root: /home/hathaway/projects/tolaria
+    titles: {local/: tolaria 约定}
+    include: [local/, _discipline, code-style, build-verify, git-workflow]
+
+  novel:
+    root: /home/hathaway/projects/novel
+    titles: {local/: novel 约定}
+    include: [local/, _discipline, code-style, git-workflow]
+
+  # canon 自己：AGENTS.md 由同一套片段生成（dogfooding）
+  canon:
+    root: /home/hathaway/projects/canon
+    titles: {local/: canon 约定}
+    include: [local/, _discipline, code-style, build-verify, git-workflow, tools]

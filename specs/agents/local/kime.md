@@ -62,14 +62,3 @@ benches/              基准测试套件（cargo bench --bench kime_bench）
 3. **真实复验（Audit）**：不轻信子代理自报的 "ALL PASS"——必须检查 diff 边界、核对真实测试计数；**验收命令一律由 PR 的 CI 跑**（见「开发方式」），主控本地不执行 cargo，靠 CI 绿灯 + 产物判断。
 4. **工具审查**：修改核心逻辑后先跑 `code-review-graph detect-changes` 检查结构面风险。
 5. **收尾报备**：汇报改了哪些文件、跑了哪些测试、性能对比、剩余风险。
-## 发现处置纪律（gate / jev / review）
-
-自动检查的每条 finding（gate `FAIL`/`WARN`、`jev` L3 发现、CRG / `ocr review` 意见）必须被显式处置：
-
-1. **先读规范再改代码**：先读 `.githooks/GATE_HANDBOOK.md` 总览、`.githooks/spec/**/<规则>.yaml` 单条规则、`.agent/rules/gates.md` 项目适配（本仓没有该文件时省略最后一项）。
-2. **修根因**：让规则约束成立，不是让检查不再报。
-3. **禁止糊弄式修复**：改/删 `.githooks/spec` 规则或降 `fail_severity`；`--no-verify`；`head`/`tail`/`grep -v` 截断输出后当没看见；`#[allow(...)]`/`# noqa` 压制；建空文件/空目录占位；给无断言测试塞 `assert!(true)`；拆分/改名只为躲匹配范围。
-4. **逐条留痕**：修复写 `规则 ID → 根因 → 改法(file:line)`；驳回写 `规则 ID + 理由 + 依据` 交维护者裁决。落点 = PR 正文 `## Delivery record` 或 issue 交付评论。沉默即违规。
-5. **WARN ≠ 可忽略**：与 `FAIL` 同等处置。
-
-完整版与判例见 canon `specs/agents/_discipline.md`。

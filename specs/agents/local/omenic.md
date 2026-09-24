@@ -106,14 +106,3 @@ web UI（dsh 设计语言复刻，C5.1 已验收）的视觉/结构锁在 `.gith
 - `taskpanel.yaml`——composer 上方 dock 卡宽随消息列（≤780）；进度条 1px 品牌蓝；filter chip h26 r7；任务卡 r10。
 
 **已知偏差（记录不改）**：dsh 消息列 748px，omenic 消息列与 composer 统一 `max-w-[780px]`（chat.yaml notes）。
-## 发现处置纪律（gate / jev / review）
-
-自动检查的每条 finding（gate `FAIL`/`WARN`、`jev` L3 发现、CRG / `ocr review` 意见）必须被显式处置：
-
-1. **先读规范再改代码**：先读 `.githooks/GATE_HANDBOOK.md` 总览、`.githooks/spec/**/<规则>.yaml` 单条规则、`.agent/rules/gates.md` 项目适配（本仓没有该文件时省略最后一项）。
-2. **修根因**：让规则约束成立，不是让检查不再报。
-3. **禁止糊弄式修复**：改/删 `.githooks/spec` 规则或降 `fail_severity`；`--no-verify`；`head`/`tail`/`grep -v` 截断输出后当没看见；`#[allow(...)]`/`# noqa` 压制；建空文件/空目录占位；给无断言测试塞 `assert!(true)`；拆分/改名只为躲匹配范围。
-4. **逐条留痕**：修复写 `规则 ID → 根因 → 改法(file:line)`；驳回写 `规则 ID + 理由 + 依据` 交维护者裁决。落点 = PR 正文 `## Delivery record` 或 issue 交付评论。沉默即违规。
-5. **WARN ≠ 可忽略**：与 `FAIL` 同等处置。
-
-完整版与判例见 canon `specs/agents/_discipline.md`。
