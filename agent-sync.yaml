@@ -63,11 +63,15 @@ projects:
         to: .agent/tasks/webfix-lane.md
       - src: specs/templates/closeout-pr.md
         to: .agent/tasks/closeout-pr.md
+      - src: specs/rules/workflow-state.md
+        to: .agent/rules/workflow-state.md
   kime:
     root: /home/hathaway/projects/kime
     files:
       - src: tasks/closeout.md
         to: .agent/tasks/closeout.md
+      - src: specs/rules/workflow-state.md
+        to: .agent/rules/workflow-state.md
       - src: tasks/feature-dev-handbook.md
         to: .agent/tasks/feature-dev-handbook.md
   omenic:
@@ -79,17 +83,25 @@ projects:
         to: .agent/tasks/feature-dev-handbook.md
       - src: tasks/version-stats.md
         to: .agent/tasks/version-stats.md
+      - src: specs/rules/workflow-state.md
+        to: .agent/rules/workflow-state.md
       - src: specs/templates/task-templates-handbook.md
         to: .agent/task-templates-handbook.md
       - src: specs/skills/refactor-workflow.omenic.md
         to: .agent/skills/refactor-workflow/SKILL.md
+      - src: specs/rules/workflow-state.md
+        to: .agent/rules/workflow-state.md
   silverq:
     root: /home/hathaway/projects/silverq
     files:
       - src: tasks/closeout.md
         to: .agent/tasks/closeout.md
+      - src: specs/rules/workflow-state.md
+        to: .agent/rules/workflow-state.md
       - src: tasks/feature-dev-handbook.md
         to: .agent/tasks/feature-dev-handbook.md
+      - src: specs/rules/workflow-state.md
+        to: .agent/rules/workflow-state.md
   oh-my-pi:
     root: /home/hathaway/projects/oh-my-pi
     files:
@@ -97,6 +109,8 @@ projects:
         to: .agent/tasks/closeout.md
       - src: tasks/feature-dev-handbook.md
         to: .agent/tasks/feature-dev-handbook.md
+      - src: specs/rules/workflow-state.md
+        to: .agent/rules/workflow-state.md
   deskctl:
     root: /home/hathaway/projects/deskctl
     files:
@@ -104,6 +118,8 @@ projects:
         to: .agent/tasks/closeout.md
       - src: tasks/feature-dev-handbook.md
         to: .agent/tasks/feature-dev-handbook.md
+      - src: specs/rules/workflow-state.md
+        to: .agent/rules/workflow-state.md
   gugu:
     root: /home/hathaway/projects/gugu
     files:
@@ -111,6 +127,8 @@ projects:
         to: .agent/tasks/closeout.md
       - src: tasks/feature-dev-handbook.md
         to: .agent/tasks/feature-dev-handbook.md
+      - src: specs/rules/workflow-state.md
+        to: .agent/rules/workflow-state.md
   new-api:
     root: /home/hathaway/projects/new-api
     files:
@@ -118,3 +136,5 @@ projects:
         to: .agent/tasks/closeout.md
       - src: tasks/feature-dev-handbook.md
         to: .agent/tasks/feature-dev-handbook.md
+      - src: specs/rules/workflow-state.md
+        to: .agent/rules/workflow-state.md
