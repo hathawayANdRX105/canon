@@ -1,0 +1,47 @@
+diff --git a/agent/skills/wf-architect/internal/design-conversation.md b/agent/skills/wf-architect/internal/design-conversation.md
+index cef8ab3..385d8de 100644
+--- a/agent/skills/wf-architect/internal/design-conversation.md
++++ b/agent/skills/wf-architect/internal/design-conversation.md
+@@ -53,8 +53,25 @@ Mechanics (every question, no exceptions):
+ - **The last choice is always a free text custom input.** The picker appends that "Other" slot automatically (don't add your own); in a plain text fallback, add it explicitly as the final option。 This holds for design questions and confirm panels alike (the data model, accept the spec, References consent, an overlapping spec): one recommended option plus the custom slot。
+ - **Grill down to the smallest load bearing decision.** Work out every decision this specific project needs, from the big architectural calls to the smallest tool and setup choices, and ask each as its own question with a recommended pick and current, real options you generate at runtime。 No choice is too small to route through the engineer; never silently decide one for them。
+ - Capability first, per the picker/custom slot mechanics above。 Batch related questions up to 4 per call, run as many rounds as a stage needs, fold prior answers forward so it reads as one continuous interview。
+-
+-Still infer the framing, but ASK the design inputs。 Within each stage, sort every dimension INFER / ASK / RECOMMEND (see *Asks vs acts*): INFER silently from the prompt/codebase/local-agents.md; ASK the engineer the design inputs (data model, stack, provider, methods, rules) one phase at a time with a suggested pick; RECOMMEND the small internal implementation details they don't want to weigh in on。 Use jev（omp 里 `judge()`，见 `jev` skill；独立场景 `jev-ask.py`） for calibration on critical judgments (per contract for Beta/GA)。
++- **每句自带判断信息，遮住上文也能答**。每个问句必须包含四要素，缺一不可：
++  1. **具体主语** — 点名具体对象，不用"这份/这个/它"。"这份契约" → "交互终端 ↔ 进程通信契约"。
++  2. **位置与背景** — 一句话说清正在定什么、为什么现在定它、它卡住了什么后续工作。
++  3. **选项的取舍** — 每个选项写清代价与后果，不只写名字。"只定交互终端" 后面接"后台会话与远程控制留到各自的 spec"。
++  4. **推荐的理由** — `(recommended)` 后的一句为什么，必须指向本项目的具体约束（栈、规模、合规、既有代码），不是通用优点。
++  自查：把上文遮住，只看问句，能否独立读懂并作出选择？不能 → 重写再问。
++- **术语纪律：不用未定义过的词**。禁止自造比喻、行话、内部简称（"这一刀""那一刀""这块"等），也禁止在 skill 正文里没有定义过的缩写。每个术语首次出现必须当场定义，或直接换成直白表述。选项描述里同样不许出现 —— 读者是在选项里做选择，不是猜谜。
++
++Still infer the framing, but ASK the design inputs。 Within each stage, sort every dimension INFER / ASK / RECOMMEND (see *Asks vs acts*): INFER silently from the prompt/codebase/local-agents.md; ASK the engineer the design inputs (data model, stack, provider, methods, rules) one phase at a time with a suggested pick; RECOMMEND the small internal implementation details they don't want to weigh in on。
++
++**jev 先判，再问工程师（强制，不是收尾校准）**：每个要标记 `(recommended)` 的选择，推荐方案必须先过决策模型（omp 里 `judge()`，见 `jev` skill；独立场景 `jev-ask.py`），之后才把面板交给工程师。主模型自己拍脑袋的推荐不算推荐。
++
++- **state 喂足信息**：该维度的完整决策上下文 —— 本项目的栈与规模、已定的前序答案、每个选项的完整取舍与代价。信息不足就先去读代码/文档补齐，再判；不许拿空上下文让 judge 猜。
++- **question 形状**：`{type: "choice", instructions: "在给定约束下哪个选项更优", criteria: {<选项A>: "什么证据让它赢", …}}`，criteria 每个 label 一句可观察的证据，穷尽且互斥。
++- **全部选项都过 judge**，不只推荐项 —— 否则"推荐"只是模型偏好，不是评估结论。
++- **概率进面板**：judge 的选择成为 `(recommended)`，理由里带上概率（例："决策模型判定此方案更优（p=0.72），因为它避免每轮对话都重新握手"），让工程师知道推荐有据可依，也能一眼看出哪些是强推、哪些只是倾向。
++- **低置信度就承认**：首选概率 < 0.6 时，面板里明说"这一项我把握不大，两个方案各有取舍"，别硬推一个。
++- **降级路径**：jev 不可用（无 `TYPESAFE_API_KEY`、或独立场景无 `judge()`）→ 退回主模型判断，并在面板注明"此项未经决策模型评估"，不假装有评估。
++- **不 judge 的例外**：只有你自己知道答案的输入（业务规则、团队偏好、合规要求）不适用 —— 那里 judge 没有信息可依，模型问对了。这类问题走四要素问句契约即可。
+ 
+ **Your mandate (senior+ role):** you are the Staff/Principal engineer accountable if this ships wrong。 The spec is the complete build spec `/wf-develop` implements from; any blank dimension becomes a question partway through the build, or a wrong guess。 Leaving a gap is the failure mode; be exhaustive, cover everything a senior engineer would pin down before writing code。
+ 
+diff --git a/agent/skills/wf-scope/modes/plan.md b/agent/skills/wf-scope/modes/plan.md
+index d81b06c..30f9eb5 100644
+--- a/agent/skills/wf-scope/modes/plan.md
++++ b/agent/skills/wf-scope/modes/plan.md
+@@ -16,6 +16,10 @@ Do not read the other plan route files unless the classification changes. After
+ 
+ Do not follow a fixed script or a set number of rounds. Enumerate the planning dimensions THIS product needs (generate them from the idea and `.agent/rules/local-agents.md` via agent-sync), then ask them one after another as batched decision panels (up to 4 per panel), as many panels as it takes. Infer and skip anything already stated; ask everything else. Never cap the questions to save time, and never end while a load bearing dimension is unasked.
+ 
++**问句质量契约（每个 panel 都适用）**。问句要能被独立读懂：具体主语（不用"这个/这块/它"）、一句话说清正在定什么以及它卡住了什么后续工作、每个选项写清取舍与代价、推荐项标 `(recommended)` 并给出指向本项目具体约束的理由。禁止自造比喻与未定义行话 —— 术语首次出现必须当场定义。遮住上文只看问句仍应能作答；不能则重写。
++
++**推荐先过决策模型**（omp 里 `judge()`，见 `jev` skill；独立场景 `jev-ask.py`）：你要标 `(recommended)` 的技术/架构类选择，先把本项目的规模、约束、已定答案与各选项代价喂进 `state` 判一遍，全部选项都参与比较，再把结论（连同概率）写进面板理由。概率 < 0.6 就说明把握不大，不要硬推。jev 不可用时退回自身判断并注明"未经决策模型评估"。纯产品判断（目标用户、变现方式、MVP 边界）不适用 —— 那些只有用户知道。
++
+ Cover at least these dimension groups (a checklist of what to reach, not an order to recite; add product specific dimensions freely):
+ 
+ - **Product & business**: MVP boundary (smallest version delivering the core value; most important); primary audience (only if unclear); monetization (free / subscription / one time / usage based / ads / none yet; shapes billing features); success metric (signups, activation, revenue; informs analytics features); hard constraints (deadline, budget, team size, compliance scope; shape phasing and weights).
