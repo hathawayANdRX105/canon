@@ -148,8 +148,8 @@ fn main() -> ExitCode {
             let max_sla = engine::SlaLevel::parse(&sla);
             if !json {
                 eprintln!("══════════════════════════════════════════════════════");
-                eprintln!("⚠️  L3 质量关卡: 需开发 agent 自主判断 (非强制拦截, 仅参考)");
-                eprintln!("    L3 finding 带 score/confidence, agent 自行设阈值决定改不改");
+                eprintln!("⚠️  L3 质量关卡: 不阻断 push, 但 finding 必须逐条处置, 禁止静默忽略");
+                eprintln!("    WARN = 修复(默认) 或 书面驳回(证据写进 PR 审查记录); FAIL = 必须修复或拆 PR 才能继续");
                 eprintln!("    ocr 深度审查请自行调: ocr review --format json --audience agent");
                 eprintln!("✅  L1+L2 是硬门槛 (确定性检查): FAIL 必须修复才能 commit/push");
                 eprintln!("══════════════════════════════════════════════════════");
@@ -162,7 +162,7 @@ fn main() -> ExitCode {
             } else {
                 shared::print_findings(&findings);
                 eprintln!("══════════════════════════════════════════════════════");
-                eprintln!("ℹ️  L3 finding 仅供参考: 开发 agent 自主判断是否采纳");
+                eprintln!("ℹ️  L3 finding 不阻断, 但每条 WARN/FAIL 必须处置: 修复(默认) 或 书面驳回记入 PR 审查记录; 静默忽略 = 违规");
                 eprintln!("    L1+L2 FAIL = 硬门槛, 必须修复. 深度审查请自行调 ocr.");
                 eprintln!("══════════════════════════════════════════════════════");
             }

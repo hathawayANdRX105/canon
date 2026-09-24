@@ -79,7 +79,7 @@ stdout 必须是 finding JSON 数组：`{"id","severity","path","line","message"
 
 **可移植标准（强制遵守，见 `spec/docs/CHECKLIST_SPEC.md`「mode: grep 规则编写标准」）：**
 1. 扫仓库根 `"$ROOT"`，**禁止**写死 `crates/*/src` 布局（换仓库会静默扫 0 文件、假绿）。
-2. grep 用 `--exclude-dir=target --exclude-dir=.wt --exclude-dir=.git`（按目录名，worktree 安全）。
+2. 扫描集用 `git ls-files` 跟踪文件集（gitignore 感知）；`grep -r`/`find` 走文件系统会扫进 gitignored 参考目录 → 假 FAIL。
 3. find 用 `\( -name target -o -name .git -o -name .wt \) -prune -o ...`，**禁止** `-not -path "*/.wt/*"`（全路径 glob 在 `.wt/` worktree 下会把自己全排除）。
 4. 跨语言测试文件命名一并 `--exclude`（`*_test.go`/`*.spec.ts` 等，`--exclude-dir=tests` 挡不住同目录测试）。
 

@@ -27,7 +27,7 @@ from pathlib import Path
 
 try:
     import lizard
-except Exception:  # pragma: no cover - environment-dependent
+except (ImportError, Exception):  # noqa: BLE001 - lizard 缺失/损坏均视为无
     lizard = None
 
 RATCHET = "ratchet.tsv"
@@ -43,7 +43,7 @@ def is_code(rel: str) -> bool:
 
 
 def tracked_files(root: Path) -> list[str]:
-    out = subprocess.run(["git", "ls-files"], cwd=root, capture_output=True, text=True)
+    out = subprocess.run(["git", "ls-files"], cwd=root, capture_output=True, text=True, check=False)
     if out.returncode != 0:
         return []
     return [line for line in out.stdout.splitlines() if line.strip()]

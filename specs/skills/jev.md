@@ -32,6 +32,13 @@ Any list of ≥ ~20 homogeneous items with a bucket/yes-no/score question: commi
 4. **Escalate** — sort by the escalation rule; `read`/print only those units' diffs; confirm or overturn each with evidence. Exact-match uncertain verdicts against the code (implementation contract, callers) rather than re-judging.
 5. **Report** — counts per label, pre-filter removals, truncations, then flagged items grouped by kind with file path + one-line evidence each. Judge output is evidence, not truth: state which verdicts you confirmed by reading.
 </workflow>
+<disposition>
+jev 产出的 finding（gate review_chain 的 WARN/FAIL 或独立调用）不是"参考信息"：
+- **FAIL（p≥fail 阈值）= 阻塞**：修好（或拆 diff）才能继续；
+- **WARN = 必须处置，二选一**：修复（默认），或**书面驳回**——一句理由 + 证据，写进 PR 的审查记录节（`docs/reviews/` 对应工件或 PR 模板"审查记录"表）。
+- **INFO = 可批量进 backlog**，不逐条处置。
+- **静默跳过任何 WARN/FAIL = 违规**：收尾（closeout）核对处置记录，缺项打回。
+</disposition>
 
 <judge>
 `judge(state, questions) → JudgmentHandle`; returns immediately; `.wait()` → `{id: answer}`.
