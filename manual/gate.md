@@ -191,6 +191,9 @@ choice+fail_labels 两种形态）和 `example_checklist.yaml`（接线模板，
 2. 有 `TYPESAFE_API_KEY`：真判决，核对"该抓的"出 FAIL/WARN、"该幸存的"消失。
 3. `unset TYPESAFE_API_KEY` 再跑：确认降级输出 WARN-candidates-raw（召回没丢）。
 4. `gate check <名字> --sla l2` 过一遍引擎接线。
+5. 核对 `hooks`：每个命中文件都要付一次 jev 调用——挂 pre-push/merge，**不放 pre-commit**。
+6. `context_files` 逐个确认存在：缺失会被静默内联 `<missing>`（harness 会在 finding
+   里标 `context-missing`，但最好在 fixture 阶段就发现）。验证脚本用完删掉，不留仓根。
 
 ### 常见坑
 

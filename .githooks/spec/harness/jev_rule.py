@@ -93,14 +93,17 @@ def file_matches(rule: dict, rel: str) -> bool:
     return True if not inc else any(loose_match(rel, p) for p in inc)
 
 
-def build_state(rule: dict, rel: str, content: str, diff_text: str, root: str) -> str:
+def build_state(rule: dict, rel: str, content: str, diff_text: str, root: str) -> list:
+    """Returns (state_text, missing_context_files)."""
     parts = [f"RULE INTENT:\n{rule.get('intent', '')}"]
+    missing = []
     ctx = rule.get("state", {}).get("context_files", [])
     for cf in ctx:
         try:
             with open(os.path.join(root, cf)) as f:
                 parts.append(f"PROJECT SPEC CONTEXT ({cf}):\n{f.read()[:8_000]}")
         except OSError:
+            missing.append(cf)
             parts.append(f"PROJECT SPEC CONTEXT ({cf}): <missing>")
     st = rule.get("state", {})
     if st.get("diff"):
@@ -110,7 +113,7 @@ def build_state(rule: dict, rel: str, content: str, diff_text: str, root: str) -
         if len(body) > STATE_CAP:
             body = body[:STATE_CAP] + "\n…[truncated]"
         parts.append(f"FILE CONTENT ({rel}):\n{body}")
-    return "\n\n".join(parts)
+    return "\n\n".join(parts), missing
 
 
 def post(url: str, headers: dict, payload: dict, timeout: int) -> dict:
@@ -179,13 +182,14 @@ def main():
         print(json.dumps([]))
         return
 
-    judged, notes = {}, {}
+    judged, notes, missing_map = {}, {}, {}
     if key:
         with concurrent.futures.ThreadPoolExecutor(max_workers=POOL) as ex:
             futs = {}
             for i, (rid, rule, rel, content) in enumerate(jobs):
                 q = rule.get("questions", {})
-                st = build_state(rule, rel, content, "", root)
+                st, missing_ctx = build_state(rule, rel, content, "", root)
+                missing_map[i] = missing_ctx
                 futs[i] = ex.submit(judge_one, base, key, model, st, q)
             for i, fut in futs.items():
                 try:
@@ -199,6 +203,10 @@ def main():
     findings = []
     for i, (rid, rule, rel, _c) in enumerate(jobs):
         r = judged.get(i)
+        if missing_map.get(i):
+            findings.append({"id": rid.upper(), "severity": "WARN", "path": rel, "line": 0,
+                             "message": f"context file(s) missing: {', '.join(missing_map[i])}",
+                             "tier": "context-missing"})
         if r is None:
             findings.append({"id": rid.upper(), "severity": "WARN", "path": rel, "line": 0,
                              "message": f"{rule.get('intent', rid)[:100]}",
