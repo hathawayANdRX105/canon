@@ -1,8 +1,13 @@
-//! pre-commit hook — commit title validation (CM-01/02/03) + workspace + code checks.
+//! pre-commit + commit-msg hooks — commit title validation (CM-01/02/03)
+//! lives in the commit-msg phase; topics (workspace, code, checklist) run
+//! in pre-commit.
 //!
-//! Port of `.githooks/hooks/pre-commit`. Runs the topics listed in
-//! `dispatch.yaml` under `pre-commit` plus the commit-title checks that
-//! the Python hook does unconditionally.
+//! Port of `.githooks/hooks/pre-commit` and `.githooks/hooks/commit-msg`.
+//! The title checks MUST read the message file git passes to commit-msg
+//! (`$1`): at pre-commit time `.git/COMMIT_EDITMSG` still holds the
+//! PREVIOUS commit's message (git finalizes it only after pre-commit), so
+//! validating there checked the wrong commit whenever the last message was
+//! written with -m/`--no-verify`.
 //!
 //! CM-* checks are native Rust. Topic validators (workspace, code) are
 //! native Rust functions in `crate::tools::workspace` and `crate::tools::code`.
@@ -64,7 +69,7 @@ fn check_commit_title(title: &str) -> Vec<Finding> {
     findings
 }
 
-fn check_commit_pr_consistency() -> Vec<Finding> {
+fn check_commit_pr_consistency(commit_title: &str) -> Vec<Finding> {
     let repo = match git::derive_repo() {
         Some(r) => r,
         None => return vec![],
@@ -93,12 +98,8 @@ fn check_commit_pr_consistency() -> Vec<Finding> {
         None => return vec![],
     };
 
-    let commit_title = match git::read_commit_editmsg() {
-        Some(t) => t.lines().next().unwrap_or("").trim().to_string(),
-        None => return vec![],
-    };
     let commit_type = TYPE_RE
-        .captures(&commit_title)
+        .captures(commit_title)
         .map(|c| c.get(1).unwrap().as_str().to_string());
     if let Some(ct) = commit_type
         && ct != pr_type
@@ -120,7 +121,7 @@ fn check_commit_pr_consistency() -> Vec<Finding> {
 // Main entry
 // ---------------------------------------------------------------------------
 
-/// `gate pre-commit` — runs commit-title checks + dispatched topics.
+/// `gate pre-commit` — dispatched topics only (title checks live in commit-msg).
 pub fn run() -> i32 {
     let githooks_root =
         git::find_githooks_dir().unwrap_or_else(|| std::path::PathBuf::from(".githooks"));
@@ -129,15 +130,6 @@ pub fn run() -> i32 {
     let cfg = crate::shared::load_yaml(dispatch_path.to_str().unwrap_or("")).ok();
 
     let mut findings = Vec::new();
-
-    // CM-01 / CM-02
-    if let Some(title) = git::read_commit_editmsg() {
-        let title = title.lines().next().unwrap_or("").trim();
-        findings.extend(check_commit_title(title));
-    }
-
-    // CM-03
-    findings.extend(check_commit_pr_consistency());
 
     // Dispatched topics from YAML — no silent defaults: a missing dispatch
     // means the repo's hook setup is incomplete → loud gate.setup finding.
@@ -173,6 +165,29 @@ pub fn run() -> i32 {
 
     // dispatch.yaml `severity_overrides:` first (family-level), then the
     // global severity_overrides.yaml as the user's last word.
+    crate::shared::apply_severity_overrides(&mut findings, cfg.as_ref());
+    crate::shared::apply_global_overrides(&mut findings);
+    print_findings(&findings);
+    exit_code(&findings)
+}
+
+/// `gate commit-msg <file>` — CM-01/02/03 against the message git is about
+/// to commit. git passes the finalized message file as `$1`; pre-commit
+/// cannot see it (COMMIT_EDITMSG is stale at that point).
+pub fn run_commit_msg(path: &str) -> i32 {
+    let githooks_root =
+        git::find_githooks_dir().unwrap_or_else(|| std::path::PathBuf::from(".githooks"));
+    let dispatch_path = githooks_root.join("spec").join("dispatch.yaml");
+    let cfg = crate::shared::load_yaml(dispatch_path.to_str().unwrap_or("")).ok();
+
+    let title = match std::fs::read_to_string(path) {
+        Ok(msg) => msg.lines().next().unwrap_or("").trim().to_string(),
+        Err(_) => String::new(),
+    };
+
+    let mut findings = check_commit_title(&title);
+    findings.extend(check_commit_pr_consistency(&title));
+
     crate::shared::apply_severity_overrides(&mut findings, cfg.as_ref());
     crate::shared::apply_global_overrides(&mut findings);
     print_findings(&findings);

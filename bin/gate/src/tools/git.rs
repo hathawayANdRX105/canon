@@ -54,13 +54,6 @@ pub fn find_githooks_dir() -> Option<PathBuf> {
     }
 }
 
-/// Read `.git/COMMIT_EDITMSG` relative to the repo root.
-pub fn read_commit_editmsg() -> Option<String> {
-    let root = git_root()?;
-    let msg_file = root.join(".git").join("COMMIT_EDITMSG");
-    std::fs::read_to_string(&msg_file).ok()
-}
-
 /// Repo root from `git rev-parse --show-toplevel`.
 pub fn git_root() -> Option<PathBuf> {
     let out = Command::new("git")

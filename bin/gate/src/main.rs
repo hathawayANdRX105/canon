@@ -37,6 +37,9 @@ enum Commands {
     },
     /// Run pre-commit hooks
     PreCommit,
+    /// Validate the commit message git is about to commit (CM-01/02/03);
+    /// git passes the message file as $1
+    CommitMsg { path: PathBuf },
     /// Run pre-push hooks
     PrePush,
     /// Run merge checks: `gate merge <owner/repo> <pr_number> [--dry-run]`
@@ -129,6 +132,9 @@ fn main() -> ExitCode {
             }
         },
         Commands::PreCommit => ExitCode::from(tools::pre_commit::run() as u8),
+        Commands::CommitMsg { path } => {
+            ExitCode::from(tools::pre_commit::run_commit_msg(path.to_str().unwrap_or("")) as u8)
+        }
         Commands::PrePush => ExitCode::from(tools::pre_push::run() as u8),
         Commands::Merge(args) => {
             let mut arg_vec = vec![args.repo, args.pr.to_string()];
@@ -149,7 +155,9 @@ fn main() -> ExitCode {
             if !json {
                 eprintln!("══════════════════════════════════════════════════════");
                 eprintln!("⚠️  L3 质量关卡: 不阻断 push, 但 finding 必须逐条处置, 禁止静默忽略");
-                eprintln!("    WARN = 修复(默认) 或 书面驳回(证据写进 PR 审查记录); FAIL = 必须修复或拆 PR 才能继续");
+                eprintln!(
+                    "    WARN = 修复(默认) 或 书面驳回(证据写进 PR 审查记录); FAIL = 必须修复或拆 PR 才能继续"
+                );
                 eprintln!("    ocr 深度审查请自行调: ocr review --format json --audience agent");
                 eprintln!("✅  L1+L2 是硬门槛 (确定性检查): FAIL 必须修复才能 commit/push");
                 eprintln!("══════════════════════════════════════════════════════");
@@ -162,7 +170,9 @@ fn main() -> ExitCode {
             } else {
                 shared::print_findings(&findings);
                 eprintln!("══════════════════════════════════════════════════════");
-                eprintln!("ℹ️  L3 finding 不阻断, 但每条 WARN/FAIL 必须处置: 修复(默认) 或 书面驳回记入 PR 审查记录; 静默忽略 = 违规");
+                eprintln!(
+                    "ℹ️  L3 finding 不阻断, 但每条 WARN/FAIL 必须处置: 修复(默认) 或 书面驳回记入 PR 审查记录; 静默忽略 = 违规"
+                );
                 eprintln!("    L1+L2 FAIL = 硬门槛, 必须修复. 深度审查请自行调 ocr.");
                 eprintln!("══════════════════════════════════════════════════════");
             }

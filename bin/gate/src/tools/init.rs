@@ -22,6 +22,22 @@ echo \"gate binary not found (need: gate on PATH, or .githooks/gate)\" >&2
 exit 1
 ";
 
+const HOOK_COMMIT_MSG: &str = "\
+#!/usr/bin/env bash
+# gate-managed hook — delegates to the gate binary
+# 找二进制: 先 PATH 里的 gate (系统安装), 否则用仓库内 .githooks/gate
+REPO=$(git rev-parse --show-toplevel 2>/dev/null)
+MSG=\"$1\"
+if command -v gate >/dev/null 2>&1; then
+  exec gate commit-msg \"$MSG\"
+fi
+if [ -x \"$REPO/.githooks/gate\" ]; then
+  exec \"$REPO/.githooks/gate\" commit-msg \"$MSG\"
+fi
+echo \"gate binary not found (need: gate on PATH, or .githooks/gate)\" >&2
+exit 1
+";
+
 const HOOK_PRE_PUSH: &str = "\
 #!/usr/bin/env bash
 # gate-managed hook — delegates to the gate binary
@@ -254,10 +270,11 @@ fn write_hook_templates() -> anyhow::Result<()> {
     fs::create_dir_all(&hooks_dir)?;
 
     write_template(&hooks_dir.join("pre-commit"), HOOK_PRE_COMMIT)?;
+    write_template(&hooks_dir.join("commit-msg"), HOOK_COMMIT_MSG)?;
     write_template(&hooks_dir.join("pre-push"), HOOK_PRE_PUSH)?;
     write_template(&hooks_dir.join("merge"), HOOK_MERGE)?;
 
-    println!("  hook templates: pre-commit, pre-push, merge");
+    println!("  hook templates: pre-commit, commit-msg, pre-push, merge");
     Ok(())
 }
 
