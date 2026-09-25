@@ -110,6 +110,16 @@ WARN**（召回不丢、处置照常），绝不静默清零。score 返回值�
 - GT-04/06（Done when/epic sub-issues）保持硬拦：没有配置逃生门，想跳过就把活
   干完——勾掉 checkbox 或写明完成说明。
 
+## 自定义 spec（jev_rule：项目自配规范，零代码）
+
+项目自有规范放 `spec/custom/<name>.json`：每个规则集 = intent（进 jev state 的
+规则原文）+ paths 过滤 + state 范围（file/diff/context_files 指明信息范围）+
+三种原语的问题（noul/choice/score，criteria 一句话可观察证据）+ fail/warn 阈值。
+每个命中文件作为一个 jev state，判决低于 warn 丢弃（假阳性过滤器）；
+无 key/断网时候选原样 WARN（召回不丢）。接线 = 一份 `checklist_<name>.yaml`
+（mode: file → harness jev_rule.py --config ...）。**加规范 = 改 json，不改代码。**
+choice 原语用 `fail_labels` 标出哪些选项算违规。分发/收集用 `bin/gate-sync`。
+
 ## 怎么豁免
 
 **原则：要不要拦截全部在 spec yaml 里配，不改代码。**
