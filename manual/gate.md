@@ -112,13 +112,95 @@ WARN**（召回不丢、处置照常），绝不静默清零。score 返回值�
 
 ## 自定义 spec（jev_rule：项目自配规范，零代码）
 
-项目自有规范放 `spec/custom/<name>.json`：每个规则集 = intent（进 jev state 的
-规则原文）+ paths 过滤 + state 范围（file/diff/context_files 指明信息范围）+
-三种原语的问题（noul/choice/score，criteria 一句话可观察证据）+ fail/warn 阈值。
-每个命中文件作为一个 jev state，判决低于 warn 丢弃（假阳性过滤器）；
-无 key/断网时候选原样 WARN（召回不丢）。接线 = 一份 `checklist_<name>.yaml`
-（mode: file → harness jev_rule.py --config ...）。**加规范 = 改 json，不改代码。**
-choice 原语用 `fail_labels` 标出哪些选项算违规。分发/收集用 `bin/gate-sync`。
+适合**语义判断型**规范——"这段代码/文档好不好"正则抓不住、需要理解上下文的。
+语法/计数/存在性检查**不要**放这里：那是确定性 checklist（sh harness）的活，
+零方差且免费。判据：如果一个问题可以让 `grep`/`wc`/`test -f` 直接回答，就别问 jev。
+
+### 四件套
+
+| 件 | 位置 | 作用 |
+|---|---|---|
+| 规则本体 | `spec/custom/<name>.json` | intent + 信息范围 + 问题（三种原语）+ 阈值 |
+| 接线 | `spec/quality/checklist_<name>.yaml` | mode:file → jev_rule.py --config |
+| 验证 | fixture（含"该抓的"和"该幸存的"） | 真判决 + 无 key 降级两条路径 |
+| 分发 | `bin/gate-sync push <项目>` | 同步给成员仓（custom/ 受保护不覆盖） |
+
+完整可抄的现成示例：`.githooks/spec/custom/example_spec.json`（含 noul+score 与
+choice+fail_labels 两种形态）和 `example_checklist.yaml`（接线模板，文件名不以
+`checklist_` 开头所以引擎不加载它，复制改名后才生效）。
+
+### json 字段
+
+```jsonc
+{
+  "<rule-id>": {                       // finding id = 它的 uppercase
+    "intent": "规则原文，原样进 jev state —— 写成给新同事看的规范条文",
+    "paths_include": ["**/*.rs"],      // 细过滤（在引擎 yaml 粗过滤之内）
+    "paths_exclude": ["target/"],
+    "state": {
+      "file": true,                    // 变更文件全文进 state
+      "diff": false,                   // true 则附变更 hunks
+      "context_files": ["docs/spec.md"] // 仓内规范文档内联（每个截 8k 字符）
+    },
+    "questions": {
+      "<qid>": {
+        "type": "noul",                // noul(是非) | choice(分类) | score(程度)
+        "instructions": "问什么",
+        "criteria": {                  // noul: true/false；每条=一句可观察证据
+          "true": "什么情况算违规（引用文件里能看到的证据）",
+          "false": "什么情况合法（含豁免条件，如测试代码/带 issue 号）"
+        },
+        "fail_labels": ["placeholder"],// 仅 choice：哪些选项算违规
+        "fail": 0.85,                  // ≥fail → FAIL 硬拦
+        "warn": 0.6                    // ≥warn → WARN 须处置；两者之间以下→丢弃
+      }
+    }
+  }
+}
+```
+
+### 三种原语怎么选
+
+- **noul**："是不是违规"——过滤正则候选、判真伪。≈0.5 表示"是和非差不多可能"，
+  不是"中等程度"。
+- **choice**：分桶。标签必须穷尽（留兜底标签如 `not_docs`）；单元可能横跨时加
+  `mixed`。用 `fail_labels` 指出哪些桶算违规。
+- **score**：程度/严重度。每档必须描述具体处境（"启动路径可被打挂"），不是裸的
+  "低/中/高"。
+
+### criteria 写法（决定判决质量）
+
+- 每条 = 一句话**可观察证据**（读文件能核对的），不是判决词（`bad`/`suspicious`）。
+- 把豁免条件写进 `false`/合法档：测试代码、带 issue 号的 TODO、文档示例——否则
+  全被误报。
+- 一个问题一个判断。想同时知道"违不违规"和"多严重"，拆成 noul + score 两个问题
+  （同 state 一次调用并行出）。
+
+### 阈值与代价
+
+- `fail` 是拦截线、`warn` 是处置线；**判决低于 warn 直接丢弃——这个丢弃就是假阳性
+  过滤器**。起步用 0.85/0.6（noul）、2/1（score），按误报/漏报实据调。
+- 每个命中文件一次 jev 调用（100-500ms，并发 8）。**挂 pre-push/merge**，别放
+  pre-commit 热路径；`timeout: 300`。
+- 无 key/断网：候选原样 WARN（召回不丢、处置照常），绝不静默清零。
+- state 截 16k 字符（超出带截断标记）；单次最多 20 个文件。
+
+### 上线前验证（SOP）
+
+1. 造 fixture：至少一个"该抓的"和一个"该幸存的"（豁免形态各一）。
+2. 有 `TYPESAFE_API_KEY`：真判决，核对"该抓的"出 FAIL/WARN、"该幸存的"消失。
+3. `unset TYPESAFE_API_KEY` 再跑：确认降级输出 WARN-candidates-raw（召回没丢）。
+4. `gate check <名字> --sla l2` 过一遍引擎接线。
+
+### 常见坑
+
+- `intent` 写成口号（"代码要规范"）→ jev 没有判据可依，判决发散。写成条文。
+- criteria 里只有判决词没有证据描述 → 等于让 jev 猜。
+- choice 忘了 `fail_labels` → 所有桶都不算违规，永远静默。
+- 语法类检查（缺 alt 属性这种正则可抓的）塞进来 → 又慢又不确定；先正则后 jev。
+- paths 粗细两层都配了但互相矛盾 → 引擎粗过滤先进不来，json 细过滤永远空转。
+
+分发/收集用 `bin/gate-sync`（custom/ 目录受保护，push 不会覆盖项目自有规范）。
 
 ## 怎么豁免
 
