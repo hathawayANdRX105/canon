@@ -1,14 +1,92 @@
 ---
 name: jev
+license: MIT
 description: >
-  用 jev（System One 决策模型，omp 里经 eval kernel 的 judge() 调用）做批量校准判断：
-  commit/PR diff 归类、日志行筛分、测试名、搜索命中、review 发现、清单行。
-  rubric 先冻结、judge 批量分类、人只读被标记的项。
-  写代码调 jev/judge、设计批量判定、或 ≥20 个同类项要分桶/是非性/打分时用本 skill。
-  零依赖 HTTP 调用脚本 jev-ask.py 仍随附（脱离 omp kernel 的场景用）。
+  Classify, rank, verify, and decide with Jev — TypeSafe's System One decision
+  model — through the omp eval kernel's judge() / judge_batch(). Jev turns
+  natural language plus state into typed answers with probabilities that code
+  can act on. Use when the user says jevify, when ≥ ~20 homogeneous items need
+  bucketing / yes-no / scoring (diffs, log lines, test names, search hits,
+  review findings, checklist rows), or when a recommendation should be
+  calibrated by a decision model before it reaches the engineer. This skill
+  covers the rubric-first bulk discipline, the escalation rule, and the
+  disposition contract that turns verdicts into action. Outside the omp
+  kernel, the bundled zero-dependency jev-ask.py talks to the same API.
 ---
 
-User message contains **jevify** → bulk classification through the `eval` kernel's `judge()`. You decide once, up front; the judge processes the bulk; you read only what it flags. This overrides the tendency to split the data up and scan it yourself.
+# Classify and decide with Jev
+
+Jev answers narrow questions about a piece of **state** and returns typed
+answers with probabilities. Your code (or agent workflow) owns the data and the
+consequences; Jev supplies the judgment. In omp, the eval kernel exposes
+`judge(state, questions)`; outside omp, `jev-ask.py` (same directory) calls the
+HTTP API directly.
+
+The live TypeSafe docs are the source of truth for semantics. A local clone of
+the official skill lives at `canon/todo/ref/typesafe-skills`.
+
+## Read the docs for the task at hand
+
+| Task | Start here |
+| --- | --- |
+| Programming model | https://docs.typesafe.ai/concepts/system-one.md |
+| Question primitives | https://docs.typesafe.ai/primitives.md |
+| Uncertainty semantics | https://docs.typesafe.ai/confidence.md |
+| State design | https://docs.typesafe.ai/concepts/state.md |
+| HTTP API (for jev-ask.py) | https://docs.typesafe.ai/api.md |
+
+Mintlify serves any page as Markdown by appending `.md`.
+
+## Pick the primitive
+
+| Kernel type | Official name | Returns | Use for |
+| --- | --- | --- | --- |
+| `choice` | Choice | `{choice, probabilities, confidence}` | One of a defined set; the distribution compares competing options |
+| `bool` | Noul | `{bool: P(yes)}` | A yes/no condition. **≈0.5 means "yes and no are equally likely", not "medium degree"** — for degree, use `score` |
+| `score` | Score | `{score, probabilities, confidence}` | Position on an ordered spectrum; levels must describe concrete situations that stand on their own ("low/medium/high" alone is not a level) |
+
+One narrow, coherent judgment per question. Split independently useful
+dimensions into separate questions — they run in parallel and cannot see each
+other's answers. Ask independent questions over the same state **together in
+one call**; a second call is warranted only when a later question needs an
+earlier answer to fetch evidence or build new state.
+
+Design rules (from the official docs, verified against our usage):
+
+- **Give enough state.** Source text, identities, relationships, policies,
+  current facts. Prefer named JSON fields when the state has several parts.
+  A judge with thin state guesses; feed it like you would a new teammate.
+- **Labels must be exhaustive.** The model cannot choose an omitted value.
+  Include an explicit catch-all ("unrelated" / "other") and a "mixed" label
+  when a unit can straddle.
+- **Every criterion label is one sentence of observable evidence** — what a
+  reader would check — not a verdict word ("bad", "suspicious").
+- Put the judgment in `instructions`; define the answer space in `criteria`.
+  Question ids are for your code only; carry the full meaning in the question.
+
+## Bulk discipline: rubric first, judge the bulk, read only flags
+
+For any list of ≥ ~20 homogeneous items with a bucket / yes-no / score
+question. Under ~20 items, or when the question needs cross-item reasoning,
+just read them.
+
+1. **Decide** (one eval cell, before any data is loaded). Freeze as constants:
+   the **unit** (what one `state` is — prefer the smallest unit that still
+   carries enough context), the **questions** (independent, fixed ids),
+   a deterministic **pre-filter** (path prefix, extension, size — log how many
+   units it removes), an **escalation rule** (which verdicts and which
+   uncertainty bands you will read yourself, e.g. top probability < 0.7), and
+   a **cap** (max state size; truncate with a visible marker and count).
+2. **Partition** — load every unit, apply the pre-filter, key by stable id.
+3. **Judge** — one `judge()` per unit with all questions in that call, all
+   handles fired in one cell. In omp: `judge_batch(states, questions,
+   concurrency=N)` for large runs; `wait(handles, raise_errors=False)` keeps
+   failures in their slot instead of raising.
+4. **Escalate** — read only the units your escalation rule flags. Confirm or
+   overturn each against the code (implementation contract, callers) rather
+   than re-judging.
+5. **Report** — counts per label, pre-filter removals, truncations, then
+   flagged items with path + one-line evidence each.
 
 <critical>
 - NEVER read bulk items before the rubric is frozen. Rubric first, data second.
@@ -16,56 +94,36 @@ User message contains **jevify** → bulk classification through the `eval` kern
 - Rubric changes mid-run invalidate every prior verdict: re-judge everything.
 </critical>
 
-<when>
-Any list of ≥ ~20 homogeneous items with a bucket/yes-no/score question: commit or PR file diffs ("what here is unrelated?"), log lines, test names, search hits, issues, review findings, catalog rows. Under ~20 items or a question that needs cross-item reasoning: read directly.
-</when>
+## Interpret the answers (official semantics — do not improvise)
 
-<workflow>
-1. **Decide** — one `eval` cell, before any data is loaded, define as constants:
-   - **Unit**: what one `state` is (file diff, hunk, log line, row). Prefer the smallest unit that still carries enough context to answer.
-   - **Questions**: independent `judge` questions with fixed ids. One `choice` for the primary bucket; optional `bool`/`score` for secondary facts. Every criterion label is one sentence of observable evidence; labels exhaustive + mutually exclusive; include an explicit catch-all ("unrelated"/"other") and a "mixed" label when a unit can straddle.
-   - **Pre-filter**: deterministic exclusions (path prefix, extension, size, pure deletions) that skip judging. Log how many units it removed.
-   - **Escalation rule**: which verdicts and which uncertainty (e.g. top probability `< 0.7`, `bool` in `0.3..0.7`, error) you will read yourself.
-   - **Cap**: max state size; truncate with a visible marker and count truncations.
-2. **Partition** — load every unit in the kernel (`git show`, `glob`, `read`, parsers). Apply the pre-filter. Store units in a dict keyed by a stable id.
-3. **Judge** — one `judge(state, questions)` per unit, all questions in that call, all handles fired in one cell. `state` carries the id, the frozen framing (commit subject, question context), and the content. Then `wait(handles, raise_errors=False)`; tabulate `{id: choice, top_p, extra facts}`; keep errors as their own row.
-4. **Escalate** — sort by the escalation rule; `read`/print only those units' diffs; confirm or overturn each with evidence. Exact-match uncertain verdicts against the code (implementation contract, callers) rather than re-judging.
-5. **Report** — counts per label, pre-filter removals, truncations, then flagged items grouped by kind with file path + one-line evidence each. Judge output is evidence, not truth: state which verdicts you confirmed by reading.
-</workflow>
-<disposition>
-jev 产出的 finding（gate review_chain 的 WARN/FAIL 或独立调用）不是"参考信息"：
-- **FAIL（p≥fail 阈值）= 阻塞**：修好（或拆 diff）才能继续；
-- **WARN = 必须处置，二选一**：修复（默认），或**书面驳回**——一句理由 + 证据，写进 PR 的审查记录节（`docs/reviews/` 对应工件或 PR 模板"审查记录"表）。
-- **INFO = 可批量进 backlog**，不逐条处置。
-- **静默跳过任何 WARN/FAIL = 违规**：收尾（closeout）核对处置记录，缺项打回。
-</disposition>
+- `confidence` is **distribution concentration**, not overall correctness and
+  not permission to act. Several acceptable alternatives can spread
+  probability; low confidence need not invalidate a harmless preference
+  choice. Set thresholds from the consequence of being wrong, evaluated on
+  your data — not from the number alone.
+- A Noul near 0.5 means similar probability for yes and no, not medium
+  intensity.
+- **Typed output guarantees the interface, not the truth.** Jev is trained for
+  calibrated decisions, but validate performance in your target domain before
+  thresholds drive automation. Cookbook thresholds are examples, not rules.
+- Keep policy explicit and raw judgments reusable: weighted scores suit
+  compensating preferences; an "any serious violation" rule needs separate
+  conditions per violation.
 
-<judge>
-`judge(state, questions) → JudgmentHandle`; returns immediately; `.wait()` → `{id: answer}`.
-- `state`: `str` | JSON object | JSON array. Every question sees the same state.
-- `{type: "choice", instructions, criteria: {label: rubric, …}}` → `{choice, probabilities, confidence}`.
-- `{type: "bool", instructions, criteria?: {true, false}}` → `{bool: P(yes)}`.
-- `{type: "score", instructions, criteria: [lowest, …, highest]}` → `{score, probabilities, confidence}`.
-- `wait(handles, raise_errors=False)` (JS: `wait(handles, { raiseErrors: false })`) keeps a failure in its slot.
+## Turn verdicts into action (disposition contract)
 
-**官方语义（typesafe-ai docs 为准，勿凭直觉解读返回值）**：
+In this workflow, jev findings feed gates and reviews. A verdict is evidence,
+not a final ruling — escalate, then act:
 
-- kernel 的 `bool` 即官方 **Noul** 原语（`criteria: {true, false}` 一一对应）。
-  **Noul≈0.5 表示"是/否概率相近"，不是"中等程度"** —— 想要程度强弱用 `score`，别用 bool。
-- `confidence` 是**分布集中度**，不是"整体正确性"更不是"允许行动"。
-  多个合理选项也会摊低 confidence；低 confidence 不必然推翻一个无害的选择 ——
-  看后果定阈值，不看数字定信心。
-- **类型化输出只保证接口，不保证真值**。Jev 为校准训练，但性能必须在你的目标域验证
-  （拿有标签的样本测过再用阈值做自动化）；cookbook 阈值是示例，不是普适规则。
-- 候选/标签必须**穷尽**：模型选不了没给的选项。可能"都不属于"就加显式 catch-all 标签。
-- `score` 的每个档位必须**描述具体情境、能独立成立**（读档位名即知什么情况算这档），
-  不能写"低/中/高"这种需要上下文才能解释的档位。
+- **FAIL (p ≥ fail threshold): blocks.** Fix, or split the change; it cannot ship as-is.
+- **WARN: must be dispositioned.** Fix (default) or **reject in writing** —
+  one-line reason + evidence, recorded in the PR review record (`.workflow/reviews/`
+  artifact or the PR template's review section). Silence is a violation.
+- **INFO: may be batched into a backlog.**
+- Closing a task with undispositioned WARN/FAIL findings is a violation;
+  closeout checks the disposition record.
 
-Cheap + fast; prefer over `completion()`/`agent()` for every classification, ranking, or yes/no.
-</judge>
-
-<example>
-**Python:**
+## Example: bulk diff classification
 
 ```python
 SHA = "abc123"
@@ -82,9 +140,7 @@ QUESTIONS = {
 }
 CAP = 24_000
 def prefilter(path): return path.startswith("packages/tui/") or path.endswith(".tsx")
-```
 
-```python
 import subprocess
 def git(*args): return subprocess.run(["git", *args], capture_output=True, text=True, check=True).stdout
 files = [f for f in git("show", "--name-only", "--format=", SHA).split() if not prefilter(f)]
@@ -95,25 +151,48 @@ rows = [(f, r) for f, r in zip(handles, results)]
 flag = [f for f, r in rows if isinstance(r, Exception) or r["verdict"]["choice"] != "belongs" or r["verdict"]["probabilities"]["belongs"] < 0.7 or r["logic"]["bool"] >= 0.5]
 ```
 
-**JavaScript:**
+Then print only `diffs[f]` for `f in flag`, confirm each against the code, and report.
 
-```js
-const handles = Object.fromEntries(Object.entries(diffs).map(([f, d]) => [f, judge({ file: f, subject: SUBJECT, diff: d.slice(0, CAP) }, QUESTIONS)]));
-const results = await wait(Object.values(handles), { raiseErrors: false });
+## Example: calibrate a recommendation before asking the engineer
+
+When a workflow (e.g. `/wf-architect`) must mark one option `(recommended)`,
+run the judgment first and put the number in the panel:
+
+```python
+STATE = {
+    "constraints": "single maintainer; nightly batch; existing Rust/tokio stack",
+    "prior_decisions": ["storage: SQLite (WAL)", "auth: platform-managed"],
+    "options": {
+        "cron_in_process": "tokio cron inside the daemon; no new process; dies with daemon",
+        "systemd_timer": "systemd units; survives daemon restarts; needs install step",
+    },
+}
+Q = {"type": "choice",
+     "instructions": "Given the constraints and prior decisions, which scheduling approach should we recommend?",
+     "criteria": {
+         "cron_in_process": "Simplicity outweighs restart-survival for this deployment shape.",
+         "systemd_timer": "Restart-survival and ops visibility outweigh the install cost.",
+     }}
+r = judge(STATE, Q).wait()
+# Panel: "(recommended) systemd_timer — decision model p=0.72; runner-up cron_in_process p=0.21"
+# p < 0.6 → say so in the panel instead of pushing a pick.
 ```
 
-Then print only `diffs[f]` for `f in flag`, confirm each against the code, and report.
-</example>
+Pure product judgments only the engineer knows (target users, monetization)
+are not judgeable — ask those directly.
 
-<anti-patterns>
+## Outside the kernel: jev-ask.py
+
+`jev-ask.py` (this directory) is a zero-dependency HTTP client for the same
+API — use it in scripts, hooks, or non-omp environments. Keep API credentials
+server-side in web apps; never commit keys.
+
+## Anti-patterns
+
 - Reading the first N items "to get a feel" before writing the rubric.
 - One question per `judge()` call when several independent questions share a state.
 - Fanning items to `task` subagents to "review" them: they read; the judge classifies.
 - Treating a judge verdict as final without reading the flagged unit.
 - Dropping errored or truncated items silently instead of counting and escalating them.
 - Vague labels ("bad", "suspicious") instead of one-sentence observable evidence.
-</anti-patterns>
-
-<critical>
-Rubric frozen before data. Judge classifies the bulk. You read only what it flags. Report counts, then evidence.
-</critical>
+- Reading a low `confidence` as "medium intensity" or as a ban on acting.
