@@ -19,11 +19,12 @@ description: >
 Jev answers narrow questions about a piece of **state** and returns typed
 answers with probabilities. Your code (or agent workflow) owns the data and the
 consequences; Jev supplies the judgment. In omp, the eval kernel exposes
-`judge(state, questions)`; outside omp, `jev-ask.py` (same directory) calls the
-HTTP API directly.
+`await judge(state, questions)` (async — it returns the answers dict) and
+`judge_batch(states, questions)` for runs over many states; outside omp,
+`jev-ask.py` (same directory) calls the HTTP API directly.
 
 The live TypeSafe docs are the source of truth for semantics. A local clone of
-the official skill lives at `canon/todo/ref/typesafe-skills`.
+the official skill lives at `~/projects/canon/todo/ref/typesafe-skills`.
 
 ## Read the docs for the task at hand
 
@@ -51,6 +52,16 @@ other's answers. Ask independent questions over the same state **together in
 one call**; a second call is warranted only when a later question needs an
 earlier answer to fetch evidence or build new state.
 
+Kernel calling conventions (omp Python — verified against the live kernel):
+
+- `judge()` / `judge_batch()` are **awaited**: `r = await judge(state, qs)`
+  returns the answers dict directly. There is no `.wait()` on a judge call.
+- **Never loop `judge()` over states** — two or more states means
+  `judge_batch(states, questions, concurrency=N)`: `b.drain_iter(timeout)` /
+  `b.results()` / `b.failed()` / `b.status()`.
+- `wait(handles, raise_errors=False)` is for **agent/completion handles only**;
+  passing judge coroutines to it is an error.
+
 Design rules (from the official docs, verified against our usage):
 
 - **Give enough state.** Source text, identities, relationships, policies,
@@ -76,15 +87,21 @@ just read them.
    a deterministic **pre-filter** (path prefix, extension, size — log how many
    units it removes), an **escalation rule** (which verdicts and which
    uncertainty bands you will read yourself, e.g. top probability < 0.7), and
-   a **cap** (max state size; truncate with a visible marker and count).
+   a **cap** (max state size; truncate with a visible marker and count). The
+   pre-filter can empty the candidate set entirely — guard that case (skip and
+   report 0 units); `judge_batch` rejects empty items.
 2. **Partition** — load every unit, apply the pre-filter, key by stable id.
-3. **Judge** — one `judge()` per unit with all questions in that call, all
-   handles fired in one cell. In omp: `judge_batch(states, questions,
-   concurrency=N)` for large runs; `wait(handles, raise_errors=False)` keeps
-   failures in their slot instead of raising.
+3. **Judge** — all questions in one call per unit, every unit fired in the
+   same cell. In omp: `judge_batch(states, questions, concurrency=N)` for the
+   whole run (`wait(handles, raise_errors=False)` keeps failures in their slot
+   instead of raising — for agent/completion handles; judge calls are awaited,
+   never passed to `wait()`).
 4. **Escalate** — read only the units your escalation rule flags. Confirm or
    overturn each against the code (implementation contract, callers) rather
-   than re-judging.
+   than re-judging. `choice`/`bool`/`score` return **no reasoning** — for bulk
+   classification the flagged unit's raw content is the evidence, but when
+   reviewing prose, pair the verdict with a `completion()` call asking for the
+   quoted error; otherwise you are guessing at why it was flagged.
 5. **Report** — counts per label, pre-filter removals, truncations, then
    flagged items with path + one-line evidence each.
 
@@ -143,12 +160,23 @@ def prefilter(path): return path.startswith("packages/tui/") or path.endswith(".
 
 import subprocess
 def git(*args): return subprocess.run(["git", *args], capture_output=True, text=True, check=True).stdout
+def diff_for(f):
+    d = git("show", "--format=", SHA, "--", f)
+    return d[:CAP] + ("\n…[truncated]" if len(d) > CAP else "")
 files = [f for f in git("show", "--name-only", "--format=", SHA).split() if not prefilter(f)]
-diffs = {f: git("show", "--format=", SHA, "--", f) for f in files}
-handles = {f: judge({"file": f, "subject": SUBJECT, "diff": d[:CAP] + ("\n…[truncated]" if len(d) > CAP else "")}, QUESTIONS) for f, d in diffs.items()}
-results = wait(list(handles.values()), raise_errors=False)
-rows = [(f, r) for f, r in zip(handles, results)]
-flag = [f for f, r in rows if isinstance(r, Exception) or r["verdict"]["choice"] != "belongs" or r["verdict"]["probabilities"]["belongs"] < 0.7 or r["logic"]["bool"] >= 0.5]
+states = {f: {"file": f, "subject": SUBJECT, "diff": diff_for(f)}
+          for f in files if diff_for(f).strip()}
+if not states:
+    ...  # pre-filter emptied the candidate set: skip (judge_batch rejects empty items)
+b = judge_batch(states, QUESTIONS, concurrency=8)
+async for k, item in b.drain_iter(timeout=300):
+    pass                       # settled items auto-collect; loop until done
+res = b.results()              # {file: {verdict: {...}, logic: {...}}}
+flag = [f for f, a in res.items()
+        if a["verdict"]["choice"] != "belongs"
+        or a["verdict"]["probabilities"]["belongs"] < 0.7
+        or a["logic"]["bool"] >= 0.5]
+flag += [f for f, err in b.failed().items()]   # errors are their own row, never dropped
 ```
 
 Then print only `diffs[f]` for `f in flag`, confirm each against the code, and report.
@@ -173,7 +201,7 @@ Q = {"type": "choice",
          "cron_in_process": "Simplicity outweighs restart-survival for this deployment shape.",
          "systemd_timer": "Restart-survival and ops visibility outweigh the install cost.",
      }}
-r = judge(STATE, Q).wait()
+r = await judge(STATE, Q)
 # Panel: "(recommended) systemd_timer — decision model p=0.72; runner-up cron_in_process p=0.21"
 # p < 0.6 → say so in the panel instead of pushing a pick.
 ```
