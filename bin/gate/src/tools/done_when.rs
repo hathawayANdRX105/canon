@@ -130,13 +130,14 @@ fn linked_pr_diff(repo: &str, num: &str) -> String {
     }) else {
         return String::new();
     };
-    let (rc2, diff, _) = run_gh(&[
-        "api".to_string(),
-        format!("repos/{repo}/pulls/{pr}"),
-        "-H".to_string(),
-        "Accept: application/vnd.github.diff".to_string(),
-    ],
-    None,
+    let (rc2, diff, _) = run_gh(
+        &[
+            "api".to_string(),
+            format!("repos/{repo}/pulls/{pr}"),
+            "-H".to_string(),
+            "Accept: application/vnd.github.diff".to_string(),
+        ],
+        None,
     );
     if rc2 == 0 { diff } else { String::new() }
 }
@@ -259,7 +260,6 @@ pub fn run_done_when_judge(
     findings
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -275,14 +275,17 @@ mod tests {
         assert!(!dwj_enabled(None));
         assert!(!dwj_enabled(cfg("other: 1\n").as_ref()));
         // Missing done_when_judge map or flag → off.
-        assert!(!dwj_enabled(cfg("done_when_judge:\n  command: python3\n").as_ref()));
+        assert!(!dwj_enabled(
+            cfg("done_when_judge:\n  command: python3\n").as_ref()
+        ));
         let on = cfg("done_when_judge:\n  enabled: true\n  command: python3\n");
         assert!(dwj_enabled(on.as_ref()));
     }
 
     #[test]
     fn done_when_items_extract_ticked_and_unticked() {
-        let body = "## Done when\n\n- [x] 接口编译通过\n- [x] 测试全绿\n\n## 备注\n\n- [ ] 不扫这里\n";
+        let body =
+            "## Done when\n\n- [x] 接口编译通过\n- [x] 测试全绿\n\n## 备注\n\n- [ ] 不扫这里\n";
         let items = done_when_item_texts(body, cfg(DW_CFG).as_ref());
         assert_eq!(items, vec!["接口编译通过", "测试全绿"]);
     }
