@@ -76,8 +76,9 @@ def find_over(root: Path, ceiling: int, files: list[str]):
             continue
         try:
             result = lizard.analyze_file(str(path))
-        except Exception:
-            continue  # unparseable / unsupported: not a gate finding
+        except Exception as e:  # noqa: BLE001 - lizard 对不支持的语法抛不透明异常，跳过不判罚
+            print(f"ccn_gate: skip unparseable {rel}: {e}", file=sys.stderr)
+            continue
         for fn in result.function_list:
             if fn.cyclomatic_complexity > ceiling:
                 yield rel, fn
@@ -120,7 +121,8 @@ def cmd_judge(args: argparse.Namespace) -> None:
             continue
         try:
             result = lizard.analyze_file(str(path))
-        except Exception:
+        except Exception as e:  # noqa: BLE001 - 同上：解析不了的老文件不进 ratchet 记账
+            print(f"ccn_gate: skip unparseable {rel}: {e}", file=sys.stderr)
             continue
         current_keys: set[str] = set()
         for fn in result.function_list:

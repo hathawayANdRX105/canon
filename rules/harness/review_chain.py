@@ -79,7 +79,7 @@ def run_jev(diff: str, questions: dict, d_fail: float, d_warn: float):
             {"state": diff, "model": model, "questions": questions},
             TIMEOUT["jev"],
         )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - 网关错误统一降级，由上层 tier 链兜底
         return None, f"jev request failed: {e}"
     out = []
     for qid, ans in (payload.get("answers") or {}).items():
@@ -119,12 +119,12 @@ def run_small_llm(diff: str, questions: dict, d_fail: float, d_warn: float):
             TIMEOUT["llm"],
         )
         content = payload["choices"][0]["message"]["content"]
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - 同上
         return None, f"small-llm request failed: {e}"
     try:
         start, end = content.index("["), content.rindex("]")
         verdicts = {v["id"]: float(v["p"]) for v in json.loads(content[start : end + 1])}
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - 模型输出不可信，解析失败即降级
         return None, f"small-llm response unparseable: {e}"
     out = []
     for qid, q in questions.items():
@@ -184,7 +184,7 @@ def main() -> int:
         state = json.loads(raw)
         if not isinstance(state, dict):
             state = raw.strip()
-    except Exception:
+    except Exception:  # noqa: BLE001 - stdin 不是合法 JSON 时原样当 diff 用，属正常降级
         state = raw.strip()
     questions = load_questions(qpath, d_fail, d_warn, state)
     if isinstance(state, dict):
