@@ -138,7 +138,7 @@ pub fn install(rules_dir: Option<&Path>) -> anyhow::Result<()> {
 
     // Seed the default rules pack (never overwrites — user edits survive
     // re-init). canon/specs is the source of truth; found by walking up
-    // from the binary location (target/debug → gate → canon) or cwd.
+    // from the binary location (target/debug → canon) or cwd.
     let pack = match rules_dir {
         Some(dir) => Some(dir.to_path_buf()),
         None => find_rules_pack(),
@@ -174,7 +174,7 @@ fn is_pack(dir: &Path) -> bool {
 }
 
 /// Look for the rules pack near the binary (canon checkout: target/debug →
-/// gate → canon) then near cwd. New layout: `specs/`; legacy checkouts:
+/// canon) then near cwd. New layout: `specs/`; legacy checkouts:
 /// `rules/` or `rules/gate/`.
 fn find_rules_pack() -> Option<PathBuf> {
     let mut starts = Vec::new();

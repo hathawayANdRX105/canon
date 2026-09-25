@@ -282,7 +282,7 @@ timeout: 30
 ## 迁移路径
 
 1. 加 `crates/spec/src/tools/checklist.rs`（~120 行）
-2. `bin/gate/src/main.rs` 在 PreCommit/PrePush/Merge 路径里调 `run_all`
+2. `src/main.rs` 在 PreCommit/PrePush/Merge 路径里调 `run_all`
 3. `.githooks/spec/dispatch.yaml` 加 `checklist` topic
 4. `.githooks/spec/SPEC_OVERVIEW.md` 加「主题九：Checklist（CK-01）」章节
 5. demo yaml + mock harness 脚本（不需真调 LLM；echo mock JSON 即可）

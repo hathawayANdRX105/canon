@@ -643,9 +643,6 @@ mod spec_smoke {
 
     fn load(name: &str) -> YamlValue {
         let p = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .ancestors()
-            .nth(1)
-            .unwrap()
             .join("specs")
             .join("github")
             .join(name);

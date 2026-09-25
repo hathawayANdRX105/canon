@@ -231,12 +231,9 @@ mod tests {
 
     #[test]
     fn loads_real_spec_and_counts_required_headings() {
-        // ponytail: crate lives at <repo>/gate, so the repo root is one
-        // ancestor up; the default rules pack ships at canon/specs.
+        // ponytail: the crate root IS the canon repo root, so the default
+        // rules pack is just a subdir. No ancestor walk needed.
         let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .ancestors()
-            .nth(1)
-            .expect("gate crate must sit at <repo>/gate")
             .join("specs")
             .join("github")
             .join("github_issues.yaml");

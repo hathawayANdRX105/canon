@@ -7,22 +7,22 @@
 default:
     @just --list
 
-# ── gate（Rust crate 在仓根 gate/）──────────────────────────────
+# ── gate（canon 仓本身即 Rust crate）────────────────────────────
 
 # 编译 release 二进制并落到 .githooks/gate（gate-sync 分发的是这个产物）
 gate-build:
-    cd gate && cargo build --release
-    cp gate/target/release/gate .githooks/gate
+    cargo build --release
+    cp target/release/gate .githooks/gate
     chmod 755 .githooks/gate
     @echo "✓ built + installed to .githooks/gate"
 
 # gate crate 全量测试
 gate-test:
-    cd gate && cargo test
+    cargo test
 
 # 格式检查（门禁会拦 fmt 违规，提交前先跑）
 gate-fmt:
-    cd gate && cargo fmt --check
+    cargo fmt --check
 
 # gate 同步到成员仓（custom/ 受保护不覆盖）
 gate-push project='':
