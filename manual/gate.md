@@ -22,9 +22,9 @@ gate 是仓库自带的质量门禁：读 `.githooks/spec/*.yaml` 规则 → 调
 
 | 规则 | SLA | 自动触发 | 严重度 | 查什么 |
 |---|---|---|---|---|
-| `hardcoded_secret` | l1 | pre-commit/push/merge | WARN | 硬编码密钥/密码/Token（PCRE，5 语言） |
+| `hardcoded_secret` | l2 | pre-commit/push/merge | FAIL | 硬编码密钥/密码/Token：PCRE 出候选，jev 判「真凭证 vs 占位符/测试夹具」——占位符 FP 被滤；无 key 时候选降 WARN |
 | `stale_api` | l1 | pre-commit/push/merge | WARN | 废弃 Rust API（`uninitialized`/`try!`/`ONCE_INIT`） |
-| `slop_comment` | l1 | pre-commit/push/merge | WARN | AI 风格注释（步骤/叙述/拖延语/含糊语，如 `Step 1:`/`该函数`/`for now`/`临时`/`hopefully`/`估计`） |
+| `slop_comment` | l2 | pre-commit/push/merge | FAIL | AI 风格注释：正则出候选，jev 判「是否真 slop」+ score 严重度（0 化妆品/1 叙述/2 误导）——实质 why 注释与转述变体分别幸存/被抓 |
 | `ccn` | l1 | pre-commit/merge | **FAIL** | 函数 ccn 超天花板(默认 6)：新违规/恶化硬拦；存量记账 `ratchet.tsv` 容忍且只许降（`seed` 一次后记账进仓）；lizard 缺失静默跳过 |
 | `antislop` | l1 | pre-commit/push/merge | WARN（harness 映射 HIGH→FAIL） | AI slop 五类（Placeholder/Deferral/Hedging/Stub/命名，`antislop` 二进制；缺失静默跳过） |
 | `rust_no_process_cmd` | l1 | pre-commit/push/merge | **FAIL** | HTTP 走 reqwest，禁 subprocess 拉 curl/wget |
@@ -32,7 +32,7 @@ gate 是仓库自带的质量门禁：读 `.githooks/spec/*.yaml` 规则 → 调
 | `rust_no_dead_code_allow` | l1 | pre-commit/push/merge | WARN | 合并前清理 `#[allow(dead_code)]`（同行带 `//` 理由放行） |
 | `rust_no_empty_module` | l1 | pre-commit/push/merge | WARN | 微型空文件（≤2 行且无实现） |
 | `rust_no_cfg_test_in_tests_dir` | l1 | pre-commit/push/merge | WARN | `tests/` 里不需要 `#[cfg(test)]` |
-| `rust_test_no_assert` | l1 | pre-commit/push/merge | WARN | 测试函数必须含断言 |
+| `rust_test_no_assert` | l2 | pre-commit/push/merge | FAIL | 测试必须验证行为：无字面 assert 的 `#[test]` 出候选，jev 判「是否以其他方式验证」（mock expectations/should_panic）——spy 风格幸存，空跑被拦 |
 | `rust_todo_needs_issue` | l1 | pre-commit/push/merge | WARN | TODO/FIXME 必须挂 issue 号（`// TODO(#N)` 或 `todo!("TODO(#N)")`） |
 | `dep_hygiene` | l1 | merge | WARN | `cargo-machete` 未使用依赖（工具缺失则 WARN 跳过） |
 | `clippy` | l1 | merge | **FAIL/WARN** | rustc 编译错误 + `unused_*`/`dead_code`→FAIL；`collapsible_if` 等风格→WARN |
@@ -82,6 +82,20 @@ stdout 必须是 finding JSON 数组：`{"id","severity","path","line","message"
 2. 扫描集用 `git ls-files` 跟踪文件集（gitignore 感知）；`grep -r`/`find` 走文件系统会扫进 gitignored 参考目录 → 假 FAIL。
 3. find 用 `\( -name target -o -name .git -o -name .wt \) -prune -o ...`，**禁止** `-not -path "*/.wt/*"`（全路径 glob 在 `.wt/` worktree 下会把自己全排除）。
 4. 跨语言测试文件命名一并 `--exclude`（`*_test.go`/`*.spec.ts` 等，`--exclude-dir=tests` 挡不住同目录测试）。
+
+## jev cascade：正则管召回，jev 管判决
+
+l1 形式检查的两类角色拆开：**确定性正则只做候选生成**（毫秒级、高召回、零成本），
+**语义判决交给 jev**（`verify_chain.py`，l2）。每个候选一条 noul（"真违规？"）+
+score（"多严重"），阈值在 `harness/jev_questions_verify.json` 按后果标定；
+p < warn 直接丢弃——这个丢弃就是假阳性过滤器。
+
+降级链：有 key 走 Jev；无 key 自动落 small model；kernel 外/全失败时候选**原样降
+WARN**（召回不丢、处置照常），绝不静默清零。score 返回值是 0 起始连续值
+（3 档题实测 1.43），不是 0-9。
+
+已转换：`hardcoded_secret` / `slop_comment` / `rust_test_no_assert`（实测三路径：
+占位符 FP 消失、实质 why 注释幸存、spy 风格幸存、空跑 FAIL）。
 
 ## 怎么豁免
 
