@@ -23,6 +23,15 @@ CANON = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 CANON_HOOKS = os.path.join(CANON, ".githooks")
 CANON_SPEC = os.path.join(CANON_HOOKS, "spec")
 
+# 文档映射：canon 正本（manual/）-> 成员仓 .githooks/ 部署名。
+# GATE_HANDBOOK 是必布项；其余三个仅在成员仓已存在时原位更新（不复活已清理的文件）。
+MAPPED_DOCS = [
+    ("manual/gate.md", "GATE_HANDBOOK.md", True),
+    ("manual/github.md", "GITHUB_ISSUE_PR.md", False),
+    ("manual/pr-dev-workflow.md", "PR_DEV_WORKFLOW.md", False),
+    ("manual/worktree.md", "WORKFLOW.md", False),
+]
+
 # canon-owned 相对路径（相对 .githooks/）。目录 = 整目录分发；文件 = 单文件。
 OWNED_DIRS = ["hooks", "spec/github", "spec/workspace", "spec/cleanup",
               "spec/code", "spec/quality", "spec/harness", "spec/docs"]
@@ -50,6 +59,17 @@ def walk_files(base: str):
 
 def same(a: str, b: str) -> bool:
     return os.path.isfile(a) and os.path.isfile(b) and filecmp.cmp(a, b, shallow=False)
+
+
+def mapped_deployments(p_hooks: str):
+    """[(source_abs, target_abs)] 按策略过滤。"""
+    out = []
+    for src_rel, tgt_rel, always in MAPPED_DOCS:
+        src = os.path.join(CANON, src_rel)
+        tgt = os.path.join(p_hooks, tgt_rel)
+        if os.path.isfile(src) and (always or os.path.exists(tgt)):
+            out.append((src, tgt))
+    return out
 
 
 def owned_rels():
@@ -87,6 +107,13 @@ def status(project: str):
             only_canon.append(rel)
         elif not same(os.path.join(CANON_HOOKS, rel), tgt):
             drift.append(rel)
+
+    for src, tgt in mapped_deployments(p_hooks):
+        rel = os.path.basename(tgt)
+        if not os.path.exists(tgt):
+            only_canon.append(f".githooks/{rel} <- {os.path.relpath(src, CANON)}")
+        elif not same(src, tgt):
+            drift.append(f".githooks/{rel} <- {os.path.relpath(src, CANON)}")
 
     # 旧布局重复层：非 quality/ 的 checklist 与 quality/ 同名
     yamls = checklist_yamls(os.path.join(p_hooks, "spec"))
@@ -131,6 +158,11 @@ def push(project: str):
         shutil.copy2(src, tgt)
         if rel == "gate":
             os.chmod(tgt, 0o755)
+        n += 1
+    for src, tgt in mapped_deployments(p_hooks):
+        if same(src, tgt):
+            continue
+        shutil.copy2(src, tgt)
         n += 1
     print(f"pushed {n} file(s) -> {p_hooks}")
     return 0
