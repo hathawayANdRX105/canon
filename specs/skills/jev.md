@@ -35,7 +35,7 @@ Any list of ≥ ~20 homogeneous items with a bucket/yes-no/score question: commi
 <disposition>
 jev 产出的 finding（gate review_chain 的 WARN/FAIL 或独立调用）不是"参考信息"：
 - **FAIL（p≥fail 阈值）= 阻塞**：修好（或拆 diff）才能继续；
-- **WARN = 必须处置，二选一**：修复（默认），或**书面驳回**——一句理由 + 证据，写进 PR 的审查记录节（`.workflow/reviews/` 对应工件或 PR 模板"审查记录"表）。
+- **WARN = 必须处置，二选一**：修复（默认），或**书面驳回**——一句理由 + 证据，写进 PR 的审查记录节（`docs/reviews/` 对应工件或 PR 模板"审查记录"表）。
 - **INFO = 可批量进 backlog**，不逐条处置。
 - **静默跳过任何 WARN/FAIL = 违规**：收尾（closeout）核对处置记录，缺项打回。
 </disposition>
@@ -47,6 +47,20 @@ jev 产出的 finding（gate review_chain 的 WARN/FAIL 或独立调用）不是
 - `{type: "bool", instructions, criteria?: {true, false}}` → `{bool: P(yes)}`.
 - `{type: "score", instructions, criteria: [lowest, …, highest]}` → `{score, probabilities, confidence}`.
 - `wait(handles, raise_errors=False)` (JS: `wait(handles, { raiseErrors: false })`) keeps a failure in its slot.
+
+**官方语义（typesafe-ai docs 为准，勿凭直觉解读返回值）**：
+
+- kernel 的 `bool` 即官方 **Noul** 原语（`criteria: {true, false}` 一一对应）。
+  **Noul≈0.5 表示"是/否概率相近"，不是"中等程度"** —— 想要程度强弱用 `score`，别用 bool。
+- `confidence` 是**分布集中度**，不是"整体正确性"更不是"允许行动"。
+  多个合理选项也会摊低 confidence；低 confidence 不必然推翻一个无害的选择 ——
+  看后果定阈值，不看数字定信心。
+- **类型化输出只保证接口，不保证真值**。Jev 为校准训练，但性能必须在你的目标域验证
+  （拿有标签的样本测过再用阈值做自动化）；cookbook 阈值是示例，不是普适规则。
+- 候选/标签必须**穷尽**：模型选不了没给的选项。可能"都不属于"就加显式 catch-all 标签。
+- `score` 的每个档位必须**描述具体情境、能独立成立**（读档位名即知什么情况算这档），
+  不能写"低/中/高"这种需要上下文才能解释的档位。
+
 Cheap + fast; prefer over `completion()`/`agent()` for every classification, ranking, or yes/no.
 </judge>
 
