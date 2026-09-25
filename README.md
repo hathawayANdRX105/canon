@@ -12,11 +12,11 @@
 
 ```
 canon/
-├── bin/agent-sync      # 同步工具（status / push / backport / pull）
+├── scripts/            # 同步与组装工具（agent-sync / agents / gate-sync）（status / push / backport / pull）
 ├── tasks/              # 手动发给 agent 的任务书（closeout / feature-dev-handbook / version-stats）
 ├── manual/             # 人查手册（gate / github / pr-dev-workflow / worktree，不分发）
 ├── specs/              # 默认 spec 与工具使用（rules / skills / templates，索引见 specs/README.md）
-├── rules/              # gate 规则包正本（quality/code/cleanup/github/workspace/harness/docs）
+├── specs/              # gate 规则包正本（gate init 的 seed 源）（quality/code/cleanup/github/workspace/harness/docs）
 └── agent-sync.yaml     # 分发单一配置（项目 = 路径 + 安装路径清单）
 ```
 
@@ -80,9 +80,9 @@ agent-sync pull                # canon 仓自更新
 
 戳 = 「这份副本来自哪」。agent 在项目里看到它，就知道改文档去 canon，**别改本地副本**。
 
-## gate — 规范执行引擎（bin/gate）
+## gate — 规范执行引擎（gate/）
 
-canon 管规范的**存储、分发与执行**，是 gate 的**唯一源码正本**（omenic 的 `bin/gate` 与 `spec` 的 gate 部分已删除，omenic 只留 `spec::template` 模板库供其 CLI 使用）。
+canon 管规范的**存储、分发与执行**，是 gate 的**唯一源码正本**（omenic 的 `gate/` 与 `spec` 的 gate 部分已删除，omenic 只留 `spec::template` 模板库供其 CLI 使用）。
 
 ### 拦截配置化（原则：要不要拦，spec 说了算）
 
@@ -98,9 +98,9 @@ canon 管规范的**存储、分发与执行**，是 gate 的**唯一源码正�
 优先级：**家族 yaml `severity_overrides` → 全局 `severity_overrides.yaml`**；规则 yaml 缺失 → `gate.setup` FAIL 报错，绝不静默放行。
 
 **分层**：
-- `bin/gate/src/engine.rs` — checklist 引擎，**零检测逻辑**：按 scope 收集 payload（staged diff / 全量 diff / 变更文件）→ 喂给 yaml 声明的外部 harness 命令 → 解析 finding JSON 聚合放行或拦截。加规则/改规则/删规则全部是 yaml 操作，不动二进制
-- `bin/gate/src/rules/` + `tools/` — gh 工作流策略层（issue/PR/review 合规、merge 编排、gh 命令拦截），检测逻辑由 `github_*.yaml` 驱动
-- `rules/` — 默认规则包正本（43 份：quality checklist ×17 + code/cleanup/workspace/github 系 + harness 4 件套 + docs 4 份 + dispatch/severity_overrides）
+- `gate/src/engine.rs` — checklist 引擎，**零检测逻辑**：按 scope 收集 payload（staged diff / 全量 diff / 变更文件）→ 喂给 yaml 声明的外部 harness 命令 → 解析 finding JSON 聚合放行或拦截。加规则/改规则/删规则全部是 yaml 操作，不动二进制
+- `gate/src/rules/` + `tools/` — gh 工作流策略层（issue/PR/review 合规、merge 编排、gh 命令拦截），检测逻辑由 `github_*.yaml` 驱动
+- `specs/` — 默认规则包正本（43 份：quality checklist ×17 + code/cleanup/workspace/github 系 + harness 4 件套 + docs 4 份 + dispatch/severity_overrides）
 
 与 omenic 内嵌版的差异（去硬编码）：
 
@@ -119,11 +119,11 @@ canon 管规范的**存储、分发与执行**，是 gate 的**唯一源码正�
 ### 构建与安装
 
 ```bash
-cd bin/gate && cargo build --release    # 产物 target/release/gate
+cd gate && cargo build --release    # 产物 target/release/gate
 cd <目标仓库> && ~/projects/canon/bin/gate/target/release/gate init
 ```
 
-`gate init` 做四件事：装二进制到 `~/.local/bin/`（**gate + gh 两个名字**，gh 用于拦截 issue/PR 命令）→ 设 `core.hooksPath=.githooks/hooks` → 写三个 hook 脚本（pre-commit / pre-push / merge，带 PATH→仓内二进制的兜底查找）→ 从 `rules/`（自动探测 canon 仓，或 `--rules-dir` 指定）播种规则到 `.githooks/spec/`，**已存在的文件绝不覆盖**。
+`gate init` 做四件事：装二进制到 `~/.local/bin/`（**gate + gh 两个名字**，gh 用于拦截 issue/PR 命令）→ 设 `core.hooksPath=.githooks/hooks` → 写三个 hook 脚本（pre-commit / pre-push / merge，带 PATH→仓内二进制的兜底查找）→ 从 `specs/`（自动探测 canon 仓，或 `--rules-dir` 指定）播种规则到 `.githooks/spec/`，**已存在的文件绝不覆盖**。
 
 ### 用法
 
@@ -154,10 +154,10 @@ export REVIEW_LLM_API_KEY=...
 export REVIEW_LLM_MODEL=qwen-plus
 ```
 
-per-question 阈值、问题集分别在 `rules/harness/jev_questions_review.json` / `jev_questions_done_when.json`；close 路径总开关在 `github_issues.yaml` 的 `done_when_judge.enabled`。
+per-question 阈值、问题集分别在 `specs/harness/jev_questions_review.json` / `jev_questions_done_when.json`；close 路径总开关在 `github_issues.yaml` 的 `done_when_judge.enabled`。
 
 ### 新规则包怎么进 canon
 
-1. 规则 yaml 放 `canon/rules/quality/checklist_<名字>.yaml`（schema 见 `rules/docs/CHECKLIST_SPEC.md`）
+1. 规则 yaml 放 `canon/specs/quality/checklist_<名字>.yaml`（schema 见 `specs/docs/CHECKLIST_SPEC.md`）
 2. 各项目 manifest（`agent-sync.yaml` / gate 规则包）加一行把 `rules/quality/checklist_<名字>.yaml` 分发到该仓 `.githooks/spec/`
 3. `agent-sync push <项目>` 下发

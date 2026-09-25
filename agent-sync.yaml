@@ -31,46 +31,46 @@ projects:
         to: .agent/tasks/feature-dev-handbook.md
       - src: tasks/version-stats.md
         to: .agent/tasks/version-stats.md
-      - src: specs/rules/agent-readme.md
+      - src: agent-pack/rules/agent-readme.md
         to: .agent/README.md
-      - src: specs/rules/conventions.md
+      - src: agent-pack/rules/conventions.md
         to: .agent/rules/conventions.md
-      - src: specs/rules/dev-env.md
+      - src: agent-pack/rules/dev-env.md
         to: .agent/rules/dev-env.md
-      - src: specs/rules/gates.md
+      - src: agent-pack/rules/gates.md
         to: .agent/rules/gates.md
-      - src: specs/rules/pr-workflow.md
+      - src: agent-pack/rules/pr-workflow.md
         to: .agent/rules/pr-workflow.md
-      - src: specs/rules/testing-ci.md
+      - src: agent-pack/rules/testing-ci.md
         to: .agent/rules/testing-ci.md
-      - src: specs/rules/web-lanes.md
+      - src: agent-pack/rules/web-lanes.md
         to: .agent/rules/web-lanes.md
-      - src: specs/skills/refactor-workflow.ferrite.md
+      - src: agent-pack/skills/refactor-workflow.ferrite.md
         to: .agent/skills/refactor-workflow/SKILL.md
-      - src: specs/skills/scaffold-dsh.md
+      - src: agent-pack/skills/scaffold-dsh.md
         to: .agent/skills/scaffold-dsh/SKILL.md
-      - src: specs/skills/gate-checklist.md
+      - src: agent-pack/skills/gate-checklist.md
         to: .agent/skills/gate-checklist/SKILL.md
-      - src: specs/skills/ainotation-web.md
+      - src: agent-pack/skills/ainotation-web.md
         to: .agent/skills/ainotation-web/SKILL.md
-      - src: specs/templates/template.md
+      - src: agent-pack/templates/template.md
         to: .agent/tasks/TEMPLATE.md
-      - src: specs/templates/dev.md
+      - src: agent-pack/templates/dev.md
         to: .agent/tasks/dev.md
-      - src: specs/templates/dev-web-lane.md
+      - src: agent-pack/templates/dev-web-lane.md
         to: .agent/tasks/dev-web-lane.md
-      - src: specs/templates/webfix-lane.md
+      - src: agent-pack/templates/webfix-lane.md
         to: .agent/tasks/webfix-lane.md
-      - src: specs/templates/closeout-pr.md
+      - src: agent-pack/templates/closeout-pr.md
         to: .agent/tasks/closeout-pr.md
-      - src: specs/rules/workflow-state.md
+      - src: agent-pack/rules/workflow-state.md
         to: .agent/rules/workflow-state.md
   kime:
     root: /home/hathaway/projects/kime
     files:
       - src: tasks/closeout.md
         to: .agent/tasks/closeout.md
-      - src: specs/rules/workflow-state.md
+      - src: agent-pack/rules/workflow-state.md
         to: .agent/rules/workflow-state.md
       - src: tasks/feature-dev-handbook.md
         to: .agent/tasks/feature-dev-handbook.md
@@ -83,24 +83,24 @@ projects:
         to: .agent/tasks/feature-dev-handbook.md
       - src: tasks/version-stats.md
         to: .agent/tasks/version-stats.md
-      - src: specs/rules/workflow-state.md
+      - src: agent-pack/rules/workflow-state.md
         to: .agent/rules/workflow-state.md
-      - src: specs/templates/task-templates-handbook.md
+      - src: agent-pack/templates/task-templates-handbook.md
         to: .agent/task-templates-handbook.md
-      - src: specs/skills/refactor-workflow.omenic.md
+      - src: agent-pack/skills/refactor-workflow.omenic.md
         to: .agent/skills/refactor-workflow/SKILL.md
-      - src: specs/rules/workflow-state.md
+      - src: agent-pack/rules/workflow-state.md
         to: .agent/rules/workflow-state.md
   silverq:
     root: /home/hathaway/projects/silverq
     files:
       - src: tasks/closeout.md
         to: .agent/tasks/closeout.md
-      - src: specs/rules/workflow-state.md
+      - src: agent-pack/rules/workflow-state.md
         to: .agent/rules/workflow-state.md
       - src: tasks/feature-dev-handbook.md
         to: .agent/tasks/feature-dev-handbook.md
-      - src: specs/rules/workflow-state.md
+      - src: agent-pack/rules/workflow-state.md
         to: .agent/rules/workflow-state.md
   oh-my-pi:
     root: /home/hathaway/projects/oh-my-pi
@@ -109,18 +109,18 @@ projects:
         to: .agent/tasks/closeout.md
       - src: tasks/feature-dev-handbook.md
         to: .agent/tasks/feature-dev-handbook.md
-      - src: specs/rules/workflow-state.md
+      - src: agent-pack/rules/workflow-state.md
         to: .agent/rules/workflow-state.md
   deskctl:
     root: /home/hathaway/projects/deskctl
     files:
-      - src: specs/rules/gates.md
+      - src: agent-pack/rules/gates.md
         to: .agent/rules/gates.md
       - src: tasks/closeout.md
         to: .agent/tasks/closeout.md
       - src: tasks/feature-dev-handbook.md
         to: .agent/tasks/feature-dev-handbook.md
-      - src: specs/rules/workflow-state.md
+      - src: agent-pack/rules/workflow-state.md
         to: .agent/rules/workflow-state.md
   gugu:
     root: /home/hathaway/projects/gugu
@@ -129,7 +129,7 @@ projects:
         to: .agent/tasks/closeout.md
       - src: tasks/feature-dev-handbook.md
         to: .agent/tasks/feature-dev-handbook.md
-      - src: specs/rules/workflow-state.md
+      - src: agent-pack/rules/workflow-state.md
         to: .agent/rules/workflow-state.md
   new-api:
     root: /home/hathaway/projects/new-api
@@ -138,7 +138,7 @@ projects:
         to: .agent/tasks/closeout.md
       - src: tasks/feature-dev-handbook.md
         to: .agent/tasks/feature-dev-handbook.md
-      - src: specs/rules/workflow-state.md
+      - src: agent-pack/rules/workflow-state.md
         to: .agent/rules/workflow-state.md
   herdr:
     root: /home/hathaway/projects/herdr

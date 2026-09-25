@@ -1,9 +1,21 @@
-# 功能开发任务书指南
+---
+name: task-brief
+description: >
+  任务书写作守则与填号模板：主控写任务书、子代理执行、主控验收三方共用的质量守则；<...> 填号派工单，空号不许发出。主控要写任务书/派工单时都用本技能。
+allowed-tools: Bash, Read, Grep, Glob, Write
+license: MIT
+---
+## 附属参考（按需读，不必每次通读）
+
+- `references/task-templates-handbook.md` — canon/specs/templates/task-templates-handbook.md 原样内容
+- `references/template.md` — canon/specs/templates/template.md 原样内容
+
+---
 
 > 日期 2026-09-16。基线 main `235fcf1`。
 > 用途：主控 agent 写任务书、子代理执行、主控验收，三方共用一份质量守则。
 > 定位：**不是 workflow**。workflow 讲流程顺序（canon `manual/pr-dev-workflow.md`；收尾全流程见 canon `tasks/closeout.md`），本文讲**每个功能任务必须回答清楚的问题**，以及答案不合格长什么样。
-> 强制规则见 `.githooks/spec/docs/SPEC_OVERVIEW.md`（`gate init` 播种副本；正本 canon `specs/docs/`，总手册 canon `manual/gate.md`），本文不重复规则，只讲怎么把规则落进任务书。
+> 强制规则见 `.githooks/spec/docs/SPEC_OVERVIEW.md`（`gate init` 播种副本；正本 canon `rules/docs/`，总手册 canon `manual/gate.md`），本文不重复规则，只讲怎么把规则落进任务书。
 
 ## 怎么用
 
