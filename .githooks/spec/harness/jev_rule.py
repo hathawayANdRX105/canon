@@ -43,6 +43,7 @@ Checklist yaml wiring:
 import concurrent.futures
 import json
 import os
+import subprocess
 import re
 import sys
 import urllib.error
@@ -114,6 +115,22 @@ def build_state(rule: dict, rel: str, content: str, diff_text: str, root: str) -
             body = body[:STATE_CAP] + "\n…[truncated]"
         parts.append(f"FILE CONTENT ({rel}):\n{body}")
     return "\n\n".join(parts), missing
+
+
+def diff_for(root: str, rel: str) -> str:
+    """Hunks of `rel` vs HEAD, so jev judges the CHANGED code, not the whole file.
+
+    The gate's mode:file payload carries full file content only; the engine does
+    not embed hunks. Without this the 'state.diff' config flag is dead and jev
+    reviews pre-existing code as if it were new (false positives on large files).
+    """
+    try:
+        out = subprocess.run(
+            ["git", "-C", root, "diff", "HEAD", "--unified=3", "--no-color", "--", rel],
+            capture_output=True, text=True, timeout=30).stdout
+    except Exception:
+        return ""
+    return out[:8_000]
 
 
 def post(url: str, headers: dict, payload: dict, timeout: int) -> dict:
@@ -188,7 +205,7 @@ def main():
             futs = {}
             for i, (rid, rule, rel, content) in enumerate(jobs):
                 q = rule.get("questions", {})
-                st, missing_ctx = build_state(rule, rel, content, "", root)
+                st, missing_ctx = build_state(rule, rel, content, diff_for(root, rel), root)
                 missing_map[i] = missing_ctx
                 futs[i] = ex.submit(judge_one, base, key, model, st, q)
             for i, fut in futs.items():
