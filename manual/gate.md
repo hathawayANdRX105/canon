@@ -23,21 +23,21 @@ gate 是仓库自带的质量门禁：读 `.githooks/spec/*.yaml` 规则 → 调
 | 规则 | SLA | 自动触发 | 严重度 | 查什么 |
 |---|---|---|---|---|
 | `hardcoded_secret` | l2 | pre-commit/push/merge | FAIL | 硬编码密钥/密码/Token：PCRE 出候选，jev 判「真凭证 vs 占位符/测试夹具」——占位符 FP 被滤；无 key 时候选降 WARN |
-| `stale_api` | l1 | pre-commit/push/merge | WARN | 废弃 Rust API（`uninitialized`/`try!`/`ONCE_INIT`） |
+| `stale_api` | l1 | merge | WARN | 废弃 Rust API（`uninitialized`/`try!`/`ONCE_INIT`） |
 | `slop_comment` | l2 | pre-commit/push/merge | FAIL | AI 风格注释：正则出候选，jev 判「是否真 slop」+ score 严重度（0 化妆品/1 叙述/2 误导）——实质 why 注释与转述变体分别幸存/被抓 |
 | `ccn` | l1 | pre-commit/merge | **FAIL** | 函数 ccn 超天花板(默认 6)：新违规/恶化硬拦；存量记账 `ratchet.tsv` 容忍且只许降（`seed` 一次后记账进仓）；lizard 缺失静默跳过 |
-| `antislop` | l1 | pre-commit/push/merge | WARN（harness 映射 HIGH→FAIL） | AI slop 五类（Placeholder/Deferral/Hedging/Stub/命名，`antislop` 二进制；缺失静默跳过） |
+| `antislop` | l2 | merge | WARN | AI slop 四类（Deferral/Hedging/搁置词/空桩；裸 TODO 归 `rust_todo_needs_issue` 专属）：词法正则出候选，jev 判「真 slop vs 合法用法」+ score 严重度 |
 | `rust_no_process_cmd` | l1 | pre-commit/push/merge | **FAIL** | HTTP 走 reqwest，禁 subprocess 拉 curl/wget |
-| `rust_tests_in_tests_dir` | l1 | pre-commit/push/merge | WARN | 测试放同层 `tests/`（架构偏好规则，降级为提示：存量大仓/bin 单测放 `src/` 会全仓命中，agent 只会学会忽略） |
-| `rust_no_dead_code_allow` | l1 | pre-commit/push/merge | WARN | 合并前清理 `#[allow(dead_code)]`（同行带 `//` 理由放行） |
-| `rust_no_empty_module` | l1 | pre-commit/push/merge | WARN | 微型空文件（≤2 行且无实现） |
-| `rust_no_cfg_test_in_tests_dir` | l1 | pre-commit/push/merge | WARN | `tests/` 里不需要 `#[cfg(test)]` |
+| `rust_tests_in_tests_dir` | l1 | merge | WARN | 测试放同层 `tests/`（架构偏好规则，降级为提示：存量大仓/bin 单测放 `src/` 会全仓命中，agent 只会学会忽略） |
+| `rust_no_dead_code_allow` | l1 | merge | WARN | 合并前清理 `#[allow(dead_code)]`（同行带 `//` 理由放行） |
+| `rust_no_empty_module` | l1 | merge | WARN | 微型空文件（≤2 行且无实现） |
+| `rust_no_cfg_test_in_tests_dir` | l1 | merge | WARN | `tests/` 里不需要 `#[cfg(test)]` |
 | `rust_test_no_assert` | l2 | pre-commit/push/merge | FAIL | 测试必须验证行为：无字面 assert 的 `#[test]` 出候选，jev 判「是否以其他方式验证」（mock expectations/should_panic）——spy 风格幸存，空跑被拦 |
-| `rust_todo_needs_issue` | l1 | pre-commit/push/merge | WARN | TODO/FIXME 必须挂 issue 号（`// TODO(#N)` 或 `todo!("TODO(#N)")`） |
+| `rust_todo_needs_issue` | l1 | merge | WARN | TODO/FIXME 必须挂 issue 号（`// TODO(#N)` 或 `todo!("TODO(#N)")`） |
 | `dep_hygiene` | l1 | merge | WARN | `cargo-machete` 未使用依赖（工具缺失则 WARN 跳过） |
 | `clippy` | l1 | merge | **FAIL/WARN** | rustc 编译错误 + `unused_*`/`dead_code`→FAIL；`collapsible_if` 等风格→WARN |
 | `file_size` | l1 | merge | WARN | 单 `.rs` >1500 行 或 >35KB → 提示按职责拆分（存量宽，清账后可升 FAIL） |
-| `duplication` | l2 | merge | WARN | 跨文件 4+ 连续行重复块 |
+| `duplication` | l2 | merge | WARN | 复制漂移：本次变更内 4+ 连续行块(>80字符)重复出候选，jev 判「真漂移 vs 惯用相似」+ score |
 | `crg_impact` | l2 | merge | WARN | diff 跨 3+ crate 改动，提示耦合 |
 | `ferrite_oversize` | l3 | merge | INFO | 大文件/大函数参考分（wildtoken `fast-l`，带 `score`/`confidence`，不阻断） |
 | `review_chain` | l3 | pre-push/merge | INFO（harness 透传 FAIL/WARN/INFO） | 模型审查层三档降级：jev（`TYPESAFE_API_KEY`）→ 小模型（`REVIEW_LLM_*`）→ 无（INFO）；每个问题带 per-question `fail`/`warn` 阈值，p≥fail FAIL 硬拦；finding 带 `tier`/`confidence` extra |
@@ -96,6 +96,19 @@ WARN**（召回不丢、处置照常），绝不静默清零。score 返回值�
 
 已转换：`hardcoded_secret` / `slop_comment` / `rust_test_no_assert`（实测三路径：
 占位符 FP 消失、实质 why 注释幸存、spy 风格幸存、空跑 FAIL）。
+
+## hook 路由（dispatch.yaml）
+
+- **pre-commit / pre-push（快路径）**：code（六语言 lint）+ checklist 精选——FAIL 型
+  （`rust_no_process_cmd`、`ccn`）+ jev 级联（`hardcoded_secret`/`slop_comment`/
+  `rust_test_no_assert`）。干净树毫秒级，有候选才付 jev 的钱。
+- **merge（完整把关）**：workspace（WS-01/WS-02，工作区干净是合并标准）+
+  github PR/Review 规则 + cleanup + 全部 checklist（含提示型与 l2/l3 重量项）。
+  提示型 l1 规则（stale_api/todo_needs_issue 等 6 条）只在 merge 提示，不拖慢提交。
+- **commit-msg**：CM-01/02/03 标题检查（读 git 传入的消息文件，不读残留的
+  COMMIT_EDITMSG）。
+- GT-04/06（Done when/epic sub-issues）保持硬拦：没有配置逃生门，想跳过就把活
+  干完——勾掉 checkbox 或写明完成说明。
 
 ## 怎么豁免
 

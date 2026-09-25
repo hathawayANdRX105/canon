@@ -11,7 +11,7 @@ use crate::shared::{
     Finding, Severity, apply_global_overrides, exit_code, gh_api, gh_api_paginate, load_yaml,
     print_findings,
 };
-use crate::tools::{cleanup, git};
+use crate::tools::{cleanup, git, workspace};
 /// `gate merge <owner/repo> <pr_number> [--dry-run]` — pre-merge validation.
 pub fn run(args: &[String]) -> i32 {
     let mut positional = Vec::new();
@@ -71,6 +71,7 @@ pub fn run(args: &[String]) -> i32 {
     for topic in &topics {
         println!("--- {} ---", topic);
         match topic.as_str() {
+            "workspace" => findings.extend(workspace::run_workspace(".")),
             "github/pull_requests" => findings.extend(run_pr_rules(repo, pr_num)),
             "github/reviews" => findings.extend(run_review_rules(repo, pr_num, &spec_dir)),
             "cleanup" => {

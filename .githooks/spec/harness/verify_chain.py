@@ -133,10 +133,67 @@ def candidates_rust_test_no_assert(files):
     return out
 
 
+
+# --- antislop: 五类词法候选（占位/拖延/对冲/搁置/空桩），jev 判合法用法 ---
+# placeholder-marker(TODO/FIXME) 不在此列: 裸 TODO 的执法归 rust_todo_needs_issue
+# （MECE——antislop 只抓其他规则不覆盖的拖延/对冲/搁置/空桩）
+ANTISLOP_RES = [
+    ("deferral",           re.compile(r"\b(for now|temporar\w*|provisional)\b", re.I)),
+    ("placeholder-word",   re.compile(r"\b(placeholder|stub|dummy)\b", re.I)),
+    ("hedging",            re.compile(r"\b(hopefully|should work|works in theory|might not)\b", re.I)),
+    ("revisit",            re.compile(r"\b(revisit|reconsider|circle back)\b", re.I)),
+    ("rust-stub",          re.compile(r"\bfn\s+\w+[^{;]*\{\s*\}")),
+]
+
+
+def candidates_antislop(files):
+    out = []
+    for path, content in files:
+        for lineno, line in enumerate(content.splitlines(), 1):
+            for cat, pat in ANTISLOP_RES:
+                m = pat.search(line)
+                if m:
+                    out.append({"path": path, "line": lineno,
+                                "excerpt": f"[{cat}] {line.strip()[:200]}"})
+                    break          # 一行一候选：命中即算，避免同类刷屏
+    return out
+
+
+# --- duplication: 4+ 连续非空行块(>80字符)在本次变更内重复出现 ---
+def candidates_duplication(files):
+    import hashlib
+    blocks = {}
+    for path, content in files:
+        if not path.endswith(".rs") or "/tests/" in path or "test_" in path.rsplit("/", 1)[-1]:
+            continue
+        lines = content.splitlines()
+        i = 0
+        while i < len(lines):
+            if lines[i].strip():
+                j = i
+                while j < len(lines) and lines[j].strip():
+                    j += 1
+                block = tuple(l.rstrip() for l in lines[i:j])
+                if len(block) >= 4 and len("\n".join(block)) > 80:
+                    key = hashlib.md5("\n".join(block).encode()).hexdigest()
+                    blocks.setdefault(key, []).append((path, i + 1, block))
+                i = j
+            else:
+                i += 1
+    out = []
+    for occ in blocks.values():
+        if len(occ) >= 2:
+            out.append({"path": occ[0][0], "line": occ[0][1],
+                        "excerpt": f"{len(occ)}x identical block: {', '.join(o[0] for o in occ)}",
+                        "block": "\n".join(occ[0][2])[:400]})
+    return out
+
 EXTRACTORS = {
     "hardcoded_secret": candidates_hardcoded_secret,
     "slop_comment": candidates_slop_comment,
     "rust_test_no_assert": candidates_rust_test_no_assert,
+    "antislop": candidates_antislop,
+    "duplication": candidates_duplication,
 }
 
 
