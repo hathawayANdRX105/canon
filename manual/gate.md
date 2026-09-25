@@ -217,7 +217,7 @@ choice+fail_labels 两种形态）和 `example_checklist.yaml`（接线模板，
 - gh 拦截闸门（GT-* 现在产出 Finding，可覆盖/可关）：
   - `github_issues.yaml` 开关：`close_requires_comment`（GT-COMMENT）/ `close_done_when_gate`（GT-04）/ `done_when_judge.enabled`（DWJ 模型评审，见下）/ `epic_sub_issue_gate`（GT-06）/ `merge_fixes_gate`（GT-05）——false = 整块跳过
   - `github_pull_requests.yaml` 开关：`merge_requires_body`（GT-BODY）/ `merge_checkbox_gate`（GT-CHK）/ `merge_title_gate`（CM-01/02 squash 标题）
-  - `github_reviews.yaml`：`merge_review.required: false` 关掉 RV-07 的 CRG+ocr 强制；`merge_review.ocr_timeout_secs` 调 ocr 超时
+  - `github_reviews.yaml`：`merge_review.required: false` 关掉 RV-07 的强制审查（CRG 结构层 + jev ocr_* checklist 语义层）
   - 严重度降级：GT-*/CM-*/RV-07 在 `dispatch.yaml` 的 `severity_overrides:` 段或全局 `severity_overrides.yaml` 按 ID 覆盖（如 `GT-06: "WARN"`）
   - 数据解析/子查询失败仍 fail-closed 硬拦（安全属性，不可配）
 - commit 检查（CM-01/02/03）：`dispatch.yaml` 的 `severity_overrides:` 段。
@@ -247,7 +247,7 @@ choice+fail_labels 两种形态）和 `example_checklist.yaml`（接线模板，
 | 数据错误 | `shared.rs` `load_spec_yaml` | 缺 `dispatch.yaml` / `github_*.yaml`（pre-commit、pre-push、merge） | **否**，fail-closed |
 | git commit | `pre_commit.rs:113` / `:118` / `:141` | `CM-01` 非 conventional / `CM-02` 标题含 CJK / `CM-03` commit type 与 PR type 不一致 | 是（`dispatch.yaml` `severity_overrides`） |
 | git push | `pre_commit.rs` 之后的 l1/l2 链 | 任一 checklist `FAIL`（含 `code_*` 六条工具链、`checklist_ccn`、`rust_no_process_cmd`） | 是（yaml + `severity_overrides.yaml`） |
-| git merge | `merge.rs:140-170` | `RV-07` CRG/ocr 强制（`merge_review.required`） | 是（`github_reviews.yaml` 开关 + override） |
+| git merge | `merge.rs:140-170` | `RV-07` CRG 结构层（ocr 已退役，语义层由 jev ocr_* checklist 承担） | 是（`merge_review.required` 开关 + override） |
 | git merge | `cleanup.rs:47-90` | `CL-01` 分支已合并/孤儿/临时前缀需清理 | 是（`cleanup_branch_cleanup.yaml`） |
 | gh issue create | `gh_wrap.rs:371-553` | `GT-01`/`GT-03` 标题/正文/label/父子关联（映射 `IS-*`） | 是（`github_issues.yaml` + override） |
 | gh issue close | `gh_wrap.rs:555-731` | `GT-04` Done when 未勾 / `GT-05` 缺 Fixes / `GT-06` epic 子 issue / `GT-07` 关联 PR | 是（同上，含 `done_when_judge`） |

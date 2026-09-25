@@ -69,9 +69,9 @@ severity_overrides:
   RV-05: "FAIL"   # 缺少 CRG Review
   RV-06: "FAIL"   # inline finding 无回复
 
-# merge 审查门 (RV-07): gate merge 时的 CRG + ocr 双重审查
-#   required: false      → 完全跳过 CRG+ocr (RV-07 降为 INFO, 不拦 merge)
-#   ocr_timeout_secs: 600 → ocr 超时秒数 (缺省 600)
+# merge 审查门 (RV-07): gate merge 时的 CRG 结构层 + jev ocr_* checklist 语义层
+#   required: false      → 完全跳过 RV-07 (降为 INFO, 不拦 merge)
+#   ocr 已退役：ocr 二进制缺席时 RV-07 只看 CRG，语义层交给 ocr_rust/go/javascript checklist
 merge_review:
   required: true
   ocr_timeout_secs: 600

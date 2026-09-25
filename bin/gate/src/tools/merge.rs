@@ -187,7 +187,7 @@ fn check_pr_review(repo: &str, pr_num: u32) -> Vec<Finding> {
     let file_count = pr_files.as_array().map(|a| a.len()).unwrap_or(0);
     if file_count == 0 {
         println!("PR #{} 无文件改动，无需审查。", pr_num);
-        return vec![rv07_decide(0, "", "")];
+        return vec![rv07_decide(0, "", "", true)];
     }
     // merge_review.required=false skips the whole check (config-driven, no
     // code edit needed to turn RV-07 off for a repo).
@@ -225,14 +225,27 @@ fn check_pr_review(repo: &str, pr_num: u32) -> Vec<Finding> {
     // Run CRG + ocr — both must succeed for RV-07 to pass.
     // Uses review.rs runners which surface timeouts/errors as "[CRG] …" /
     // "[ocr] …" markers; rv07_decide classifies those into FAIL.
-    println!("（CRG + ocr 运行中，LLM 需几分钟...）");
+    // ocr 在退役（语义审查改由 jev ocr_* checklist 承担）：ocr 二进制缺失时
+    // 不再硬 FAIL，而是 ocr 半视为已由 checklist 覆盖，CRG 仍是结构层硬门。
+    let ocr_present = std::process::Command::new("ocr")
+        .arg("--version")
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+    println!("（CRG 运行中...）");
     let crg_out = crate::tools::review::run_crg();
     println!("{}", crate::shared::truncate_utf8(&crg_out, 1200));
 
-    let ocr_out = crate::tools::review::run_ocr(ocr_timeout);
-    println!("{}", crate::shared::truncate_utf8(&ocr_out, 1500));
+    let (ocr_out, ocr_present) = if ocr_present {
+        println!("（ocr 运行中，LLM 需几分钟...）");
+        let out = crate::tools::review::run_ocr(ocr_timeout);
+        println!("{}", crate::shared::truncate_utf8(&out, 1500));
+        (out, true)
+    } else {
+        (String::new(), false)
+    };
 
-    vec![rv07_decide(file_count, &crg_out, &ocr_out)]
+    vec![rv07_decide(file_count, &crg_out, &ocr_out, ocr_present)]
 }
 
 /// Classify RV-07 from file count + CRG/ocr outputs.
@@ -246,7 +259,7 @@ fn check_pr_review(repo: &str, pr_num: u32) -> Vec<Finding> {
 ///        spawn error); success returns the raw stdout.
 ///   ocr: `run_ocr()` prefixes every failure with "[ocr]" (spawn error, stderr,
 ///        or 超时 timeout); success returns the raw stdout.
-fn rv07_decide(file_count: usize, crg_out: &str, ocr_out: &str) -> Finding {
+fn rv07_decide(file_count: usize, crg_out: &str, ocr_out: &str, ocr_present: bool) -> Finding {
     const CRG_FAIL_PREFIX: &str = "[CRG]";
     const OCR_FAIL_PREFIX: &str = "[ocr]";
     const TRUNC_MAX: usize = 200;
@@ -268,6 +281,22 @@ fn rv07_decide(file_count: usize, crg_out: &str, ocr_out: &str) -> Finding {
             s.to_string()
         }
     };
+    // ocr 已退役：缺席时结构层只看 CRG，语义层交给 jev ocr_* checklist。
+    if !ocr_present {
+        return if crg_failed {
+            Finding::new(
+                "RV-07",
+                Severity::Fail,
+                &format!("CRG 失败: {}", cap(crg_out)),
+            )
+        } else {
+            Finding::new(
+                "RV-07",
+                Severity::Info,
+                "CRG 通过；ocr 已退役（缺失），语义审查由 jev ocr_* checklist 承担",
+            )
+        };
+    }
     match (crg_failed, ocr_failed) {
         (true, true) => Finding::new(
             "RV-07",

@@ -238,7 +238,6 @@ mod tests {
             .nth(2)
             .expect("gate crate must sit at <repo>/bin/gate")
             .join("rules")
-            .join("gate")
             .join("github")
             .join("github_issues.yaml");
         let v =

@@ -38,10 +38,10 @@ scope → 隔离 → 实现 → 验证 → 审查 → 合并 → 清理
 
 ## 阶段 3 — 验证与审查
 
-### 本地审查（CRG + ocr）
+### 本地审查（CRG + gate/jev）
 
 ```bash
-gate review              # 终端输出 CRG 影响 + ocr 发现
+gate review              # 终端输出 CRG 影响 + gate 检查发现
 gate review --post-inline  # 提交到 PR Files changed
 ```
 
@@ -68,7 +68,7 @@ gate review --post-inline  # 提交到 PR Files changed
 ## 阶段 5 — 合并（merge 前必查）
 
 ```bash
-# 合并检查：规则校验 + CRG 影响 + ocr 审查
+# 合并检查：规则校验 + CRG 影响 + gate/jev 审查
 gate merge <owner/repo> <N> --dry-run
 
 # 链式 PR：子 PR 先重设 base
@@ -78,7 +78,7 @@ gh pr edit <child> --base main
 gh pr merge <N> --squash
 ```
 
-merge 入口自动执行：PR 校验 + reviews + cleanup + CRG 结构分析 + ocr AI 审查。
+merge 入口自动执行：PR 校验 + reviews + cleanup + CRG 结构分析 + gate/jev 审查。
 
 ## 阶段 6 — 清理
 

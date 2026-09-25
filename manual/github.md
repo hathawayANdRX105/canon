@@ -61,7 +61,7 @@ gate merge <owner/repo> <PR_N> --dry-run
 ## 本地审查
 
 ```bash
-gate review                     # CRG 结构分析 + ocr AI 审查
+gate review                     # CRG 结构分析 + gate jev 语义审查
 gate review --post-inline       # 审查结果→PR inline review
 ```
 

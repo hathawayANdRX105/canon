@@ -84,12 +84,14 @@ Rust 项目加 `clippy`；按语言加减。FAIL 清零；duplication 的 brace 
 
 **降级语义（二选一，工具层永远跑）**：jev 不可用 → 自动降级小模型（`REVIEW_LLM_BASE_URL/API_KEY/MODEL`）→ 都不可用 INFO 说明。任何基础设施失败（key 缺失/网络/超时/输出不可解析）只降级**不阻断**。大 diff 已自动截断（>24KB 取尾部=最新改动），400 问题已修。
 
-### A4. ocr 深查（规范层，按模块分批）
+### A4. 语义审查（gate jev ocr_* checklist）
+
+ocr 已退役，语义层由 gate 的 jev ocr_rust / ocr_go / ocr_javascript checklist 承担（收编自 OpenCodeReview 规范）：
 
 ```bash
-ocr review --from <base_sha> --to HEAD          # 按文件/模块分批，不许一次喂全 repo
+gate check ocr_rust ocr_go ocr_javascript --sla l2   # 按变更文件喂，别一次全仓
 ```
-深边界 case（并发、错误路径、abi）再上 ocr；jev 是快筛，ocr 是深查，两者互补不重复。
+deep 边界 case（并发、错误路径、abi）直接让 jev 按语言规范判。
 
 ### A5. 判定口径
 
@@ -124,7 +126,7 @@ loop:
 ```text
 标题: Agent 🤖 - <topic>          # 如 "Agent 🤖 - review round 1: ccn + jev findings"
 正文:
-## 发现的问题        # 每条含: 来源(工具/jev p值/ocr)、严重度、位置
+## 发现的问题        # 每条含: 来源(CRG/gate/jev p值)、严重度、位置
 ## 修复情况          # 每条含: 修法、修复 commit SHA、验证命令
 ```
 
@@ -191,7 +193,7 @@ git branch -d <branch>                     # 已合的分支；--delete-branch �
 
 必报内容（deskctl closeout §7 + ferrite 阶段 8 合并口径）：
 1. PR 链接 + base_sha + 改了哪些文件。
-2. 跑了哪些检查：CRG / gate 工具层（列规则）/ jev（列 question+p值+结论）/ ocr / CI / smoke，逐项给结果。
+2. 跑了哪些检查：CRG / gate 工具层（列规则）/ jev ocr_* checklist（列 question+p值+结论）/ CI / smoke，逐项给结果。
 3. 每轮"审查+修复"对应的 PR comment 链接（有新建未报备 = 违规）。
 4. 清理记录：删了哪些 worktree/分支/进程；**保留了哪些资源及原因**。
 5. 剩余风险：未跑的测试、已知问题、WARN/INFO 里未采纳项及理由。
@@ -204,7 +206,7 @@ git branch -d <branch>                     # 已合的分支；--delete-branch �
 
 | # | 门禁 |
 |---|---|
-| 1 | 审查必须 CRG + gate 全栈（工具层 jev ocr 三层都出结果才算审完） |
+| 1 | 审查必须 CRG + gate 全栈（结构层 CRG + 工具层 jev 都出结果才算审完） |
 | 2 | FAIL 必须清零；WARN/INFO 逐条给结论写进 PR |
 | 3 | gate/gh 输出完整读，禁过滤后装没看见 |
 | 4 | 子代理只在 `.wt/<branch>`，prompt 给绝对路径；≤5 文件单主题 |
