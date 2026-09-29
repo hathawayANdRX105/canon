@@ -111,6 +111,89 @@ def scan_nesting(path: str, src: str, limit: int) -> list[Finding]:
         if depth >= limit
     ]
 
+# ── style 模式：内联 class 散落 / 硬编码颜色（ui-component-principles §4.1）──
+# 三类 finding：
+#   DIOXUS-INLINE-CLASS   内联 class 串 ≥ --class-limit 字符 → 样式该抽成常量或用 ui-kit 常量
+#   DIOXUS-HARDCODED-COLOR  类串/样式串里 #hex 硬编码颜色
+#   DIOXUS-RAW-PALETTE  原始色板类（bg-zinc-800 / text-white / text-red-400 …）绕开语义 token
+# 重要取舍：不要求「所有 class 都得是常量」——单个原子类（flex / gap-2）提常量是
+# 过度抽象，比散落更难维护。只在成组出现（串过长）时抽。
+# 色板类判的是「有没有语义等价物」：text-muted-foreground / bg-card / border-border /
+# text-destructive 这类语义类不报；text-zinc-N、text-red-N 等原始色板报。
+# 阈值口径（来自 ferrite 实测）：存量仓全仓 1971 条（RAW-PALETTE 1401 集中在正在
+# 迁移的 ui-components 副本里）→ 规则是「新代码不许新增散落」（--scope changed），
+# 存量债走 merge 全仓审计 + 书面驳回，不在热路径里报。
+
+# 布局/原子 utility 前缀（出现 2 个以上才认为是 class 串，避免误伤散文字符串）
+_UTIL_PREFIX = re.compile(
+    r'^(?:flex|grid|hidden|block|inline|table|relative|absolute|fixed|sticky|float|'
+    r'w|h|size|p|px|py|ps|pe|pt|pb|pl|pr|m|mx|my|ms|me|mt|mb|ml|mr|gap|space|'
+    r'rounded|ring|border|shadow|bg|text|font|leading|tracking|uppercase|lowercase|'
+    r'items|justify|self|content|place|object|overflow|transition|duration|delay|ease|'
+    r'z|top|right|bottom|left|inset|opacity|cursor|outline|select|appearance|touch|'
+    r'scale|rotate|translate|skew|origin|min|max|aspect|line-clamp|col|row|order)'
+)
+
+# 原始色板类：修饰语 - 色族（-shade）(/opacity)。语义色（-foreground/-muted-…）不在此列。
+_RAW_PALETTE = re.compile(
+    r'\b(?:text|bg|border|ring|from|to|via|fill|stroke|outline|decoration|divide|'
+    r'accent|caret|placeholder|selection|shadow)'
+    r'-(?:zinc|slate|neutral|stone|gray|red|orange|amber|yellow|lime|green|emerald|'
+    r'teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)'
+    r'(?:-\d{1,3})?(/\d{1,3})?(?![a-z])'
+)
+_HEX = re.compile(r'#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b')
+
+
+def _looks_like_class_list(value: str) -> bool:
+    toks = value.split()
+    hits = sum(1 for t in toks if _UTIL_PREFIX.match(t))
+    return len(toks) >= 2 and hits >= 2
+
+
+def scan_style(path: str, src: str, class_limit: int) -> list[Finding]:
+    out: list[Finding] = []
+    for lineno, line in enumerate(src.split('\n'), 1):
+        stripped = line.lstrip()
+        if stripped.startswith('//') or stripped.startswith('*'):
+            continue                      # 注释/文档里的字符串不算
+        for value in STRING_LIT.findall(line):
+            if not _looks_like_class_list(value):
+                continue
+            if len(value) >= class_limit:
+                out.append(Finding(
+                    id="DIOXUS-INLINE-CLASS",
+                    severity="WARN",
+                    path=path, line=lineno,
+                    message=(
+                        f"内联 class 串 {len(value)} 字符（≥{class_limit}）：成组样式散落在 rsx 里，"
+                        "换主题要逐处改。重构：抽成命名常量（或引用 ui-kit styles.rs 的语义常量），"
+                        "rsx 里只留一次引用。单个原子类（flex / gap-2）不要提常量——过度抽象。"
+                    ),
+                ))
+            for m in _RAW_PALETTE.finditer(value):
+                out.append(Finding(
+                    id="DIOXUS-RAW-PALETTE",
+                    severity="WARN",
+                    path=path, line=lineno,
+                    message=(
+                        f"原始色板类 {m.group(0)} 绕开语义 token（ui-component-principles §4.1"
+                        " token 唯一来源）。重构：换成语义类（text-muted-foreground / bg-card / "
+                        "border-border / text-destructive …），色板值只住在 token 层（theme.css）。"
+                    ),
+                ))
+            for m in _HEX.finditer(value):
+                out.append(Finding(
+                    id="DIOXUS-HARDCODED-COLOR",
+                    severity="WARN",
+                    path=path, line=lineno,
+                    message=(
+                        f"硬编码颜色 {m.group(0)}：未走设计 token，换主题会失效。"
+                        "重构：值进 token 层（theme.css 变量），类上引用语义类。"
+                    ),
+                ))
+    return out
+
 
 def scan_spec(path: str, src: str) -> list[Finding]:
     """按 web-spec **原文阈值**判，不用自造数字。
@@ -222,7 +305,9 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--max', type=int, default=40,
                     help='单次最多输出多少条 finding（防止刷屏）；统计真实量级时传 0')
-    ap.add_argument('--only', choices=['nesting', 'spec', 'layering'], default=None)
+    ap.add_argument('--only', choices=['nesting', 'spec', 'layering', 'style'], default=None)
+    ap.add_argument('--class-limit', type=int, default=72,
+                    help='style: 内联 class 串超过该字符数报 DIOXUS-INLINE-CLASS')
     ap.add_argument('--nesting-limit', type=int, default=2,
                     help='R1 要求 tab-page/ 元素嵌套 ≤1 层；默认 2 = 报「超过 1 层」')
     ap.add_argument('--scope', choices=['repo', 'changed'], default='repo',
@@ -259,6 +344,8 @@ def main() -> int:
             findings += scan_spec(rel, src)
         if args.only in (None, 'layering'):
             findings += scan_layering(rel, src)
+        if args.only in (None, 'style'):
+            findings += scan_style(rel, src, args.class_limit)
 
     findings.sort(key=lambda f: (f.path, f.line))
     total = len(findings)
