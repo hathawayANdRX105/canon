@@ -206,7 +206,7 @@ crates/web/<prefix-feature>/
   **FAIL 必须清零**；WARN 说明理由后可放行。
 - `gh` 操作（建 issue / PR / 关 issue）在**创建时**就走校验：FAIL 会直接拦截该操作，
   必须逐条修到清零再重试；WARN 每条都要处理（能补就补，补不了的在 PR 正文写明理由）。
-  操作前先跑 `gate check` 对应清单或 `gate issue` / `gate pr` 预检，不要等推送才撞墙。
+  操作前先跑 `canon check` 对应清单或 `canon issue` / `canon pr` 预检，不要等推送才撞墙。
 - 占位符用 Rust 原生宏：`todo!("TODO(#<issue>): 说明")` 或 `unimplemented!(...)`；
   TODO / FIXME 注释必须带 issue 号（`TODO(#123): ...`）——这是 `rust_todo_needs_issue` 检查项。
 

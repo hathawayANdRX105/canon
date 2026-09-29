@@ -1,4 +1,4 @@
-# 闸门（gate）与 GitHub 操作
+# 闸门（canon）与 GitHub 操作
 
 **什么时候读这份文档**：提交或推送被拦下、创建 PR/issue 被拒绝、或者想知道有哪些检查规则的时候。
 
@@ -42,8 +42,8 @@
 出问题最常跑的两条命令：
 
 ```bash
-gate pre-commit    # 提交前的完整检查
-gate pre-push      # 推送前的完整检查
+canon pre-commit   # 提交前的完整检查
+canon pre-push   # 推送前的完整检查
 ```
 
 合并前还有一道预检：`hooks/merge --dry-run`，不能绕过。
@@ -60,9 +60,9 @@ gate pre-push      # 推送前的完整检查
 创建前可以先跑预检：
 
 ```bash
-gate check          # 列出当前检查项
-gate issue          # issue 预检
-gate pr             # PR 预检
+canon check   # 列出当前检查项
+canon issue   # issue 预检
+canon pr   # PR 预检
 ```
 
 **注意**：`head`、`tail`、`grep -v` 这些过滤会吞掉部分提示行，看闸门输出时必须完整读。
@@ -86,14 +86,14 @@ gate pr             # PR 预检
 
 ### 3.4 规则文档在哪（唯一正本，别处不重复维护）
 
-- 完整手册：canon `manual/gate.md`（正本；各仓不单独维护）。三层 SLA、规则清单
+- 完整手册：`gate-spec` skill（正本；各仓不单独维护）。三层 SLA、规则清单
   （20 条 checklist + github/cleanup/code/workspace 系）、豁免与降级全部以它为准——
   **本文件不复制规则表**，改了规则只改手册与 `rules/docs/SPEC_OVERVIEW.md`。
 - 规则对照清单：canon `rules/docs/SPEC_OVERVIEW.md`（正本；新增或修改规则后必须同步更新，
-  `gate init` 播种到本仓 `.githooks/spec/docs/`，本仓可直接读播种副本）。
+  `canon init` 播种到本仓 `.githooks/spec/docs/`，本仓可直接读播种副本）。
 - 手动跑某个检查：先看 `SPEC_OVERVIEW.md` 找规则名（如 `rust_todo_needs_issue`），
-  再跑 `gate check <规则名> --sla l1`。
-- `gate` 命令装在 `~/.local/bin/gate`（已在 PATH 里）；钩子脚本在 `.githooks/hooks/`。
+  再跑 `canon check <规则名> --sla l1`。
+- `canon` 命令装在 `~/.local/bin/canon`（已在 PATH 里）；钩子脚本在 `.githooks/hooks/`。
 
 ### 3.5 代码里的占位符要求
 
@@ -117,7 +117,7 @@ TODO / FIXME 注释也必须带 issue 号，写成 `// TODO(#123): ...`。
 - 不绕过 `.githooks/` 的拦截，不绕过 `hooks/merge --dry-run` 预检。
 - 占位符用 `todo!()` / `unimplemented!()` 并带 issue 号；TODO 注释同样要带。
 
-## 五、发现的处置纪律（gate / jev / review）
+## 五、发现的处置纪律（canon / jev / review）
 
 自动检查产出的是**发现**，不是判决。每条 finding（`FAIL` / `WARN`、`jev` L3 发现、
 CRG / `ocr review` 意见）都必须被显式处置：

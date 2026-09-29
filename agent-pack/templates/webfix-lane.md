@@ -57,7 +57,7 @@ git checkout -b webfix/xxx origin/web-dev         # base_sha = 上次发布记�
 ## 3. 合回 web-dev
 
 ```bash
-gate check                        # FAIL 清零（WARN 说明理由放行）
+canon check                        # FAIL 清零（WARN 说明理由放行）
 git checkout web-dev && git pull --ff-only
 git merge --no-ff webfix/xxx      # 保留审查轨迹，不 squash
 git push origin web-dev && git branch -d webfix/xxx

@@ -1,15 +1,15 @@
-<!-- managed by canon agents.yaml @ 2026-09-26 -->
+<!-- managed by canon agents.yaml @ 2026-09-27 -->
 ## canon 约定
 
 canon 是**规范与 agent 文档的正本仓**。别的项目想改规范、改 agent 约定，来这里改，再分发回去。
 
 ### 这个仓是什么
 
-- 规范正本：`agent-pack/rules/`、`agent-pack/skills/`、`specs/`（gate spec，`gate init` 的 seed 源）、`manual/`（人查手册）
-- 项目任务书：`agent-pack/tasks/`（closeout / feature-dev-handbook）
+- 规范正本：`agent-pack/rules/`、`agent-pack/skills/`、`specs/`（spec 正本，`canon init` 的 seed 源）
+- 人查手册与任务书：已全部转成 dotfiles skill（gate-spec / pr-orchestration / task-brief / closeout / worktree-isolation）
 - agent 文档正本：`agent-pack/agents/`
-- gate 源码：**canon 仓根本身就是 Rust crate**（仓根 `src/` + `tests/` + `Cargo.toml`）；
-  `cargo build --release` 产物 `target/release/gate` 复制到 `.githooks/gate`，再由 gate-sync 分发到各项目
+- canon 源码：**canon 仓根本身就是 Rust crate**（仓根 `src/` + `tests/` + `Cargo.toml`）；
+  `cargo build --release` 产物 `target/release/canon` 复制到 `.githooks/canon`，再由 canon-sync 分发到各项目
 - 待部署的暂存改动：`agent-pack/deployed/pending-*/`（**故意不部署**，见各目录 README）
 
 ### 项目 AGENTS.md 是生成物
@@ -80,26 +80,26 @@ scripts/agent-sync backport <项目> <src>  # 项目本地修正 → 回流 cano
 `just` 封装了高频命令，见仓根 `Justfile`：
 
 ```bash
-just gate-build      # cargo build --release，产物落 .githooks/gate
-just gate-test       # gate crate 全量测试
-just gate-push       # gate-sync 推 8 个成员仓（custom/ 受保护）
+just build      # cargo build --release，产物落 .githooks/canon
+just test       # canon crate 全量测试
+just push       # canon-sync 推 8 个成员仓（custom/ 受保护）
 just agents-push     # agents push canon（重新组装本仓 AGENTS.md）
 just spec-sync       # specs/ → .githooks/spec/ 正本同步部署镜像
-just review          # gate check 全套自检
+just review          # canon check 全套自检
 ```
 
-改规范的标准动线：改 `specs/` 或 `agent-pack/` → `just spec-sync`（如动 gate spec）
-→ `just gate-build && just gate-push`（如动二进制）→ `just agents-push`（如动 agent 文档）。
+改规范的标准动线：改 `specs/` 或 `agent-pack/` → `just spec-sync`（如动 spec）
+→ `just build && just push`（如动二进制）→ `just agents-push`（如动 agent 文档）。
 
 ## 发现处置纪律
 
-自动检查（gate 的 `FAIL`/`WARN`、`jev` L3 语义发现、CRG / `ocr review` 审查意见）
+自动检查（canon 的 `FAIL`/`WARN`、`jev` L3 语义发现、CRG / `ocr review` 审查意见）
 产出的是**发现**，不是判决。每条发现都必须被显式处置，不存在"绕过"这个选项。
 
 ### 先读规范，再改代码
 
 1. 拿到 finding，先读规则原文，确认这条发现到底要求什么：
-   - gate 规则总览：`.githooks/GATE_HANDBOOK.md`（无则 `canon/manual/gate.md`）
+   - canon 规则总览：`gate-spec` skill（正本）；各仓 `.githooks/spec/docs/SPEC_OVERVIEW.md` 为播种副本
    - 单条规则的参数（匹配范围 / 严重度 / harness）：`.githooks/spec/**/<rule>.yaml`
    - 项目适配说明（本仓为什么这么定）：`.agent/rules/gates.md`
 2. 不确定 finding 是否成立时，读完规则仍不能判定 → **记为待裁决**并在交付记录里写明，
@@ -118,7 +118,7 @@ just review          # gate check 全套自检
 
 ### 禁止糊弄式修复
 
-以下动作一律视为违规（无论 gate 是否因此变绿）：
+以下动作一律视为违规（无论 canon 是否因此变绿）：
 
 | 禁止 | 为什么 | 正确做法 |
 |---|---|---|
@@ -140,7 +140,7 @@ just review          # gate check 全套自检
 
 ### 规范层级
 
-- `.githooks/` 是 gate 领地：agent 不改规则。
+- `.githooks/` 是 canon 领地：agent 不改规则。
 - `.agent/rules/`、`specs/rules/` 是规范正本：发现规则与现实冲突 → 提 issue，不自行改写。
 - 本纪律与各仓既有条款冲突时，以本纪律为准（它更严格）。
 
@@ -225,7 +225,7 @@ just review          # gate check 全套自检
   `test:` / `ci:` / `build:` / `perf:` / `style:` / `revert:`）。
 - 标题**用英文**，正文可用中文。
 - 一个 commit 一件事。不把无关改动、格式化噪声、生成物混进逻辑改动。
-- 提交前跑对应检查（`gate pre-commit` / `gate pre-push`），不靠推送失败才发现。
+- 提交前跑对应检查（`canon pre-commit` / `canon pre-push`），不靠推送失败才发现。
 
 ### Issue
 
@@ -240,7 +240,7 @@ just review          # gate check 全套自检
   实现步骤 / 交付记录 / 怎么验证 / 检查清单。
 - 关联 issue 用 `Fixes #<n>` 收尾行；draft 阶段用 `Related #<n>`，合并授权前改 `Fixes`。
 - 开启或更新 PR 后看 CI 结果到底（`gh pr checks`），红了就修，不等用户来问。
-- 被 gate 拦下就修代码，**不改规则**。规则确有缺陷 → 开 issue 交维护者裁决。
+- 被 canon 拦下就修代码，**不改规则**。规则确有缺陷 → 开 issue 交维护者裁决。
 
 ### 收尾
 

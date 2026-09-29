@@ -3,13 +3,13 @@
 > 正本。`specs/agents/<项目>.md` 是各仓 `AGENTS.md` 的分发源，改这里再
 > `./bin/agent-sync push <项目>` 同步。改动纪律 = 改本文件 + 重跑分发。
 
-自动检查（gate 的 `FAIL`/`WARN`、`jev` L3 语义发现、CRG / `ocr review` 审查意见）
+自动检查（canon 的 `FAIL`/`WARN`、`jev` L3 语义发现、CRG / `ocr review` 审查意见）
 产出的是**发现**，不是判决。每条发现都必须被显式处置，不存在"绕过"这个选项。
 
 ## 1. 先读规范，再改代码
 
 1. 拿到 finding，先读规则原文，确认这条发现到底要求什么：
-   - gate 规则总览：`.githooks/GATE_HANDBOOK.md`
+   - canon 规则总览：`.githooks/GATE_HANDBOOK.md`
    - 单条规则的参数（匹配范围 / 严重度 / harness）：`.githooks/spec/**/<rule>.yaml`
    - 项目适配说明（本仓为什么这么定）：`.agent/rules/gates.md`
 2. 不确定 finding 是否成立时，读完规则仍不能判定 → **记为待裁决**并在交付记录里写明，
@@ -22,7 +22,7 @@
 
 ## 3. 禁止糊弄式修复
 
-以下动作一律视为违规（无论 gate 是否因此变绿）：
+以下动作一律视为违规（无论 canon 是否因此变绿）：
 
 | 禁止 | 为什么 | 正确做法 |
 |---|---|---|
@@ -44,6 +44,6 @@
 
 ## 5. 规范层级
 
-- `.githooks/` 是 gate 领地：agent 不改规则（见各仓 `AGENTS.md` 的既有条款）。
+- `.githooks/` 是 canon 领地：agent 不改规则（见各仓 `AGENTS.md` 的既有条款）。
 - `.agent/rules/`、`specs/rules/` 是规范正本：发现规则与现实冲突 → 提 issue，不自行改写。
 - 本纪律与各仓既有条款冲突时，以本纪律为准（它更严格）。

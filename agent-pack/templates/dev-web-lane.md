@@ -65,7 +65,7 @@ git push origin web-dev && git branch -d feat/xxx
 推之前本地过闸门（pre-commit/push 钩子会自己跑；主动预检）：
 
 ```bash
-gate check                        # FAIL 必须清零再 push，WARN 说明理由后可放行
+canon check                        # FAIL 必须清零再 push，WARN 说明理由后可放行
 ```
 
 **新 crate 必须同时建 README**（doc_sync FAIL）；组件被第二个 page 使用时搬进

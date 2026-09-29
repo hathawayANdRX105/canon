@@ -14,11 +14,10 @@
 canon/                  ← 仓根本身就是 Rust crate（gate）
 ├── src/                # gate 源码（engine / rules / tools）
 ├── tests/              # gate crate 集成测试
-├── Cargo.toml          # 产物 target/release/gate，分发到各仓 .githooks/gate
+├── Cargo.toml          # 产物 target/release/gate，分发到各仓 .githooks/canon
 ├── agent-pack/         # agent 文档正本（agents 片段 / rules / skills / templates / tasks）
-├── specs/              # gate 规则包正本（gate init 的 seed 源）（quality/code/cleanup/github/workspace/harness/docs）
-├── scripts/            # 同步与组装工具（agent-sync / agents / gate-sync）
-├── manual/             # 人查手册（gate / github / pr-dev-workflow / worktree，不分发）
+├── specs/              # gate 规则包正本（canon init 的 seed 源）（quality/code/cleanup/github/workspace/harness/docs）
+├── scripts/            # 同步与组装工具（agent-sync / agents / canon-sync）
 ├── Justfile            # 高频 CLI 封装
 └── agent-sync.yaml     # agent 文档分发配置
 ```
@@ -27,7 +26,7 @@ canon/                  ← 仓根本身就是 Rust crate（gate）
 
 一个主题要么**纯通用**（放 canon，可同步），要么**纯项目特有**（留项目，不同步）。混合内容按自然接缝拆成两份：
 
-- 版本口径唯一正本 → `canon/tasks/version-stats.md`（通用篇 + silverq 项目篇合并，勿再建项目副本）
+- 版本口径唯一正本 → `version-stats` skill（dotfiles 分发，通用篇 + silverq 项目篇合并，勿再建项目副本）
 - 项目特有（路径 / 清单 / tag 格式 / 产物）→ 各项目的 `.agent/tasks/versioning.md`
 
 两份冲突时**以项目文件为准**——它绑死了真实路径。
@@ -41,8 +40,8 @@ projects:
   kime:
     root: /abs/path/to/kime        # 项目本地绝对路径（安装根）
     files:
-      - src: tasks/version-stats.md  # canon 源路径
-        to: .agent/tasks/version-stats.md  # 安装路径（相对 root）
+      - src: agent-pack/rules/gates.md  # canon 源路径
+        to: .agent/rules/gates.md       # 安装路径（相对 root）
         # pin: abc1234               # 可选：固定同步自某次 canon 提交
 ```
 
@@ -56,7 +55,7 @@ projects:
 agent-sync status              # 所有项目的漂移报告（只读）
 agent-sync status kime         # 单个项目
 agent-sync push kime [--commit]  # 同步 canon -> kime（只推 behind/missing/unstamped）
-agent-sync backport kime tasks/version-stats.md   # kime 的本地修正回流到 canon
+agent-sync backport kime agent-pack/rules/gates.md   # kime 的本地修正回流到 canon
 agent-sync pull                # canon 仓自更新
 ```
 
@@ -123,20 +122,20 @@ canon 管规范的**存储、分发与执行**，是 gate 的**唯一源码正�
 
 ```bash
 cargo build --release              # 产物 target/release/gate
-cd <目标仓库> && ~/projects/canon/target/release/gate init
+cd <目标仓库> && ~/projects/canon/target/release/canon init
 ```
 
-`gate init` 做四件事：装二进制到 `~/.local/bin/`（**gate + gh 两个名字**，gh 用于拦截 issue/PR 命令）→ 设 `core.hooksPath=.githooks/hooks` → 写三个 hook 脚本（pre-commit / pre-push / merge，带 PATH→仓内二进制的兜底查找）→ 从 `specs/`（自动探测 canon 仓，或 `--rules-dir` 指定）播种规则到 `.githooks/spec/`，**已存在的文件绝不覆盖**。
+`canon init` 做四件事：装二进制到 `~/.local/bin/`（**gate + gh 两个名字**，gh 用于拦截 issue/PR 命令）→ 设 `core.hooksPath=.githooks/hooks` → 写三个 hook 脚本（pre-commit / pre-push / merge，带 PATH→仓内二进制的兜底查找）→ 从 `specs/`（自动探测 canon 仓，或 `--rules-dir` 指定）播种规则到 `.githooks/spec/`，**已存在的文件绝不覆盖**。
 
 ### 用法
 
 ```bash
-gate pre-commit          # staged diff 检查（钩子自动调）
-gate pre-push            # HEAD 全量 diff 检查（钩子自动调）
+canon pre-commit          # staged diff 检查（钩子自动调）
+canon pre-push            # HEAD 全量 diff 检查（钩子自动调）
 gate pre-merge           # merge-base 检查（merge 工具调；GATE_BASE=origin/develop gate pre-merge 换基线）
-gate check               # 列出全部规则
-gate check clippy --sla l2   # 手动跑指定规则（merge scope，忽略 hooks 过滤）
-gate check hardcoded_secret --json   # 机器可读输出（含 score/confidence 等 extra）
+canon check               # 列出全部规则
+canon check clippy --sla l2   # 手动跑指定规则（merge scope，忽略 hooks 过滤）
+canon check hardcoded_secret --json   # 机器可读输出（含 score/confidence 等 extra）
 ```
 
 退出码：存在 FAIL 级 finding → 1（拦截 git 操作）；否则 0。严重度可用 `.githooks/spec/severity_overrides.yaml` 按 rule_id 覆盖。

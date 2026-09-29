@@ -12,7 +12,7 @@
   `test:` / `ci:` / `build:` / `perf:` / `style:` / `revert:`）。
 - 标题**用英文**，正文可用中文。
 - 一个 commit 一件事。不把无关改动、格式化噪声、生成物混进逻辑改动。
-- 提交前跑对应检查（`gate pre-commit` / `gate pre-push`），不靠推送失败才发现。
+- 提交前跑对应检查（`canon pre-commit` / `canon pre-push`），不靠推送失败才发现。
 
 ## Issue
 
@@ -27,7 +27,7 @@
   实现步骤 / 交付记录 / 怎么验证 / 检查清单。
 - 关联 issue 用 `Fixes #<n>` 收尾行；draft 阶段用 `Related #<n>`，合并授权前改 `Fixes`。
 - 开启或更新 PR 后看 CI 结果到底（`gh pr checks`），红了就修，不等用户来问。
-- 被 gate 拦下就修代码，**不改规则**。规则确有缺陷 → 开 issue 交维护者裁决。
+- 被 canon 拦下就修代码，**不改规则**。规则确有缺陷 → 开 issue 交维护者裁决。
 
 ## 收尾
 

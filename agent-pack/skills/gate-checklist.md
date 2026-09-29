@@ -1,6 +1,6 @@
 ---
 name: gate-checklist
-description: 'Guide for creating and using custom project-level gate checklist rules (.githooks/spec/checklist_*.yaml). Use when adding new automated checks (grep, diff, or file modes) to pre-commit, pre-push, or merge hooks without modifying gate binary.'
+description: 'Guide for creating and using custom project-level gate checklist rules (.githooks/spec/checklist_*.yaml). Use when adding new automated checks (grep, diff, or file modes) to pre-commit, pre-push, or merge hooks without modifying the canon binary.'
 license: MIT
 ---
 
@@ -30,7 +30,7 @@ FAIL/WARN/INFO 出口。
 # 1. 装 omenic gate 二进制 (CK-04 已实现)
 #    拷 omenic PR #273 impl 编译出的 release 版
 cp /path/to/omenic/.wt/271-feat-gate-checklist/target/release/gate \
-   ~/.local/bin/gate
+   ~/.local/bin/canon
 
 # 2. 装 LLM CLI (任选)
 #    claude  → Anthropic CLI
@@ -84,20 +84,20 @@ YAML
 ```
 
 注意：dispatch.yaml **必须**在 `.githooks/spec/`，**不是** `.githooks/`。
-gate pre_commit/pre_push/merge 三个入口都从 spec/ 读。
+canon pre-commit/pre-push/merge 三个入口都从 spec/ 读。
 
-### Step 3: gate init 接入 git hooks
+### Step 3: canon init 接入 git hooks
 
 ```bash
-gate init
+canon init
 # 自动做：
-#   1. 部署 gate 到 ~/.local/bin/gate 和 ~/.local/bin/gh
+#   1. 部署 gate 到 ~/.local/bin/canon 和 ~/.local/bin/gh
 #   2. 写 .githooks/hooks/{pre-commit, pre-push, merge} 三个 sh 包装
 #   3. git config core.hooksPath = .githooks/hooks
 # 已 init 过会跳过
 ```
 
-如果 `gate init` 报 "could not find .githooks directory"，先 `mkdir -p .githooks/spec` 即可。
+如果 `canon init` 报 "could not find .githooks directory"，先 `mkdir -p .githooks/spec` 即可。
 
 ## 写一条规则 (yaml schema)
 
@@ -224,7 +224,7 @@ export LLM_PROMPT="额外 system 指令"
 
 # Dry-run (不调 API,只 echo MOCK_FINDINGS) — 调试 yaml 用
 LLM_DRY_RUN=1 MOCK_FINDINGS='[{"id":"X-01","severity":"WARN","line":1,"message":"test"}]' \
-  gate pre-push
+  canon pre-push
 ```
 
 `llm-checklist-harness.sh` 完整源码在 omenic `.wt/271-feat-gate-checklist/.githooks/spec/`。
@@ -312,11 +312,11 @@ timeout: 60
 
 ```bash
 # 1. 不调真 LLM,验 yaml 解析
-LLM_DRY_RUN=1 MOCK_FINDINGS='[]' gate pre-push
+LLM_DRY_RUN=1 MOCK_FINDINGS='[]' canon pre-push
 
 # 2. 验 finding 路径输出
 LLM_DRY_RUN=1 MOCK_FINDINGS='[{"id":"X","severity":"FAIL","path":"src/foo.rs","line":42,"message":"test"}]' \
-  gate pre-push 2>&1 | grep X
+  canon pre-push 2>&1 | grep X
 
 # 3. 直接调 harness (不走 gate)
 cat your_file.rs | LLM_DRY_RUN=1 MOCK_FINDINGS='[]' \
@@ -330,7 +330,7 @@ chmod +x .githooks/spec/CHECKLIST_DEMO_MOCK.sh
 $EDITOR .githooks/spec/checklist_xxx.yaml
 # 测
 CHECKLIST_DEMO_FINDINGS='[{"id":"D","severity":"WARN","line":1,"message":"x"}]' \
-  gate pre-push
+  canon pre-push
 ```
 
 ## 临时禁用

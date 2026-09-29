@@ -4,11 +4,11 @@ canon 是**规范与 agent 文档的正本仓**。别的项目想改规范、改
 
 ## 这个仓是什么
 
-- 规范正本：`agent-pack/rules/`、`agent-pack/skills/`、`specs/`（gate spec，`gate init` 的 seed 源）、`manual/`（人查手册）
-- 项目任务书：`agent-pack/tasks/`（closeout / feature-dev-handbook）
+- 规范正本：`agent-pack/rules/`、`agent-pack/skills/`、`specs/`（spec 正本，`canon init` 的 seed 源）
+- 人查手册与任务书：已全部转成 dotfiles skill（gate-spec / pr-orchestration / task-brief / closeout / worktree-isolation）
 - agent 文档正本：`agent-pack/agents/`
-- gate 源码：**canon 仓根本身就是 Rust crate**（仓根 `src/` + `tests/` + `Cargo.toml`）；
-  `cargo build --release` 产物 `target/release/gate` 复制到 `.githooks/gate`，再由 gate-sync 分发到各项目
+- canon 源码：**canon 仓根本身就是 Rust crate**（仓根 `src/` + `tests/` + `Cargo.toml`）；
+  `cargo build --release` 产物 `target/release/canon` 复制到 `.githooks/canon`，再由 canon-sync 分发到各项目
 - 待部署的暂存改动：`agent-pack/deployed/pending-*/`（**故意不部署**，见各目录 README）
 
 ## 项目 AGENTS.md 是生成物
@@ -79,13 +79,13 @@ scripts/agent-sync backport <项目> <src>  # 项目本地修正 → 回流 cano
 `just` 封装了高频命令，见仓根 `Justfile`：
 
 ```bash
-just gate-build      # cargo build --release，产物落 .githooks/gate
-just gate-test       # gate crate 全量测试
-just gate-push       # gate-sync 推 8 个成员仓（custom/ 受保护）
+just build      # cargo build --release，产物落 .githooks/canon
+just test       # canon crate 全量测试
+just push       # canon-sync 推 8 个成员仓（custom/ 受保护）
 just agents-push     # agents push canon（重新组装本仓 AGENTS.md）
 just spec-sync       # specs/ → .githooks/spec/ 正本同步部署镜像
-just review          # gate check 全套自检
+just review          # canon check 全套自检
 ```
 
-改规范的标准动线：改 `specs/` 或 `agent-pack/` → `just spec-sync`（如动 gate spec）
-→ `just gate-build && just gate-push`（如动二进制）→ `just agents-push`（如动 agent 文档）。
+改规范的标准动线：改 `specs/` 或 `agent-pack/` → `just spec-sync`（如动 spec）
+→ `just build && just push`（如动二进制）→ `just agents-push`（如动 agent 文档）。

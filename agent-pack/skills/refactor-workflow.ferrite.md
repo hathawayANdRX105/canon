@@ -246,7 +246,7 @@ ocr review -c <task_commit_2_sha>
 
 ## 阶段 7：收尾（tidy + report）
 
-1. **gate 复检**：`gate pre-commit` + `gate pre-push` 全量，FAIL 清零
+1. **gate 复检**：`canon pre-commit` + `canon pre-push` 全量，FAIL 清零
 2. **杂物检查**：`.wt/<branch>/` 里跟本次无关的临时文件 → `gio trash`（严禁 `rm`）
 3. **格式**：`cargo fmt --all`（若改动文件，重跑最小验收 + tool review + smoke）
 4. **docs 同步**：crate `README.md` 的"待实现占位清单"逐项打勾，过期注释更新

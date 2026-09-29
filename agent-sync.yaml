@@ -10,10 +10,10 @@
 #   本清单就是「哪份文档装到哪里」的唯一留存记录：agent-sync status/push/
 #   backport 全部以它为准，新增分发文档 = 加一行。
 #
-# canon 源布局三类, 互不重复:
-#   tasks/   手动发给 agent 的任务书(closeout / feature-dev-handbook / version-stats)
-#   manual/  人查手册(gate / github / pr-dev-workflow / worktree, 不分发)
+# canon 源布局, 互不重复:
 #   specs/   默认spec与工具使用(rules / skills / templates, 见 specs/README.md)
+# 任务书(closeout / feature-dev-handbook / version-stats)已全部转成 dotfiles
+# skill, 走 omp 的 skill 通道, 不再经本清单分发。
 # 安装路径沿用项目侧 .agent/ 布局; 分叉文档以 <名>.<项目>.md 命名按项目分发。
 #
 # 可选字段：
@@ -21,16 +21,10 @@
 #
 # 用法：agent-sync status|push|backport|pull（读此文件；旧 projects/ 目录已废弃）
 projects:
-  # 共同任务书(手动发给 agent): 五仓都装 .agent/tasks/
+  # 各项目安装清单
   ferrite:
     root: /home/hathaway/projects/ferrite
     files:
-      - src: tasks/closeout.md
-        to: .agent/tasks/closeout.md
-      - src: tasks/feature-dev-handbook.md
-        to: .agent/tasks/feature-dev-handbook.md
-      - src: tasks/version-stats.md
-        to: .agent/tasks/version-stats.md
       - src: agent-pack/rules/agent-readme.md
         to: .agent/README.md
       - src: agent-pack/rules/conventions.md
@@ -68,21 +62,11 @@ projects:
   kime:
     root: /home/hathaway/projects/kime
     files:
-      - src: tasks/closeout.md
-        to: .agent/tasks/closeout.md
       - src: agent-pack/rules/workflow-state.md
         to: .agent/rules/workflow-state.md
-      - src: tasks/feature-dev-handbook.md
-        to: .agent/tasks/feature-dev-handbook.md
   omenic:
     root: /home/hathaway/projects/omenic
     files:
-      - src: tasks/closeout.md
-        to: .agent/tasks/closeout.md
-      - src: tasks/feature-dev-handbook.md
-        to: .agent/tasks/feature-dev-handbook.md
-      - src: tasks/version-stats.md
-        to: .agent/tasks/version-stats.md
       - src: agent-pack/rules/workflow-state.md
         to: .agent/rules/workflow-state.md
       - src: agent-pack/templates/task-templates-handbook.md
@@ -94,21 +78,13 @@ projects:
   silverq:
     root: /home/hathaway/projects/silverq
     files:
-      - src: tasks/closeout.md
-        to: .agent/tasks/closeout.md
       - src: agent-pack/rules/workflow-state.md
         to: .agent/rules/workflow-state.md
-      - src: tasks/feature-dev-handbook.md
-        to: .agent/tasks/feature-dev-handbook.md
       - src: agent-pack/rules/workflow-state.md
         to: .agent/rules/workflow-state.md
   oh-my-pi:
     root: /home/hathaway/projects/oh-my-pi
     files:
-      - src: tasks/closeout.md
-        to: .agent/tasks/closeout.md
-      - src: tasks/feature-dev-handbook.md
-        to: .agent/tasks/feature-dev-handbook.md
       - src: agent-pack/rules/workflow-state.md
         to: .agent/rules/workflow-state.md
   deskctl:
@@ -116,28 +92,16 @@ projects:
     files:
       - src: agent-pack/rules/gates.md
         to: .agent/rules/gates.md
-      - src: tasks/closeout.md
-        to: .agent/tasks/closeout.md
-      - src: tasks/feature-dev-handbook.md
-        to: .agent/tasks/feature-dev-handbook.md
       - src: agent-pack/rules/workflow-state.md
         to: .agent/rules/workflow-state.md
   gugu:
     root: /home/hathaway/projects/gugu
     files:
-      - src: tasks/closeout.md
-        to: .agent/tasks/closeout.md
-      - src: tasks/feature-dev-handbook.md
-        to: .agent/tasks/feature-dev-handbook.md
       - src: agent-pack/rules/workflow-state.md
         to: .agent/rules/workflow-state.md
   new-api:
     root: /home/hathaway/projects/new-api
     files:
-      - src: tasks/closeout.md
-        to: .agent/tasks/closeout.md
-      - src: tasks/feature-dev-handbook.md
-        to: .agent/tasks/feature-dev-handbook.md
       - src: agent-pack/rules/workflow-state.md
         to: .agent/rules/workflow-state.md
   herdr:
@@ -163,4 +127,7 @@ projects:
     files:
   algorchemy:
     root: /home/hathaway/projects/algorchemy
+    files:
+  ui-kit:
+    root: /home/hathaway/projects/ui-kit
     files:

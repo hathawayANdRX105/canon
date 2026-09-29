@@ -3,7 +3,7 @@
 > **什么时候用**：主控要把一个子任务派给子代理（或自己执行）之前，复制本模板填满——
 > 空号发出去 = 子代理在哪一 freeing 发挥。**怎么填**：所有 `<...>` 替换为真实值，
 > 「怎么算做完」的 checkbox 就是验收项，一条都不能空。
-> 完整流程见 `../manual/pr-dev-workflow.md`；七问口径见 `../../tasks/feature-dev-handbook.md`。
+> 完整流程见 `pr-orchestration` skill；七问口径见 `task-brief` skill。
 
 # <任务标题：一句话说清做什么>
 

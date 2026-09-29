@@ -6,7 +6,7 @@
 
 ```bash
 # 安装/更新拦截门
-gate init
+canon init
 
 # issue(正文按 .github/ISSUE_TEMPLATE/ 下模板)
 gh issue create --title "..." --body "..." --label <epic|sub|...>
@@ -17,7 +17,7 @@ gh pr create --title "..." --body "..." --head <branch>
 
 gate 自动做创建前校验(规则在 `.githooks/spec/`)+ 创建后现实校验，FAIL 拒绝创建。
 
-**`.githooks/` 是 gate 自己的领地，agent 禁止改动 gate 规则**（`hooks/`、`spec/` 下的 gate 规则 yaml、`gate` 二进制）。gate 规则的增删改由用户或 gate 自身的 `gate init` 负责；agent 遇到 gate FAIL 应改自己的提交/PR 正文去迎合规则，而不是去改规则。UI 契约 yaml（7 份，含 `anchors`/`target` 字段）也平铺在 `.githooks/spec/`，但它们不是 gate 规则，由 `bin/web/tests/ui_contract.rs` 消费。
+**`.githooks/` 是 gate 自己的领地，agent 禁止改动 gate 规则**（`hooks/`、`spec/` 下的 gate 规则 yaml、`gate` 二进制）。gate 规则的增删改由用户或 gate 自身的 `canon init` 负责；agent 遇到 gate FAIL 应改自己的提交/PR 正文去迎合规则，而不是去改规则。UI 契约 yaml（7 份，含 `anchors`/`target` 字段）也平铺在 `.githooks/spec/`，但它们不是 gate 规则，由 `bin/web/tests/ui_contract.rs` 消费。
 
 ## 构建与验证（CI 驱动）
 

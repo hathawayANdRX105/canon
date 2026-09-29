@@ -3,8 +3,9 @@
 > 这里是**项目侧默认 spec 与工具使用文档**的 canon 正本：代码约定、环境/测试规范、
 > skill 用法、任务模板。**不逐份策展**——它们大多是默认规则与工具说明，按需查即可；
 > 维护动作只有两种：项目本地修改 → `agent-sync backport` 回流；统一修改 → 改正本后 push。
-> 需要**手动发给 agent 的任务书**不在这里，在 `../tasks/`（closeout / feature-dev-handbook /
-> version-stats）。人查手册在 `../manual/`。
+> 需要**手动发给 agent 的任务书**不在这里，已全部转成 dotfiles skill（`task-brief` /
+> `closeout` / `version-stats`）。人查手册同样转成了 skill（`gate-spec` / `pr-orchestration` /
+> `worktree-isolation`）。
 
 ## 目录
 
