@@ -6,7 +6,7 @@
     "state": {
       "file": true,
       "diff": false,
-      "context_files": ["docs/specs/api_security.md"]
+      "context_files": [".githooks/spec/docs/api_security.md"]
     },
     "questions": {
       "input_validation_missing": {
