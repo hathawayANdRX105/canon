@@ -4,7 +4,7 @@
 //! required headings, heading names, forbidden prefixes/brackets/keywords,
 //! the type-label set, keyword→label suggestions and every behaviour switch
 //! are read from the spec — there are no built-in defaults. When the spec is
-//! missing (or empty) the whole family returns a single loud `gate.setup`
+//! missing (or empty) the whole family returns a single loud `canon.setup`
 //! FAIL rather than validating against values invented in code.
 //!
 //! API-only checks (I-18 native sub-issues, I-20 repo labels, creation-time
@@ -257,7 +257,7 @@ fn check_content_impl(
 ) -> Vec<Finding> {
     let mut findings: Vec<Finding> = Vec::new();
 
-    // No spec ⇒ loud gate.setup FAIL. Never fall back to values baked into
+    // No spec ⇒ loud canon.setup FAIL. Never fall back to values baked into
     // code: a repo without its rules pack must not pass green. An empty
     // (null) spec is just as missing as an absent one.
     let cfg = match cfg.filter(|c| !c.is_null()) {
@@ -712,13 +712,13 @@ mod tests {
         // None: no spec on disk at all.
         let findings = check_content("标题", "正文", &[], "sub", "open", None);
         assert_eq!(findings.len(), 1);
-        assert_eq!(findings[0].rule_id, "gate.setup");
+        assert_eq!(findings[0].rule_id, "canon.setup");
         assert_eq!(findings[0].severity, Severity::Fail);
 
         // A null (empty) spec is just as missing — never silently green.
         let findings = check_content("标题", "正文", &[], "sub", "open", Some(&YamlValue::Null));
         assert_eq!(findings.len(), 1);
-        assert_eq!(findings[0].rule_id, "gate.setup");
+        assert_eq!(findings[0].rule_id, "canon.setup");
     }
 
     #[test]

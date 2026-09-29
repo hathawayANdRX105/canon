@@ -141,7 +141,7 @@ fn cfg_usize(cfg: Option<&YamlValue>, key: &str) -> usize {
 /// * `head_ref`  — head ref name (may include fork "user:" prefix)
 /// * `state`     — "open" or "closed"/"merged"
 /// * `cfg`       — parsed `github_pull_requests.yaml`; missing/null ⇒ a single
-///                 `gate.setup` FAIL and no checks run
+///                 `canon.setup` FAIL and no checks run
 ///
 /// Returns a `Vec<Finding>` in the same order as the Python version.
 pub fn check_content(
@@ -167,7 +167,7 @@ fn check_content_impl(
     draft: bool,
     cfg: Option<&YamlValue>,
 ) -> Vec<Finding> {
-    // No spec ⇒ loud gate.setup FAIL. Never fall back to values baked into
+    // No spec ⇒ loud canon.setup FAIL. Never fall back to values baked into
     // code: a repo without its rules pack must not pass green. An empty
     // (null) spec is just as missing as an absent one.
     let cfg = match cfg.filter(|c| !c.is_null()) {
@@ -545,7 +545,7 @@ mod tests {
             None,
         );
         assert_eq!(findings.len(), 1, "no checks may run without the spec");
-        assert_eq!(findings[0].rule_id, "gate.setup");
+        assert_eq!(findings[0].rule_id, "canon.setup");
         assert_eq!(findings[0].severity, Severity::Fail);
 
         // A null (empty) spec is just as missing — never silently green.
@@ -559,7 +559,7 @@ mod tests {
             Some(&YamlValue::Null),
         );
         assert_eq!(findings.len(), 1, "no checks may run without the spec");
-        assert_eq!(findings[0].rule_id, "gate.setup");
+        assert_eq!(findings[0].rule_id, "canon.setup");
     }
 
     #[test]

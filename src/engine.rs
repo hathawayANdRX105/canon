@@ -17,7 +17,7 @@ use serde::Deserialize;
 use crate::shared::{Finding, Severity, load_yaml, truncate_utf8};
 use crate::tools::git;
 
-/// Which gate entrypoint invoked us; controls the diff scope.
+/// Which canon entrypoint invoked us; controls the diff scope.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HookScope {
     PreCommit,
@@ -147,7 +147,7 @@ fn load_spec(path: &std::path::Path) -> Result<ChecklistSpec, String> {
         Ok(v) => v,
         Err(e) => {
             // Fail-closed: a broken spec must not silently drop the rule —
-            // the error is surfaced as a hard gate.setup finding at run time.
+            // the error is surfaced as a hard canon.setup finding at run time.
             return Err(format!("yaml parse fail {}: {e}", path.display()));
         }
     };
@@ -235,49 +235,158 @@ fn merge_base() -> String {
     std::env::var("GATE_BASE").unwrap_or_else(|_| "origin/main...HEAD".to_string())
 }
 
-fn diff_args(scope: HookScope) -> Vec<String> {
-    match scope {
-        HookScope::PreCommit => vec!["diff", "--cached", "--unified=3", "--no-color"]
-            .into_iter()
-            .map(String::from)
-            .collect(),
-        HookScope::PrePush => vec!["diff", "HEAD", "--unified=3", "--no-color"]
-            .into_iter()
-            .map(String::from)
-            .collect(),
-        HookScope::Merge => vec![
-            "diff".to_string(),
-            merge_base(),
-            "--unified=3".to_string(),
-            "--no-color".to_string(),
-        ],
+/// The base rev alone (no `...HEAD`), for building `<base>...<branch>`.
+pub fn base_ref() -> String {
+    std::env::var("GATE_BASE")
+        .ok()
+        .map(|v| v.split("...").next().unwrap_or(&v).to_string())
+        .unwrap_or_else(|| "origin/main".to_string())
+}
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Target {
+    /// The hook's own view: staged, HEAD-relative, or merge-base.
+    Hook(HookScope),
+    /// An explicit git revision range or single commit, e.g. `main..HEAD`.
+    Rev(String),
+    /// Paths or directories, optionally relative to a base rev. A directory
+    /// expands to its git-tracked files. `base` is what makes "this commit's
+    /// changes to these two files" expressible; without one the scope is the
+    /// files as they are now (a plain file review).
+    Files {
+        paths: Vec<String>,
+        base: Option<String>,
+    },
+}
+
+impl From<HookScope> for Target {
+    fn from(h: HookScope) -> Self {
+        Target::Hook(h)
     }
 }
 
-fn capture_diff(scope: HookScope) -> Option<String> {
-    let out = Command::new("git").args(diff_args(scope)).output().ok()?;
+impl Target {
+    /// Human-readable label for tool output, so a finding can say what it saw.
+    pub fn describe(&self) -> String {
+        match self {
+            Target::Hook(h) => h.as_str().to_string(),
+            Target::Rev(r) => format!("rev {r}"),
+            Target::Files { paths, base } => match base {
+                Some(b) => format!("{} path(s) since {b}", paths.len()),
+                None => format!("{} path(s)", paths.len()),
+            },
+        }
+    }
+}
+
+/// `Mode::Grep` harnesses run their own repo-wide scan, so a rev/path target
+/// cannot narrow them. Callers surface this rather than implying a scoped run
+/// was exhaustive.
+pub fn is_scopeable(spec: &ChecklistSpec) -> bool {
+    spec.mode != Mode::Grep
+}
+
+fn diff_args(target: &Target) -> Vec<String> {
+    match target {
+        Target::Hook(HookScope::PreCommit) => {
+            vec![
+                "diff".into(),
+                "--cached".into(),
+                "--unified=3".into(),
+                "--no-color".into(),
+            ]
+        }
+        Target::Hook(HookScope::PrePush) => {
+            vec![
+                "diff".into(),
+                "HEAD".into(),
+                "--unified=3".into(),
+                "--no-color".into(),
+            ]
+        }
+        Target::Hook(HookScope::Merge) => vec![
+            "diff".into(),
+            merge_base(),
+            "--unified=3".into(),
+            "--no-color".into(),
+        ],
+        Target::Rev(r) => vec![
+            "diff".into(),
+            r.clone(),
+            "--unified=3".into(),
+            "--no-color".into(),
+        ],
+        // Paths go after `--` so they are read as a pathspec list rather than
+        // a rev — free correctness, and it keeps a file named like a branch
+        // from being read as one.
+        Target::Files { paths, base } => {
+            let mut v = vec!["diff".into()];
+            v.extend(base.clone().into_iter());
+            v.extend(["--unified=3".into(), "--no-color".into(), "--".into()]);
+            v.extend(paths.iter().cloned());
+            v
+        }
+    }
+}
+
+fn capture_diff(target: &Target) -> Option<String> {
+    let out = Command::new("git").args(diff_args(target)).output().ok()?;
     if !out.status.success() {
         return None;
     }
     String::from_utf8(out.stdout).ok()
 }
 
-fn changed_files(scope: HookScope) -> Vec<String> {
-    let args: Vec<String> = match scope {
-        HookScope::PreCommit => vec!["diff", "--cached", "--name-only", "--no-color"]
-            .into_iter()
-            .map(String::from)
-            .collect(),
-        HookScope::PrePush => vec!["diff", "HEAD", "--name-only", "--no-color"]
-            .into_iter()
-            .map(String::from)
-            .collect(),
-        HookScope::Merge => vec![
-            "diff".to_string(),
+/// Files a `Mode::File` / `Mode::Diff` check should look at.
+///
+/// Without a base rev the paths resolve through `git ls-files`, so a directory
+/// expands to its tracked contents and the result stays gitignore-aware — the
+/// same property that keeps grep harnesses from scanning reference trees.
+fn changed_files(target: &Target) -> Vec<String> {
+    let args: Vec<String> = match target {
+        Target::Hook(HookScope::PreCommit) => {
+            vec![
+                "diff".into(),
+                "--cached".into(),
+                "--name-only".into(),
+                "--no-color".into(),
+            ]
+        }
+        Target::Hook(HookScope::PrePush) => {
+            vec![
+                "diff".into(),
+                "HEAD".into(),
+                "--name-only".into(),
+                "--no-color".into(),
+            ]
+        }
+        Target::Hook(HookScope::Merge) => vec![
+            "diff".into(),
             merge_base(),
-            "--name-only".to_string(),
-            "--no-color".to_string(),
+            "--name-only".into(),
+            "--no-color".into(),
         ],
+        Target::Rev(r) => vec![
+            "diff".into(),
+            r.clone(),
+            "--name-only".into(),
+            "--no-color".into(),
+        ],
+        Target::Files { paths, base } => {
+            let mut v = match base {
+                // "what changed in these paths since base"
+                Some(b) => vec![
+                    "diff".into(),
+                    b.clone(),
+                    "--name-only".into(),
+                    "--no-color".into(),
+                    "--".into(),
+                ],
+                // "these files as they are now"
+                None => vec!["ls-files".into(), "--".into()],
+            };
+            v.extend(paths.iter().cloned());
+            v
+        }
     };
     let Ok(out) = Command::new("git").args(&args).output() else {
         return vec![];
@@ -314,8 +423,8 @@ fn file_matches(spec: &ChecklistSpec, rel: &str) -> bool {
     spec.include.iter().any(|p| matches_include(rel, p))
 }
 
-fn has_match(spec: &ChecklistSpec, scope: HookScope) -> bool {
-    let files = changed_files(scope);
+fn has_match(spec: &ChecklistSpec, target: &Target) -> bool {
+    let files = changed_files(target);
     files.iter().any(|f| file_matches(spec, f))
 }
 
@@ -449,7 +558,7 @@ fn convert(spec: &ChecklistSpec, items: Vec<FindingJson>) -> Vec<Finding> {
 // Per-spec execution
 // ---------------------------------------------------------------------------
 
-fn run_one(spec: &ChecklistSpec, scope: HookScope, ignore_hooks: bool) -> Vec<Finding> {
+fn run_one(spec: &ChecklistSpec, target: &Target, ignore_hooks: bool) -> Vec<Finding> {
     if !spec.enabled {
         return vec![Finding::new(
             &format!("checklist.{}", spec.name),
@@ -457,10 +566,18 @@ fn run_one(spec: &ChecklistSpec, scope: HookScope, ignore_hooks: bool) -> Vec<Fi
             "disabled in config",
         )];
     }
-    if !ignore_hooks && !spec.hooks.iter().any(|h| scope.matches_yaml(h)) {
-        return vec![]; // not in this hook's scope — silent skip
+    if !ignore_hooks {
+        // A hook target honours `hooks:` routing; an explicit rev/path target
+        // is already a deliberate ask, so the hook filter must not veto it.
+        let routed = match target {
+            Target::Hook(h) => spec.hooks.iter().any(|x| h.matches_yaml(x)),
+            _ => true,
+        };
+        if !routed {
+            return vec![]; // not in this hook's scope — silent skip
+        }
     }
-    if spec.mode != Mode::Grep && !has_match(spec, scope) {
+    if spec.mode != Mode::Grep && !has_match(spec, target) {
         return vec![Finding::new(
             &format!("checklist.{}", spec.name),
             Severity::Info,
@@ -469,13 +586,13 @@ fn run_one(spec: &ChecklistSpec, scope: HookScope, ignore_hooks: bool) -> Vec<Fi
     }
 
     let stdin_payload: Vec<u8> = match spec.mode {
-        Mode::Diff => capture_diff(scope).unwrap_or_default().into_bytes(),
+        Mode::Diff => capture_diff(target).unwrap_or_default().into_bytes(),
         Mode::File => {
             // Concatenate all matching changed files; harness gets a clear
             // separator so it can attribute findings back to a file.
             let root = git::git_root().unwrap_or_else(|| PathBuf::from("."));
             let mut buf = String::new();
-            for rel in changed_files(scope) {
+            for rel in changed_files(target) {
                 if !file_matches(spec, &rel) {
                     continue;
                 }
@@ -543,18 +660,18 @@ pub fn spec_dir() -> Option<PathBuf> {
 pub fn run_all(scope: HookScope) -> Vec<Finding> {
     let Some(dir) = spec_dir() else {
         return vec![Finding::new(
-            "gate.setup",
+            "canon.setup",
             Severity::Fail,
-            "no .githooks/ found — run `gate init` in the repo root",
+            "no .githooks/ found — run `canon init` in the repo root",
         )];
     };
     let specs = find_specs(&dir);
     if specs.is_empty() {
         return vec![Finding::new(
-            "gate.setup",
+            "canon.setup",
             Severity::Fail,
             &format!(
-                "no checklist_*.yaml under {} — seed a rules pack (`gate init`) or fix the path",
+                "no checklist_*.yaml under {} — seed a rules pack (`canon init`) or fix the path",
                 dir.display()
             ),
         )];
@@ -567,7 +684,7 @@ pub fn run_all(scope: HookScope) -> Vec<Finding> {
                 // Fail-closed: a broken spec (typo / missing key) must block,
                 // not silently drop its rule.
                 findings.push(Finding::new(
-                    "gate.setup",
+                    "canon.setup",
                     Severity::Fail,
                     &format!(
                         "checklist {} broken, rule disabled: {e} — fix the yaml",
@@ -578,12 +695,62 @@ pub fn run_all(scope: HookScope) -> Vec<Finding> {
             }
         };
         eprintln!("--- checklist: {} ---", spec.name);
-        findings.extend(run_one(spec, scope, false));
+        findings.extend(run_one(spec, &Target::Hook(scope), false));
     }
     findings
 }
 
-/// `gate check [names...]` — manual run on Merge scope regardless of the
+/// Run rules against an explicit [`Target`] — a rev range, a commit, or a set
+/// of paths — instead of the working tree. Same broken-spec and empty-pack
+/// fail-closed handling as [`run_all`], so a scoped run can never pass green by
+/// scanning nothing.
+pub fn run_targeted(target: Target, names: &[String], max_sla: SlaLevel) -> Vec<Finding> {
+    let Some(dir) = spec_dir() else {
+        return vec![Finding::new(
+            "canon.setup",
+            Severity::Fail,
+            "no .githooks/ found — run `canon init` in the repo root",
+        )];
+    };
+    let specs = find_specs(&dir);
+    if specs.is_empty() {
+        return vec![Finding::new(
+            "canon.setup",
+            Severity::Fail,
+            &format!(
+                "no checklist_*.yaml under {} — seed a rules pack (`canon init`) or fix the path",
+                dir.display()
+            ),
+        )];
+    }
+    let mut findings = Vec::new();
+    for (path, spec) in &specs {
+        let spec = match spec {
+            Ok(s) => s,
+            Err(e) => {
+                findings.push(Finding::new(
+                    "canon.setup",
+                    Severity::Fail,
+                    &format!(
+                        "checklist {} broken, rule disabled: {e} — fix the yaml",
+                        path.file_name().unwrap_or_default().to_string_lossy()
+                    ),
+                ));
+                continue;
+            }
+        };
+        if !names.is_empty() && !names.iter().any(|n| *n == spec.name) {
+            continue;
+        }
+        if spec.sla > max_sla {
+            continue;
+        }
+        findings.extend(run_one(spec, &target, true));
+    }
+    findings
+}
+
+/// `canon check [names...]` — manual run on Merge scope regardless of the
 /// `hooks:` filter. No names → list what is available. SLA filter applies.
 /// Display name of a checklist spec from its file stem
 /// (`checklist_ccn.yaml` → `ccn`); `None` for non-conforming names.
@@ -602,19 +769,19 @@ pub fn run_named(names: &[String], max_sla: SlaLevel) -> Vec<Finding> {
             // Fail-closed on the manual path too: no spec = hard FAIL, not a
             // quiet ALL PASS.
             findings.push(Finding::new(
-                "gate.setup",
+                "canon.setup",
                 Severity::Fail,
-                "no .githooks/ found — run `gate init` in the repo root",
+                "no .githooks/ found — run `canon init` in the repo root",
             ));
             return findings;
         }
     };
     if specs.is_empty() {
         findings.push(Finding::new(
-            "gate.setup",
+            "canon.setup",
             Severity::Fail,
             &format!(
-                "no checklist_*.yaml under {} — seed a rules pack (`gate init`) or fix the path",
+                "no checklist_*.yaml under {} — seed a rules pack (`canon init`) or fix the path",
                 spec_dir().unwrap_or_default().display()
             ),
         ));
@@ -641,7 +808,7 @@ pub fn run_named(names: &[String], max_sla: SlaLevel) -> Vec<Finding> {
             .find(|(p, s)| s.is_err() && spec_stem_name(p).as_deref() == Some(name.as_str()))
         {
             findings.push(Finding::new(
-                "gate.setup",
+                "canon.setup",
                 Severity::Fail,
                 &format!(
                     "checklist {} broken: {e} — fix the yaml",
@@ -656,10 +823,10 @@ pub fn run_named(names: &[String], max_sla: SlaLevel) -> Vec<Finding> {
         {
             Some((_path, Ok(spec))) => {
                 eprintln!("--- checklist: {} ---", spec.name);
-                findings.extend(run_one(spec, HookScope::Merge, true));
+                findings.extend(run_one(spec, &Target::Hook(HookScope::Merge), true));
             }
             Some((path, Err(e))) => findings.push(Finding::new(
-                "gate.setup",
+                "canon.setup",
                 Severity::Fail,
                 &format!(
                     "checklist {} broken: {e} — fix the yaml",

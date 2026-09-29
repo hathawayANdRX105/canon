@@ -1,85 +1,85 @@
-//! gate init — install / uninstall the gate binary and configure git hooks.
+//! canon init — install / uninstall the canon binary and configure git hooks.
 
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use super::git;
 
-/// Hook scripts try PATH first, then the repo-local `.githooks/gate` copy —
-/// fresh clones / CI machines may not have gate installed system-wide.
+/// Hook scripts try PATH first, then the repo-local `.githooks/canon` copy —
+/// fresh clones / CI machines may not have canon installed system-wide.
 const HOOK_PRE_COMMIT: &str = "\
 #!/usr/bin/env bash
-# gate-managed hook — delegates to the gate binary
-# 找二进制: 先 PATH 里的 gate (系统安装), 否则用仓库内 .githooks/gate
+# canon-managed hook — delegates to the canon binary
+# 找二进制: 先 PATH 里的 canon (系统安装), 否则用仓库内 .githooks/canon
 REPO=$(git rev-parse --show-toplevel 2>/dev/null)
-if command -v gate >/dev/null 2>&1; then
-  exec gate pre-commit
+if command -v canon >/dev/null 2>&1; then
+  exec canon pre-commit
 fi
-if [ -x \"$REPO/.githooks/gate\" ]; then
-  exec \"$REPO/.githooks/gate\" pre-commit
+if [ -x \"$REPO/.githooks/canon\" ]; then
+  exec \"$REPO/.githooks/canon\" pre-commit
 fi
-echo \"gate binary not found (need: gate on PATH, or .githooks/gate)\" >&2
+echo \"canon binary not found (need: canon on PATH, or .githooks/canon)\" >&2
 exit 1
 ";
 
 const HOOK_COMMIT_MSG: &str = "\
 #!/usr/bin/env bash
-# gate-managed hook — delegates to the gate binary
-# 找二进制: 先 PATH 里的 gate (系统安装), 否则用仓库内 .githooks/gate
+# canon-managed hook — delegates to the canon binary
+# 找二进制: 先 PATH 里的 canon (系统安装), 否则用仓库内 .githooks/canon
 REPO=$(git rev-parse --show-toplevel 2>/dev/null)
 MSG=\"$1\"
-if command -v gate >/dev/null 2>&1; then
-  exec gate commit-msg \"$MSG\"
+if command -v canon >/dev/null 2>&1; then
+  exec canon commit-msg \"$MSG\"
 fi
-if [ -x \"$REPO/.githooks/gate\" ]; then
-  exec \"$REPO/.githooks/gate\" commit-msg \"$MSG\"
+if [ -x \"$REPO/.githooks/canon\" ]; then
+  exec \"$REPO/.githooks/canon\" commit-msg \"$MSG\"
 fi
-echo \"gate binary not found (need: gate on PATH, or .githooks/gate)\" >&2
+echo \"canon binary not found (need: canon on PATH, or .githooks/canon)\" >&2
 exit 1
 ";
 
 const HOOK_PRE_PUSH: &str = "\
 #!/usr/bin/env bash
-# gate-managed hook — delegates to the gate binary
-# 找二进制: 先 PATH 里的 gate (系统安装), 否则用仓库内 .githooks/gate
+# canon-managed hook — delegates to the canon binary
+# 找二进制: 先 PATH 里的 canon (系统安装), 否则用仓库内 .githooks/canon
 REPO=$(git rev-parse --show-toplevel 2>/dev/null)
-if command -v gate >/dev/null 2>&1; then
-  exec gate pre-push
+if command -v canon >/dev/null 2>&1; then
+  exec canon pre-push
 fi
-if [ -x \"$REPO/.githooks/gate\" ]; then
-  exec \"$REPO/.githooks/gate\" pre-push
+if [ -x \"$REPO/.githooks/canon\" ]; then
+  exec \"$REPO/.githooks/canon\" pre-push
 fi
-echo \"gate binary not found (need: gate on PATH, or .githooks/gate)\" >&2
+echo \"canon binary not found (need: canon on PATH, or .githooks/canon)\" >&2
 exit 1
 ";
 
 const HOOK_MERGE: &str = "\
 #!/usr/bin/env bash
-# gate-managed hook — delegates to the gate binary
-# 找二进制: 先 PATH 里的 gate (系统安装), 否则用仓库内 .githooks/gate
+# canon-managed hook — delegates to the canon binary
+# 找二进制: 先 PATH 里的 canon (系统安装), 否则用仓库内 .githooks/canon
 REPO=$(git rev-parse --show-toplevel 2>/dev/null)
-if command -v gate >/dev/null 2>&1; then
-  exec gate merge
+if command -v canon >/dev/null 2>&1; then
+  exec canon merge
 fi
-if [ -x \"$REPO/.githooks/gate\" ]; then
-  exec \"$REPO/.githooks/gate\" merge
+if [ -x \"$REPO/.githooks/canon\" ]; then
+  exec \"$REPO/.githooks/canon\" merge
 fi
-echo \"gate binary not found (need: gate on PATH, or .githooks/gate)\" >&2
+echo \"canon binary not found (need: canon on PATH, or .githooks/canon)\" >&2
 exit 1
 ";
 
-/// `gate init` — copy current binary to `~/.local/bin/gate` (+`gh`), configure
+/// `canon init` — copy current binary to `~/.local/bin/canon` (+`gh`), configure
 /// `core.hooksPath`, and write hook templates to `.githooks/hooks/`.
 pub fn install(rules_dir: Option<&Path>) -> anyhow::Result<()> {
     let home = std::env::var("HOME").map_err(|_| anyhow::anyhow!("HOME not set"))?;
     let install_dir = PathBuf::from(&home).join(".local").join("bin");
-    let gate_target = install_dir.join("gate");
+    let canon_target = install_dir.join("canon");
     let gh_target = install_dir.join("gh");
 
     fs::create_dir_all(&install_dir)?;
 
     let current_exe = std::env::current_exe()?;
-    for target in [&gate_target, &gh_target] {
+    for target in [&canon_target, &gh_target] {
         // current_exe() canonicalizes symlinks; compare against canonical target
         // so a symlinked HOME/.local/bin doesn't mismatch and self-truncate.
         let already_installed = match fs::canonicalize(target) {
@@ -105,7 +105,7 @@ pub fn install(rules_dir: Option<&Path>) -> anyhow::Result<()> {
                     println!("✓ Installed {}", target.display());
                 }
                 Err(e) => eprintln!(
-                    "⚠️  跳过 {}（{e}）— 旧副本仍可用，稍后重跑 gate init 更新",
+                    "⚠️  跳过 {}（{e}）— 旧副本仍可用，稍后重跑 canon init 更新",
                     target.display()
                 ),
             }
@@ -127,7 +127,7 @@ pub fn install(rules_dir: Option<&Path>) -> anyhow::Result<()> {
     println!("  git hooksPath → .githooks/hooks");
 
     // Verify install
-    let rc = std::process::Command::new(&gate_target)
+    let rc = std::process::Command::new(&canon_target)
         .arg("--version")
         .output();
     if let Ok(o) = rc
@@ -228,14 +228,14 @@ fn seed_rules(pack: &Path, spec_dir: &Path) -> anyhow::Result<usize> {
     Ok(n)
 }
 
-/// `gate init --uninstall` — remove `~/.local/bin/gate`/`gh` and unset hooksPath.
+/// `canon init --uninstall` — remove `~/.local/bin/canon`/`gh` and unset hooksPath.
 pub fn uninstall() -> anyhow::Result<()> {
     let home = std::env::var("HOME").map_err(|_| anyhow::anyhow!("HOME not set"))?;
     let bin_dir = PathBuf::from(&home).join(".local").join("bin");
-    let gate_target = bin_dir.join("gate");
+    let canon_target = bin_dir.join("canon");
     let gh_target = bin_dir.join("gh");
 
-    for target in [&gate_target, &gh_target] {
+    for target in [&canon_target, &gh_target] {
         if target.symlink_metadata().is_ok() {
             fs::remove_file(target)?;
             println!("✓ Removed {}", target.display());

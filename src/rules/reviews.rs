@@ -410,7 +410,7 @@ reply_formats:
         // A null (empty) spec is just as missing as an absent one.
         let findings = run(&[], &YamlValue::Null);
         assert_eq!(findings.len(), 1, "no checks may run without the spec");
-        assert_eq!(findings[0].rule_id, "gate.setup");
+        assert_eq!(findings[0].rule_id, "canon.setup");
         assert_eq!(findings[0].severity, Severity::Fail);
     }
 

@@ -30,7 +30,7 @@ pub struct OcrComment {
 // Entry point
 // ---------------------------------------------------------------------------
 
-/// `gate review [owner/repo] [--post] [--post-inline] [--pr N]`
+/// `canon review [owner/repo] [--post] [--post-inline] [--pr N]`
 ///
 /// Runs CRG + ocr, prints to terminal, optionally posts to PR.
 /// Review results are informational — never blocks merge.

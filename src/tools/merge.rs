@@ -4,7 +4,7 @@
 //! (pull_requests, reviews) for GitHub validation, plus the Rust cleanup
 //! module for branch cleanup.
 //!
-//! Usage: `gate merge <owner/repo> <pr_number> [--dry-run]`
+//! Usage: `canon merge <owner/repo> <pr_number> [--dry-run]`
 
 use crate::engine;
 use crate::shared::{
@@ -12,7 +12,7 @@ use crate::shared::{
     print_findings,
 };
 use crate::tools::{cleanup, git, workspace};
-/// `gate merge <owner/repo> <pr_number> [--dry-run]` — pre-merge validation.
+/// `canon merge <owner/repo> <pr_number> [--dry-run]` — pre-merge validation.
 pub fn run(args: &[String]) -> i32 {
     let mut positional = Vec::new();
     let mut dry_run = false;

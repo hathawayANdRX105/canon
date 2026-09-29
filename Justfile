@@ -7,41 +7,52 @@
 default:
     @just --list
 
-# ── gate（canon 仓本身即 Rust crate）────────────────────────────
+# ── build / test ────────────────────────────────────────────────
 
-# 编译 release 二进制并落到 .githooks/gate（gate-sync 分发的是这个产物）
-gate-build:
+# 编译 release 二进制并落到 .githooks/canon（canon-sync 分发的是这个产物）
+build:
     cargo build --release
-    cp target/release/gate .githooks/gate
-    chmod 755 .githooks/gate
-    @echo "✓ built + installed to .githooks/gate"
+    cp target/release/canon .githooks/canon
+    chmod 755 .githooks/canon
+    @echo "✓ built + installed to .githooks/canon"
 
-# gate crate 全量测试
-gate-test:
+# 全量测试
+test:
     cargo test
 
 # 格式检查（门禁会拦 fmt 违规，提交前先跑）
-gate-fmt:
+fmt-check:
     cargo fmt --check
 
-# gate 同步到成员仓（custom/ 受保护不覆盖）
-gate-push project='':
-    python3 scripts/gate-sync push {{project}} || just _gate-push-all
+# 装到 ~/.local/bin（MCP 客户端按绝对路径拉起 canon mcp）
+install:
+    cargo build --release
+    # Atomic replace, not `cp`: the MCP client holds this exact path open as a
+    # running server, and `cp` onto a busy executable fails with ETXTBSY.
+    # `mv` is a rename, which the kernel allows over a running image.
+    install -m 755 target/release/canon ~/.local/bin/.canon.new && mv ~/.local/bin/.canon.new ~/.local/bin/canon
+    @echo "✓ canon installed to ~/.local/bin/canon"
 
-_gate-push-all:
+# ── 分发到成员仓 ────────────────────────────────────────────────
+
+# canon 同步到成员仓（custom/ 受保护不覆盖）
+push project='':
+    python3 scripts/canon-sync push {{project}} || just _push-all
+
+_push-all:
     #!/usr/bin/env bash
-    for p in algorchemy deskctl ferrite gugu kime new-api omenic silverq; do
-        python3 scripts/gate-sync push "$p" | tail -1
+    for p in algorchemy deskctl ferrite gugu kime new-api omenic silverq ui-kit; do
+        python3 scripts/canon-sync push "$p" | tail -1
     done
 
 # 漂移检查（无参数=全部成员仓）
-gate-status project='':
+status project='':
     #!/usr/bin/env bash
     if [ -n "{{project}}" ]; then
-        python3 scripts/gate-sync status {{project}}
+        python3 scripts/canon-sync status {{project}}
     else
-        for p in algorchemy deskctl ferrite gugu kime new-api omenic silverq; do
-            python3 scripts/gate-sync status "$p" | grep -E "^==|DRIFT|ONLY-CANON" | head -4
+        for p in algorchemy deskctl ferrite gugu kime new-api omenic silverq ui-kit; do
+            python3 scripts/canon-sync status "$p" | grep -E "^==|DRIFT|ONLY-CANON" | head -4
         done
     fi
 
@@ -69,10 +80,10 @@ agent-sync-push project:
 
 # ── 自检 ────────────────────────────────────────────────────────
 
-# gate 自检：跑本仓的全套 checklist
+# canon 自检：跑本仓的全套 checklist
 review:
-    .githooks/gate check
+    .githooks/canon check
 
 # 提交前一站式：fmt + test + build + spec-sync
-precommit: gate-fmt gate-test gate-build spec-sync
+precommit: fmt-check test build spec-sync
     @echo "✓ ready to commit"

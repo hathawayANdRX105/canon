@@ -121,7 +121,7 @@ fn check_commit_pr_consistency(commit_title: &str) -> Vec<Finding> {
 // Main entry
 // ---------------------------------------------------------------------------
 
-/// `gate pre-commit` — dispatched topics only (title checks live in commit-msg).
+/// `canon pre-commit` — dispatched topics only (title checks live in commit-msg).
 pub fn run() -> i32 {
     let githooks_root =
         git::find_githooks_dir().unwrap_or_else(|| std::path::PathBuf::from(".githooks"));
@@ -132,7 +132,7 @@ pub fn run() -> i32 {
     let mut findings = Vec::new();
 
     // Dispatched topics from YAML — no silent defaults: a missing dispatch
-    // means the repo's hook setup is incomplete → loud gate.setup finding.
+    // means the repo's hook setup is incomplete → loud canon.setup finding.
     let topics: Vec<String> = match &cfg {
         Some(c) => c
             .get("pre-commit")
@@ -171,7 +171,7 @@ pub fn run() -> i32 {
     exit_code(&findings)
 }
 
-/// `gate commit-msg <file>` — CM-01/02/03 against the message git is about
+/// `canon commit-msg <file>` — CM-01/02/03 against the message git is about
 /// to commit. git passes the finalized message file as `$1`; pre-commit
 /// cannot see it (COMMIT_EDITMSG is stale at that point).
 pub fn run_commit_msg(path: &str) -> i32 {

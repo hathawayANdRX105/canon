@@ -7,7 +7,7 @@ use crate::engine;
 use crate::shared::{apply_global_overrides, exit_code, print_findings};
 use crate::tools::{code, git, workspace};
 
-/// `gate pre-push` — runs dispatched workspace + code topics.
+/// `canon pre-push` — runs dispatched workspace + code topics.
 pub fn run() -> i32 {
     let githooks_root =
         git::find_githooks_dir().unwrap_or_else(|| std::path::PathBuf::from(".githooks"));
@@ -17,7 +17,7 @@ pub fn run() -> i32 {
 
     let mut findings = Vec::new();
     // No silent defaults: a missing dispatch means the repo's hook setup is
-    // incomplete → loud gate.setup finding (same as pre-commit / merge).
+    // incomplete → loud canon.setup finding (same as pre-commit / merge).
     let topics: Vec<String> = match &cfg {
         Some(c) => c
             .get("pre-push")

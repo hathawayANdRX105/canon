@@ -1,24 +1,25 @@
-//! gate — spec-driven quality gate.
+//! canon — spec-driven quality gate + MCP spec server, one binary.
 //!
 //! The engine (`engine` module) contains zero detection logic: every rule
 //! lives in `checklist_*.yaml` under `<repo>/.githooks/spec/` and runs an
-//! external harness command. canon (`specs/`) is the source of truth
-//! for the default rules pack; `gate init` seeds a repo with it. The
-//! `tools`/`rules` modules carry the gh-workflow policy layer (issue/PR
-//! compliance, merge orchestration, gh command interception).
+//! external harness command. `specs/` is the source of truth for the default
+//! rules pack; `canon init` seeds a repo with it. The `tools`/`rules` modules
+//! carry the gh-workflow policy layer (issue/PR compliance, merge
+//! orchestration, gh command interception), and `mcp` exposes the rule
+//! catalog plus a pre-commit preflight over MCP stdio.
 
 use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
 
-use gate::{engine, shared, tools};
+use canon::{engine, mcp, shared, tools};
 
 #[derive(Parser)]
 #[command(
-    name = "gate",
+    name = "canon",
     version,
-    about = "spec-driven quality gate — yaml rules + external harnesses, zero built-in detection"
+    about = "spec-driven quality gate + MCP spec server — yaml rules, external harnesses, zero built-in detection"
 )]
 struct Cli {
     #[command(subcommand)]
@@ -27,7 +28,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Install gate: copy binary to ~/.local/bin (gate + gh), set
+    /// Install canon: copy binary to ~/.local/bin (canon + gh), set
     /// core.hooksPath, write hook scripts, and seed .githooks/spec/ with
     /// the default rules pack (never overwrites existing files).
     Init {
@@ -42,11 +43,11 @@ enum Commands {
     CommitMsg { path: PathBuf },
     /// Run pre-push hooks
     PrePush,
-    /// Run merge checks: `gate merge <owner/repo> <pr_number> [--dry-run]`
+    /// Run merge checks: `canon merge <owner/repo> <pr_number> [--dry-run]`
     Merge(MergeArgs),
     /// Run CRG + ocr code review
     Review(ReviewArgs),
-    /// Run named quality checks: `gate check [names...]` (no args = list)
+    /// Run named quality checks: `canon check [names...]` (no args = list)
     Check {
         /// Checklist names (file name minus `checklist_` prefix and `.yaml`)
         names: Vec<String>,
@@ -64,6 +65,8 @@ enum Commands {
     Audit(AuditArgs),
     /// Validate issues
     Pr,
+    /// Serve the rule catalog and a preflight run over MCP stdio
+    Mcp,
 }
 
 #[derive(clap::Args)]
@@ -127,7 +130,7 @@ fn main() -> ExitCode {
         Commands::Init { rules_dir } => match tools::init::install(rules_dir.as_deref()) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
-                eprintln!("gate init 失败: {e}");
+                eprintln!("canon init 失败: {e}");
                 ExitCode::FAILURE
             }
         },
@@ -178,12 +181,38 @@ fn main() -> ExitCode {
             }
             ExitCode::from(shared::exit_code(&findings) as u8)
         }
+        Commands::Mcp => match run_mcp_stdio() {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                eprintln!("canon mcp: {e}");
+                ExitCode::FAILURE
+            }
+        },
         Commands::Audit(args) => {
             let args_vec: Vec<String> = build_audit_args(&args);
             let rc = tools::audit::run(&args_vec);
             ExitCode::from(rc as u8)
         }
     }
+}
+
+/// Newline-delimited JSON-RPC on stdin/stdout; stderr is free for the
+/// engine's progress output, which is why it must never touch stdout.
+fn run_mcp_stdio() -> std::io::Result<()> {
+    use std::io::{BufRead, Write};
+    let stdin = std::io::stdin();
+    let mut out = std::io::stdout().lock();
+    for line in stdin.lock().lines() {
+        let line = line?;
+        if line.trim().is_empty() {
+            continue;
+        }
+        if let Some(reply) = mcp::handle_line(&line) {
+            writeln!(out, "{reply}")?;
+            out.flush()?;
+        }
+    }
+    Ok(())
 }
 
 fn build_review_args(args: &ReviewArgs) -> Vec<String> {
@@ -226,7 +255,7 @@ fn build_audit_args(args: &AuditArgs) -> Vec<String> {
 
 #[cfg(test)]
 mod tests {
-    use gate::shared::load_yaml;
+    use canon::shared::load_yaml;
     use std::path::Path;
 
     #[test]

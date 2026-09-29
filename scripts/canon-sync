@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""gate-sync — distribute canon's gate to member repos, collect their new stuff back.
+"""canon-sync — distribute canon's binary + spec to member repos, collect their new stuff back.
 
-canon 是正本仓：.githooks/{gate,hooks,spec} 由 canon 分发；各项目的自有规则
+canon 是正本仓：.githooks/{canon,hooks,spec} 由 canon 分发；各项目的自有规则
 （custom spec、独有 checklist）受保护不被覆盖。.github 走 collect-only（各仓
 CI 不同，不盲推）。
 
 Commands:
-  gate-sync.py status <project>     漂移表：DIFF / ONLY-CANON / DUPLICATE-LAYER / PROJECT-ONLY
-  gate-sync.py push <project>       分发 canon-owned 文件（保护 PROJECT-ONLY 与 custom/）
-  gate-sync.py collect <project>    收集报告：项目有而 canon 没有的规则/模板（回port候选）
+  canon-sync status <project>     漂移表：DIFF / ONLY-CANON / DUPLICATE-LAYER / PROJECT-ONLY
+  canon-sync push <project>       分发 canon-owned 文件（保护 PROJECT-ONLY 与 custom/）
+  canon-sync collect <project>    收集报告：项目有而 canon 没有的规则/模板（回port候选）
 
 Exit 0 = 无漂移（status）；push/collect 总是 0。
 """
@@ -23,19 +23,18 @@ CANON = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 CANON_HOOKS = os.path.join(CANON, ".githooks")
 CANON_SPEC = os.path.join(CANON_HOOKS, "spec")
 
-# 文档映射：canon 正本（manual/）-> 成员仓 .githooks/ 部署名。
-# GATE_HANDBOOK 是必布项；其余三个仅在成员仓已存在时原位更新（不复活已清理的文件）。
-MAPPED_DOCS = [
-    ("manual/gate.md", "GATE_HANDBOOK.md", True),
-    ("manual/github.md", "GITHUB_ISSUE_PR.md", False),
-    ("manual/pr-dev-workflow.md", "PR_DEV_WORKFLOW.md", False),
-    ("manual/worktree.md", "WORKFLOW.md", False),
-]
+# 文档映射：canon 正本 -> 成员仓 .githooks/ 部署名。
+# 原先映射 manual/{gate,github,pr-dev-workflow,worktree}.md 四本人查手册；
+# 这些内容已全部转成 dotfiles skill（gate-spec / pr-orchestration / worktree-isolation /
+# github-issue-pr），走 omp 的 skill 通道，不再作为仓内文档分发。
+# 成员仓里已存在的 .githooks/{GATE_HANDBOOK,GITHUB_ISSUE_PR,PR_DEV_WORKFLOW,WORKFLOW}.md
+# 是历史残留：不再更新，也不再纳入漂移判定，需要时由各仓自行清理。
+MAPPED_DOCS = []
 
 # canon-owned 相对路径（相对 .githooks/）。目录 = 整目录分发；文件 = 单文件。
 OWNED_DIRS = ["hooks", "spec/github", "spec/workspace", "spec/cleanup",
               "spec/code", "spec/quality", "spec/harness", "spec/docs"]
-OWNED_FILES = ["gate", "spec/dispatch.yaml", "spec/severity_overrides.yaml"]
+OWNED_FILES = ["canon", "spec/dispatch.yaml", "spec/severity_overrides.yaml"]
 # 受保护：push 永不触碰
 PROTECTED = ["spec/custom"]
 
@@ -135,7 +134,7 @@ def status(project: str):
                 project_only.append(f"spec/{rel}")
 
     drift = sorted(set(drift))
-    print(f"== {project}: gate status ==")
+    print(f"== {project}: canon status ==")
     for name, items in [("DRIFT (canon newer)", drift), ("ONLY-CANON (missing)", only_canon),
                         ("DUPLICATE-LAYER (root copy of quality/)", dup_layer),
                         ("PROJECT-ONLY (protected)", project_only)]:
@@ -156,7 +155,7 @@ def push(project: str):
             continue
         os.makedirs(os.path.dirname(tgt), exist_ok=True)
         shutil.copy2(src, tgt)
-        if rel == "gate":
+        if rel == "canon":
             os.chmod(tgt, 0o755)
         n += 1
     for src, tgt in mapped_deployments(p_hooks):

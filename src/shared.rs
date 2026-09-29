@@ -1,4 +1,4 @@
-//! Shared helpers for the gate validators.
+//! Shared helpers for the canon validators.
 //!
 //! Centralizes the primitives every validator needs: a GitHub API client that
 //! tolerates flaky networks, a Finding contract flowing through rule checks,
@@ -119,7 +119,7 @@ impl Finding {
     }
 
     /// Serialize to JSON Value, including all extra fields as a flat object.
-    /// Used by gate check --json mode to emit machine-readable output for
+    /// Used by canon check --json mode to emit machine-readable output for
     /// dev agents that consume score / confidence / evidence.
     pub fn to_json(&self) -> JsonValue {
         let mut obj = serde_json::Map::new();
@@ -427,7 +427,7 @@ pub fn find_spec_file(spec_dir: &Path, filename: &str) -> Option<PathBuf> {
 }
 
 /// Load `<repo>/.githooks/spec/<file>` walking up from cwd. `None` when the
-/// file is missing — rule entries turn that into a loud `gate.setup` finding
+/// file is missing — rule entries turn that into a loud `canon.setup` finding
 /// (no silent defaults: a repo without its spec must not pass green).
 pub fn load_spec_yaml(file: &str) -> Option<YamlValue> {
     let mut dir = std::env::current_dir().ok()?;
@@ -447,9 +447,9 @@ pub fn load_spec_yaml(file: &str) -> Option<YamlValue> {
 /// The standard loud finding for a missing/empty spec yaml.
 pub fn missing_cfg_finding(file: &str) -> Finding {
     Finding::new(
-        "gate.setup",
+        "canon.setup",
         Severity::Fail,
-        &format!("missing .githooks/spec/{file} — run `gate init` or restore the rules pack"),
+        &format!("missing .githooks/spec/{file} — run `canon init` or restore the rules pack"),
     )
 }
 

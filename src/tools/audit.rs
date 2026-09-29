@@ -2,7 +2,7 @@
 //!
 //! Uses the Rust issue/PR rules and the gh API client.
 //!
-//! Usage: `gate audit [owner/repo] [--issues=N,M] [--recent=N] [--limit=N] [--workers=N]`
+//! Usage: `canon audit [owner/repo] [--issues=N,M] [--recent=N] [--limit=N] [--workers=N]`
 
 use std::sync::LazyLock;
 
@@ -29,7 +29,7 @@ static NEXT_HEADING_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?m)^## 
 // Entry point
 // ---------------------------------------------------------------------------
 
-/// `gate audit [owner/repo] [...]` — scan issues/PRs for rule violations.
+/// `canon audit [owner/repo] [...]` — scan issues/PRs for rule violations.
 pub fn run(args: &[String]) -> i32 {
     let mut positional = Vec::new();
     let mut specific: Option<Vec<u32>> = None;
