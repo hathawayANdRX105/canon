@@ -1,3 +1,6 @@
 todo/
 target/
 __pycache__/
+
+# /wf-scope 的 living scope：会话内工作文档，不进版本库
+.workflow/
