@@ -1,6 +1,6 @@
 [package]
 name = "canon"
-version = "0.5.12"
+version = "0.5.17"
 edition = "2024"
 description = "Spec-driven quality gate + MCP spec server: yaml rules, external harnesses, zero built-in detection"
 publish = false
