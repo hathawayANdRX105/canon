@@ -182,6 +182,19 @@ projects:
     - _discipline
     - code-style
     - git-workflow
+  ui-kit:
+    root: /home/hathaway/projects/ui-kit
+    titles:
+      local/: ui-kit 约定
+    include:
+    - local/
+    - _discipline
+    - code-style
+    - build-verify
+    - sensitive-ops
+    - investigation
+    - git-workflow
+    - tools
   canon:
     root: /home/hathaway/projects/canon
     titles:
