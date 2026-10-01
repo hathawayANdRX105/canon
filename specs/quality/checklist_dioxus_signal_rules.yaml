@@ -15,6 +15,9 @@
 #   repo 全仓）。热路径不共享 signal 的架构约束留在 web_spec.json state_ownership
 #   问句与 REBUILD_CONTRACT 契约 4。两段扫描的输出在末尾合成**一个** JSON 数组
 #   （引擎对非法 JSON 整条判 ERROR，禁止裸拼接两个数组）。
+# 语言范围声明（2026-10-01 二轮审计）: 本规则锁定 Rust/Dioxus 语法（rsx/#[component]）。
+# 无 .rs 的仓（React/TS/Svelte）自动安静——安静=未验证，≠ 干净；非 Dioxus 仓的前端门禁
+# 需要语言适配器（R1 的 React 适配器见 checklist_react_list_key；Svelte/Solid 暂走语义层）。
 enabled: true
 hooks: [pre-push, merge]
 sla: l1

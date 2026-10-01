@@ -10,6 +10,8 @@
 #   只解析一个文件，毫秒级。无 animation.css 的仓自动安静（可移植）。
 # 升级条件: P3 清单把 prefers-reduced-motion 分支补进 animation.css 后，本条升
 #   FAIL（新动效缺分支直接拦），或届时已无意义则删。
+# 静默=未验证（2026-10-01 二轮审计）: 不按 theme.css/animation.css 命名约定的仓自动 0 发现——
+# 门禁绿不代表查过；该仓若要 CSS 分层门禁，改 paths 探测名或建适配器。
 enabled: true
 hooks: [pre-push, merge]
 sla: l1

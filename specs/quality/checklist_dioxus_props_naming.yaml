@@ -5,10 +5,11 @@
 #   决议 on_*。本条是 l1 快检：同文件内 #[component] 之后 24 行窗口里出现
 #   `handle_*:` 形式的参数行即 WARN（组件体内的局部闭包 `let handle_x = move`
 #   不含参数表形态，不命中——近似判据，漏判由 review 层消除）。
-#   窗口 24 行（2026-10-01 三仓实测 #[component]→pub fn 最大 gap=21，12 行会
-#   漏整段长 doc 签名）；模式要求 handle_ 下划线前缀（排除英文名词
-#   handler/handle/handled 误报——2026-10-01 审计：原模式 handle[A-Za-z0-9_]*
-#   会命中 `handler:`/`handle:` 属性名）。
+#   锚定（2026-10-01 二轮审计：固定窗口 24 行仍漏——ferrite chat.rs 的 #[component]
+#   签名带逐参数 doc 注释共 28 行参数，handle_send 落在 L58 超窗）。改**签名尾锚定**：
+#   handle_* 参数行须位于 #[component] 之后、签名收尾行 `) ->` 之前（收尾行未找到时
+#   回落 40 行），任意参数表长度不漏。模式要求 handle_ 下划线前缀（排除英文名词
+#   handler/handle/handled 误报）。
 # 实现: 双 grep + awk 按「同文件行号」join（grep -A 的上下文行用 `-` 分隔，
 #   解析不稳——抽取验证 2026-10-01 实测全漏，改用原生 `path:line:content` 行）。
 # 口径: 内联 sh；scope 同 list_key（$0：changed = diff 基线 GATE_BASE/origin/main，
@@ -16,6 +17,9 @@
 #   会静默假绿）。
 # 升级条件（先 WARN 处置再谈升 FAIL，web_spec 既定哲学）：三仓 handle_* 存量债
 #   （2026-10-01 仅 ferrite tavern chat.rs:58 一处参数 + 516 调用点）清零后提案。
+# 语言范围声明（2026-10-01 二轮审计）: 本规则锁定 Rust/Dioxus 语法（rsx/#[component]）。
+# 无 .rs 的仓（React/TS/Svelte）自动安静——安静=未验证，≠ 干净；非 Dioxus 仓的前端门禁
+# 需要语言适配器（R1 的 React 适配器见 checklist_react_list_key；Svelte/Solid 暂走语义层）。
 enabled: true
 hooks: [pre-push, merge]
 sla: l1
@@ -40,16 +44,20 @@ harness:
         fi
       }
       source_list |
-        xargs -0r grep -HEn -e '#\[component\]' -e '^[[:space:]]*handle_[A-Za-z0-9_]*[[:space:]]*:' -- 2>/dev/null |
+        xargs -0r grep -HEn -e '#\[component\]' -e '^[[:space:]]*handle_[A-Za-z0-9_]*[[:space:]]*:' -e '^[[:space:]]*\)[[:space:]]*->' -- 2>/dev/null |
         awk -F: '
           {
             path = $1; ln = $2 + 0
             rest = substr($0, length(path) + length($2) + 3)
             if (rest ~ /#\[component\]/) {
-              lastc[path] = ln
-            } else if (rest ~ /^[[:space:]]*handle_[A-Za-z0-9_]*[[:space:]]*:/ &&
-                       lastc[path] != "" && ln > lastc[path] && ln <= lastc[path] + 24) {
-              print path ":" ln
+              cl[path] = ln; sig[path] = 1; end[path] = 0; next
+            }
+            if (sig[path]) {
+              if (rest ~ /^[[:space:]]*\)[[:space:]]*->/) { end[path] = ln; sig[path] = 0 }
+              if (rest ~ /^[[:space:]]*handle_[A-Za-z0-9_]*[[:space:]]*:/ &&
+                  ln > cl[path] && ln < (end[path] ? end[path] : cl[path] + 40)) {
+                print path ":" ln
+              }
             }
           }
         ' |

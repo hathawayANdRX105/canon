@@ -10,6 +10,9 @@
 #   动过」都从 diff 里取，天然随引擎 scope 走（merge = GATE_BASE range）；
 #   提示型规则只挂 merge（CHECKLIST_SPEC：提示型 l1 不拖日常提交）。
 #   确实无行为可测 → 书面驳回（发现处置纪律），不塞凑数测试。
+# 语言范围声明（2026-10-01 二轮审计）: 本规则锁定 Rust/Dioxus 语法（rsx/#[component]）。
+# 无 .rs 的仓（React/TS/Svelte）自动安静——安静=未验证，≠ 干净；非 Dioxus 仓的前端门禁
+# 需要语言适配器（R1 的 React 适配器见 checklist_react_list_key；Svelte/Solid 暂走语义层）。
 enabled: true
 hooks: [merge]
 sla: l1
