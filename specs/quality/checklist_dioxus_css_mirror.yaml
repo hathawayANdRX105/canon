@@ -11,6 +11,8 @@
 # 升级依据: 2026-10-01 三仓数据——镜像当前一致（0 发现）→ 直接 FAIL 零成本；
 #   新增 :root 变量忘记同步 .dark 会在 pre-push 当场被拦（主题切换暗色破图
 #   是最难肉眼发现的回归，值得硬门）。
+# 静默=未验证（2026-10-01 二轮审计）: 不按 theme.css/animation.css 命名约定的仓自动 0 发现——
+# 门禁绿不代表查过；该仓若要 CSS 分层门禁，改 paths 探测名或建适配器。
 enabled: true
 hooks: [pre-push, merge]
 sla: l1
