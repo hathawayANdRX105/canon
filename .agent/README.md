@@ -1,1 +1,1 @@
-../specs/rules/agent-readme.md
+../agent-pack/rules/agent-readme.md

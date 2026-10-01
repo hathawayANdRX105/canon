@@ -1,1 +1,1 @@
-../../../specs/skills/gate-checklist.md
+../../../agent-pack/skills/gate-checklist.md

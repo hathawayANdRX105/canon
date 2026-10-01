@@ -1,11 +1,15 @@
 //! MCP server surface: JSON-RPC 2.0 over stdio, newline-delimited.
 //!
-//! Hand-rolled rather than pulled from the Rust SDK on purpose — this crate has
-//! no async runtime and four tools do not justify tokio + schemars + rmcp.
-//! The wire shapes match what `omenic`'s own MCP client speaks
+//! Hand-rolled rather than pulled from the Rust SDK on purpose — the wire
+//! layer stays dep-free even with the flow tool family; the flow tools
+//! themselves live in `crate::flow::tools`.
+//!
+//! Wire shapes match what `omenic`'s own MCP client speaks
 //! (`crates/mcp`, protocol revision 2025-06-18), so both consumers are covered.
 //!
-//! Every tool is a shell over the existing engine: no rule logic lives here.
+//! Spec tools are shells over the engine; flow tools are shells over the
+//! flow Store. No rule/task logic lives here.
+//!
 //! `preflight` runs the same `checklist_*.yaml` set the git hook would run and
 //! reports FAIL only by default, so an agent learns about a violation while it
 //! can still fix it rather than when the hook rejects the commit.
@@ -51,7 +55,7 @@ fn dispatch(method: &str, params: &Value) -> RpcResult {
 }
 
 fn tool_defs() -> Vec<Value> {
-    vec![
+    let mut tools: Vec<Value> = vec![
         json!({
             "name": "spec_catalog",
             "description": "List every rule this repo enforces: id, effective severity, sla, hooks, and why it exists. Call this before writing code to learn what will be checked.",
@@ -107,7 +111,9 @@ fn tool_defs() -> Vec<Value> {
                 "required": []
             }
         }),
-    ]
+    ];
+    tools.extend(crate::flow::tools::tool_defs());
+    tools
 }
 
 fn arg_str(params: &Value, key: &str) -> Option<String> {
@@ -133,6 +139,11 @@ fn call_tool(params: &Value) -> RpcResult {
         "spec_catalog" => catalog_tool(&args)?,
         "spec_explain" => explain_tool(&args)?,
         "preflight" => preflight_tool(&args)?,
+        "board_view" | "task_get" | "project_list" | "journal" | "project_create"
+        | "project_update" | "task_create" | "task_claim" | "task_transition" | "step_add"
+        | "step_mark" | "event_note" | "spec_list" | "spec_run" | "spec_bind" | "template_list" => {
+            crate::flow::tools::call(&name, &args)?
+        }
         other => return Err((-32602, format!("unknown tool: {other}"))),
     };
     Ok(json!({"content": [{"type": "text", "text": text}], "isError": false}))
@@ -367,11 +378,11 @@ mod tests {
     }
 
     #[test]
-    fn tools_list_exposes_three_tools_with_schemas() {
+    fn tools_list_exposes_all_tools_with_schemas() {
         let out = handle_line(r#"{"jsonrpc":"2.0","id":2,"method":"tools/list"}"#).unwrap();
         let v: Value = serde_json::from_str(&out).unwrap();
         let tools = v["result"]["tools"].as_array().unwrap();
-        assert_eq!(tools.len(), 3);
+        assert_eq!(tools.len(), 19);
         assert!(tools.iter().all(|t| t["inputSchema"]["type"] == "object"));
     }
 

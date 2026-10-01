@@ -1,0 +1,7 @@
+# 通用项目缺省管道 + 步骤（最小骨架）
+states: [规划, 开发, 校验, 完成]
+steps:
+  - { title: "规划：目标与验收口径", kind: work, state: 规划 }
+  - { title: "开发：实现", kind: work, state: 开发 }
+  - { title: "校验：跑真实命令验证", kind: work, state: 校验 }
+  - { title: "收尾：记录与清理", kind: work, state: 完成 }

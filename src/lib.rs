@@ -9,6 +9,7 @@
 
 pub mod catalog;
 pub mod engine;
+pub mod flow;
 pub mod mcp;
 pub mod rules;
 pub mod shared;

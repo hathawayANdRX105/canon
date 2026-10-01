@@ -1,1 +1,0 @@
-../../../specs/skills/jev.md

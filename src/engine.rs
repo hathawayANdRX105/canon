@@ -750,8 +750,6 @@ pub fn run_targeted(target: Target, names: &[String], max_sla: SlaLevel) -> Vec<
     findings
 }
 
-/// `canon check [names...]` — manual run on Merge scope regardless of the
-/// `hooks:` filter. No names → list what is available. SLA filter applies.
 /// Display name of a checklist spec from its file stem
 /// (`checklist_ccn.yaml` → `ccn`); `None` for non-conforming names.
 fn spec_stem_name(path: &PathBuf) -> Option<String> {
@@ -761,31 +759,41 @@ fn spec_stem_name(path: &PathBuf) -> Option<String> {
         .map(str::to_string)
 }
 
+/// `canon check [names...]` — manual run on Merge scope regardless of the
+/// `hooks:` filter. No names → list what is available. SLA filter applies.
 pub fn run_named(names: &[String], max_sla: SlaLevel) -> Vec<Finding> {
-    let mut findings = Vec::new();
-    let specs = match spec_dir() {
-        Some(dir) => find_specs(&dir),
-        None => {
-            // Fail-closed on the manual path too: no spec = hard FAIL, not a
-            // quiet ALL PASS.
-            findings.push(Finding::new(
-                "canon.setup",
-                Severity::Fail,
-                "no .githooks/ found — run `canon init` in the repo root",
-            ));
-            return findings;
-        }
+    let Some(dir) = spec_dir() else {
+        // Fail-closed on the manual path too: no spec = hard FAIL, not a
+        // quiet ALL PASS.
+        return vec![Finding::new(
+            "canon.setup",
+            Severity::Fail,
+            "no .githooks/ found — run `canon init` in the repo root",
+        )];
     };
+    run_named_in(&dir, names, max_sla)
+}
+
+/// Same as [`run_named`] against an explicit spec directory — flow's
+/// `spec_run` tool checks *other* repos this way (its caller chdirs into the
+/// target repo root first; harness commands are cwd-anchored and the flow
+/// layer serializes those runs behind a lock).
+pub fn run_named_in(
+    spec_dir: &std::path::Path,
+    names: &[String],
+    max_sla: SlaLevel,
+) -> Vec<Finding> {
+    let mut findings = Vec::new();
+    let specs = find_specs(spec_dir);
     if specs.is_empty() {
-        findings.push(Finding::new(
+        return vec![Finding::new(
             "canon.setup",
             Severity::Fail,
             &format!(
                 "no checklist_*.yaml under {} — seed a rules pack (`canon init`) or fix the path",
-                spec_dir().unwrap_or_default().display()
+                spec_dir.display()
             ),
-        ));
-        return findings;
+        )];
     }
     if names.is_empty() {
         for (path, s) in &specs {
