@@ -19,6 +19,13 @@ use crate::{
 pub(crate) fn db_err(e: rusqlite::Error) -> FlowError {
     FlowError::new("DB_ERROR", e.to_string())
 }
+/// 写事件钩子（serve 特性装 SSE/WS 广播；缺省无钩子，纯 store 无噪音）。
+static EVENT_HOOK: std::sync::Mutex<Option<Box<dyn Fn(&EventRow) + Send>>> =
+    std::sync::Mutex::new(None);
+
+pub fn set_event_hook(f: impl Fn(&EventRow) + Send + 'static) {
+    *EVENT_HOOK.lock().unwrap() = Some(Box::new(f));
+}
 // ---------------------------------------------------------------------------
 // Store
 // ---------------------------------------------------------------------------
@@ -760,13 +767,25 @@ impl Store {
         payload: &Value,
         actor: &str,
     ) -> FlowResult<()> {
+        let ts = now();
         self.conn()
             .execute(
                 "INSERT INTO event (task_id, ts, state_at, kind, payload_json, actor) \
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-                params![task_id, now(), state_at, kind, payload.to_string(), actor],
+                params![task_id, ts, state_at, kind, payload.to_string(), actor],
             )
             .map_err(db_err)?;
+        if let Some(hook) = EVENT_HOOK.lock().unwrap().as_ref() {
+            hook(&EventRow {
+                id: self.conn().last_insert_rowid(),
+                task_id,
+                ts,
+                state_at: state_at.to_string(),
+                kind: kind.to_string(),
+                payload: payload.clone(),
+                actor: actor.to_string(),
+            });
+        }
         Ok(())
     }
 

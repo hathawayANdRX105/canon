@@ -9,6 +9,8 @@
 //! SQLite 持久层在 `store` 模块（feature `store`，默认开），spec 执行壳在
 //! `spec`（chdir 进目标仓 + 同进程调 `gate::engine::run_named_in`）。
 
+#[cfg(feature = "serve")]
+pub mod serve;
 #[cfg(feature = "store")]
 mod spec;
 #[cfg(feature = "store")]

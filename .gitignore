@@ -7,3 +7,5 @@ __pycache__/
 
 # .wt/ 分支工作树（见 worktree-isolation 规范）
 .wt/
+# crates/web（web 独立包）：npm 依赖不入库；kit css / tailwind.out.css / lock 随仓（ui-kit 既定先例）
+crates/web/node_modules/

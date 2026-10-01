@@ -67,6 +67,14 @@ enum Commands {
     Pr,
     /// Serve the rule catalog and a preflight run over MCP stdio
     Mcp,
+    /// Run the local flow board: REST + WebSocket push over std::net.
+    /// Routes reuse the 16 flow tools; `GET /api/stream` is the WS push.
+    /// Default port 10081 (web UI via `dx serve` runs on 10080).
+    Serve {
+        /// Listen port (10000+ range; default 10081)
+        #[arg(long, default_value_t = 10081)]
+        port: u16,
+    },
 }
 
 #[derive(clap::Args)]
@@ -181,6 +189,13 @@ fn main() -> ExitCode {
             }
             ExitCode::from(shared::exit_code(&findings) as u8)
         }
+        Commands::Serve { port } => match flow::serve::run(port) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                eprintln!("canon serve: {e}");
+                ExitCode::FAILURE
+            }
+        },
         Commands::Mcp => match run_mcp_stdio() {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
