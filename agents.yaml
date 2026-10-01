@@ -1,6 +1,7 @@
 defaults:
   titles:
     _discipline: 发现处置纪律
+    rust-dev-perf: Rust 开发性能
     project-structure: 本仓结构
     architecture: 目录与架构
     code-style: 代码风格
@@ -19,6 +20,7 @@ projects:
     - local/
     - _discipline
     - code-style
+    - rust-dev-perf
     - build-verify
     - sensitive-ops
     - git-workflow
@@ -31,6 +33,7 @@ projects:
     - local/
     - _discipline
     - code-style
+    - rust-dev-perf
     - build-verify
     - sensitive-ops
     - git-workflow
@@ -64,6 +67,7 @@ projects:
     - local/
     - _discipline
     - code-style
+    - rust-dev-perf
     - sensitive-ops
     - git-workflow
   kime:
@@ -74,6 +78,7 @@ projects:
     - local/
     - _discipline
     - code-style
+    - rust-dev-perf
     - build-verify
     - sensitive-ops
     - git-workflow
@@ -85,6 +90,7 @@ projects:
     - local/
     - _discipline
     - code-style
+    - rust-dev-perf
     - build-verify
     - sensitive-ops
     - investigation
@@ -137,6 +143,7 @@ projects:
     - local/
     - _discipline
     - code-style
+    - rust-dev-perf
     - build-verify
     - sensitive-ops
     - investigation
@@ -149,6 +156,7 @@ projects:
     - local/
     - _discipline
     - code-style
+    - rust-dev-perf
     - build-verify
     - sensitive-ops
     - investigation
@@ -161,6 +169,7 @@ projects:
     - local/
     - _discipline
     - code-style
+    - rust-dev-perf
     - sensitive-ops
     - git-workflow
   sentinel:
@@ -190,6 +199,7 @@ projects:
     - local/
     - _discipline
     - code-style
+    - rust-dev-perf
     - build-verify
     - sensitive-ops
     - investigation
@@ -203,6 +213,7 @@ projects:
     - local/
     - _discipline
     - code-style
+    - rust-dev-perf
     - build-verify
     - git-workflow
     - tools
