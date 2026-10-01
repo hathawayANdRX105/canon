@@ -122,19 +122,6 @@ projects:
     - build-verify
     - sensitive-ops
     - git-workflow
-  omenic:
-    root: /home/hathaway/projects/omenic
-    titles:
-      local/: omenic 约定
-    include:
-    - local/
-    - _discipline
-    - code-style
-    - build-verify
-    - sensitive-ops
-    - investigation
-    - git-workflow
-    - subagents
   gugu:
     root: /home/hathaway/projects/gugu
     titles:
