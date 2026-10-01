@@ -16,9 +16,9 @@ build:
     chmod 755 .githooks/canon
     @echo "✓ built + installed to .githooks/canon"
 
-# 全量测试
+# 全量测试（--workspace：根包 workspace 下裸 cargo test 只跑根包）
 test:
-    cargo test
+    cargo test --workspace
 
 # 开发内环：只跑本次改动可能破坏的测试（testless 函数级影响分析）。
 # 用法：just test-fast（对比 HEAD） / just test-fast main（对比 main）。
