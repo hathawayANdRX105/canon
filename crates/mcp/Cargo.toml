@@ -1,0 +1,11 @@
+[package]
+name = "mcp"
+version = "0.5.17"
+edition = "2024"
+description = "canon MCP server: JSON-RPC 2.0 over stdio — spec catalog/preflight + flow tools"
+publish = false
+
+[dependencies]
+gate = { path = "../gate" }
+flow = { path = "../flow" }
+serde_json = "1"

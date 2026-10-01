@@ -5,8 +5,6 @@
 //! spec, that `spec_explain` returns the rationale prose, and that `preflight`
 //! honours its FAIL-only default.
 
-use canon::mcp;
-
 fn call(line: &str) -> serde_json::Value {
     let out = mcp::handle_line(line).expect("tool call must reply");
     serde_json::from_str(&out).unwrap()

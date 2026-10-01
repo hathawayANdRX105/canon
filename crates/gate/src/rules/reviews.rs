@@ -501,14 +501,10 @@ reply_formats:
 #[cfg(test)]
 mod spec_smoke {
     use super::*;
-    use std::path::Path;
 
     fn load(name: &str) -> YamlValue {
-        let p = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("specs")
-            .join("github")
-            .join(name);
-        serde_yaml::from_str(&std::fs::read_to_string(p).unwrap()).unwrap()
+        let p = crate::rules::repo_spec_path(name);
+        serde_yaml::from_str(&std::fs::read_to_string(&p).unwrap()).unwrap()
     }
 
     #[test]

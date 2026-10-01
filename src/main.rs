@@ -13,7 +13,7 @@ use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
 
-use canon::{engine, mcp, shared, tools};
+use gate::{engine, shared, tools};
 
 #[derive(Parser)]
 #[command(
@@ -255,7 +255,7 @@ fn build_audit_args(args: &AuditArgs) -> Vec<String> {
 
 #[cfg(test)]
 mod tests {
-    use canon::shared::load_yaml;
+    use gate::shared::load_yaml;
     use std::path::Path;
 
     #[test]

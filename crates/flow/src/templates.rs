@@ -7,7 +7,7 @@ use std::path::PathBuf;
 
 use serde::Deserialize;
 
-use crate::flow::FlowError;
+use crate::FlowError;
 
 #[derive(Debug, Clone)]
 pub struct TplStep {

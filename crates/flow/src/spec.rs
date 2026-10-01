@@ -9,9 +9,9 @@ use std::sync::MutexGuard;
 use rusqlite::params;
 use serde_json::{Value, json};
 
-use crate::catalog;
-use crate::engine;
-use crate::shared;
+use gate::catalog;
+use gate::engine;
+use gate::shared;
 
 use super::{FlowError, FlowResult, Project, Store, db_err, now};
 

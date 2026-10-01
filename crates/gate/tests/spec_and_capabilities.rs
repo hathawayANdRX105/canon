@@ -4,7 +4,7 @@
 //! hard `canon.setup` FAIL (not a silent drop), and the `checks:` /
 //! `fail_severity` config knobs must shape findings.
 
-use canon::shared::{Finding, Severity, apply_check_allowlist, apply_family_severity};
+use gate::shared::{Finding, Severity, apply_check_allowlist, apply_family_severity};
 
 #[test]
 fn broken_checklist_spec_blocks_instead_of_silently_dropping() {
@@ -14,7 +14,7 @@ fn broken_checklist_spec_blocks_instead_of_silently_dropping() {
         "harness: {command: sh}\ntypo_key: 1\n",
     )
     .unwrap();
-    let specs = canon::engine::find_specs(dir.path());
+    let specs = gate::engine::find_specs(dir.path());
     assert_eq!(specs.len(), 1);
     let err = specs[0]
         .1
@@ -31,7 +31,7 @@ fn valid_checklist_spec_parses() {
         "mode: grep\nfail_severity: WARN\nharness: {command: sh, args: []}",
     )
     .unwrap();
-    let specs = canon::engine::find_specs(dir.path());
+    let specs = gate::engine::find_specs(dir.path());
     assert!(specs[0].1.is_ok());
 }
 

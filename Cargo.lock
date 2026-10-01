@@ -83,14 +83,10 @@ checksum = "72f5acc6cb2ba439de613abc23857ec3d78374d8ed5ac84e9d11336e87da8649"
 name = "canon"
 version = "0.5.17"
 dependencies = [
- "anyhow",
  "clap",
- "regex",
- "rusqlite",
- "serde",
+ "gate",
+ "mcp",
  "serde_json",
- "serde_yaml",
- "tempfile",
 ]
 
 [[package]]
@@ -196,10 +192,34 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aedcfb3409746eddb02b9e19ebda1c3394f759a152e48ee875a0844d1b955484"
 
 [[package]]
+name = "flow"
+version = "0.5.17"
+dependencies = [
+ "gate",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "tempfile",
+]
+
+[[package]]
 name = "foldhash"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77ce24cb58228fbb8aa041425bb1050850ac19177686ea6e0f41a70416f56fdb"
+
+[[package]]
+name = "gate"
+version = "0.5.17"
+dependencies = [
+ "anyhow",
+ "regex",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "tempfile",
+]
 
 [[package]]
 name = "getrandom"
@@ -299,6 +319,15 @@ name = "linux-raw-sys"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32a66949e030da00e8c7d4434b251670a91556f4144941d37452769c25d58a53"
+
+[[package]]
+name = "mcp"
+version = "0.5.17"
+dependencies = [
+ "flow",
+ "gate",
+ "serde_json",
+]
 
 [[package]]
 name = "memchr"

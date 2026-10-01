@@ -1,8 +1,8 @@
 //! flow MCP 工具面：16 个工具（读 4 + 写 8 + 规范 4），JSON schema 定义 +
-//! 分发。wire 层仍在 `crate::mcp`（手写 JSON-RPC），本模块只做参数解析与
-//! 结果 JSON 组装；所有业务在 `crate::flow` 的 Store 上。
+//! 分发。wire 层在 `mcp` crate（手写 JSON-RPC），本模块只做参数解析与
+//! 结果 JSON 组装；所有业务在本 crate 的 Store 上。
 
-use crate::flow::{self, FlowError, FlowResult, Store};
+use crate::{FlowError, FlowResult, Store};
 use serde_json::{Value, json};
 
 pub const TOOL_NAMES: &[&str] = &[
@@ -193,10 +193,10 @@ fn board_view(s: &Store, a: &Value) -> Result<Value, FlowError> {
 }
 
 fn template_list() -> Result<Value, FlowError> {
-    let names = flow::templates::available();
+    let names = crate::templates::available();
     let details = names
         .iter()
-        .filter_map(|n| flow::templates::resolve(n).ok())
+        .filter_map(|n| crate::templates::resolve(n).ok())
         .map(|t| {
             json!({
                 "name": t.name,
@@ -209,7 +209,7 @@ fn template_list() -> Result<Value, FlowError> {
 }
 
 /// spec_list 行：与 mcp 的 spec_catalog 同款（id/severity/sla/hooks/mode/why）。
-fn rule_json(r: &crate::catalog::Rule) -> Value {
+fn rule_json(r: &gate::catalog::Rule) -> Value {
     json!({
         "rule_id": r.id,
         "severity": r.severity.as_str(),

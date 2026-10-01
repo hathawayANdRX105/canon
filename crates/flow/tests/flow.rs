@@ -1,16 +1,14 @@
 //! flow Store 的行为测试：管道转移（每边 + 拒边）、step 证据规则、领取锁、
 //! 模板展开、管道变更迁移、journal 时间线、spec_run 真跑 checklist。
 
-use canon::flow;
-
-fn fresh() -> (canon::flow::Store, tempfile::TempDir) {
+fn fresh() -> (flow::Store, tempfile::TempDir) {
     let dir = tempfile::tempdir().unwrap();
-    let store = canon::flow::Store::open(&dir.path().join("flow.db")).unwrap();
+    let store = flow::Store::open(&dir.path().join("flow.db")).unwrap();
     (store, dir)
 }
 
 /// 管道 = 规划→开发→审查→代码清洁→完成（用户示例口径）。
-fn pipeline_store() -> (canon::flow::Store, tempfile::TempDir, String) {
+fn pipeline_store() -> (flow::Store, tempfile::TempDir, String) {
     let (store, dir) = fresh();
     let states: Vec<String> = vec![
         "规划".into(),

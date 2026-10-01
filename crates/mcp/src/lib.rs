@@ -2,7 +2,7 @@
 //!
 //! Hand-rolled rather than pulled from the Rust SDK on purpose — the wire
 //! layer stays dep-free even with the flow tool family; the flow tools
-//! themselves live in `crate::flow::tools`.
+//! themselves live in `flow::tools`.
 //!
 //! Wire shapes match what `omenic`'s own MCP client speaks
 //! (`crates/mcp`, protocol revision 2025-06-18), so both consumers are covered.
@@ -16,9 +16,9 @@
 
 use serde_json::{Value, json};
 
-use crate::catalog::{self, Rule};
-use crate::engine::{self, SlaLevel};
-use crate::shared::{self, Severity};
+use gate::catalog::{self, Rule};
+use gate::engine::{self, SlaLevel};
+use gate::shared::{self, Severity};
 
 pub const PROTOCOL_VERSION: &str = "2025-06-18";
 
@@ -112,7 +112,7 @@ fn tool_defs() -> Vec<Value> {
             }
         }),
     ];
-    tools.extend(crate::flow::tools::tool_defs());
+    tools.extend(flow::tools::tool_defs());
     tools
 }
 
@@ -142,7 +142,7 @@ fn call_tool(params: &Value) -> RpcResult {
         "board_view" | "task_get" | "project_list" | "journal" | "project_create"
         | "project_update" | "task_create" | "task_claim" | "task_transition" | "step_add"
         | "step_mark" | "event_note" | "spec_list" | "spec_run" | "spec_bind" | "template_list" => {
-            crate::flow::tools::call(&name, &args)?
+            flow::tools::call(&name, &args)?
         }
         other => return Err((-32602, format!("unknown tool: {other}"))),
     };
