@@ -70,6 +70,44 @@ projects:
     - rust-dev-perf
     - sensitive-ops
     - git-workflow
+  kymido:
+    root: /home/hathaway/projects/kymido
+    titles:
+      local/: kymido 约定
+    include:
+    - local/
+    - _discipline
+    - code-style
+    - rust-dev-perf
+    - build-verify
+    - sensitive-ops
+    - investigation
+    - git-workflow
+    - subagents
+  ricq:
+    root: /home/hathaway/projects/ricq
+    titles:
+      local/: ricq 约定
+    include:
+    - local/
+    - _discipline
+    - code-style
+    - rust-dev-perf
+    - build-verify
+    - sensitive-ops
+    - git-workflow
+  sightline:
+    root: /home/hathaway/projects/sightline
+    titles:
+      local/: sightline 约定
+    include:
+    - local/
+    - _discipline
+    - code-style
+    - rust-dev-perf
+    - build-verify
+    - sensitive-ops
+    - git-workflow
   kime:
     root: /home/hathaway/projects/kime
     titles:
