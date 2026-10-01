@@ -45,9 +45,6 @@ enum Commands {
     PrePush,
     /// Run merge checks: `canon merge <owner/repo> <pr_number> [--dry-run]`
     Merge(MergeArgs),
-    /// Run CRG + ocr code review
-    Review(ReviewArgs),
-    /// Run named quality checks: `canon check [names...]` (no args = list)
     Check {
         /// Checklist names (file name minus `checklist_` prefix and `.yaml`)
         names: Vec<String>,
@@ -67,19 +64,6 @@ enum Commands {
     Pr,
     /// Serve the rule catalog and a preflight run over MCP stdio
     Mcp,
-}
-
-#[derive(clap::Args)]
-struct ReviewArgs {
-    /// Post results as a PR conversation comment
-    #[arg(long)]
-    post: bool,
-    /// Post inline review comments on the PR diff
-    #[arg(long = "post-inline")]
-    post_inline: bool,
-    /// PR number to post to (auto-detected if omitted)
-    #[arg(long)]
-    pr: Option<u64>,
 }
 
 #[derive(clap::Args)]
@@ -148,11 +132,6 @@ fn main() -> ExitCode {
         }
         Commands::Issue => ExitCode::from(tools::gh_wrap::intercept_issue_create(&[]) as u8),
         Commands::Pr => ExitCode::from(tools::gh_wrap::intercept_pr_create(&[]) as u8),
-        Commands::Review(args) => {
-            let args_vec: Vec<String> = build_review_args(&args);
-            let rc = tools::review::run(&args_vec);
-            ExitCode::from(rc as u8)
-        }
         Commands::Check { names, sla, json } => {
             let max_sla = engine::SlaLevel::parse(&sla);
             if !json {
@@ -161,8 +140,6 @@ fn main() -> ExitCode {
                 eprintln!(
                     "    WARN = 修复(默认) 或 书面驳回(证据写进 PR 审查记录); FAIL = 必须修复或拆 PR 才能继续"
                 );
-                eprintln!("    ocr 深度审查请自行调: ocr review --format json --audience agent");
-                eprintln!("✅  L1+L2 是硬门槛 (确定性检查): FAIL 必须修复才能 commit/push");
                 eprintln!("══════════════════════════════════════════════════════");
             }
             let mut findings = engine::run_named(&names, max_sla);
@@ -176,7 +153,9 @@ fn main() -> ExitCode {
                 eprintln!(
                     "ℹ️  L3 finding 不阻断, 但每条 WARN/FAIL 必须处置: 修复(默认) 或 书面驳回记入 PR 审查记录; 静默忽略 = 违规"
                 );
-                eprintln!("    L1+L2 FAIL = 硬门槛, 必须修复. 深度审查请自行调 ocr.");
+                eprintln!(
+                    "    L1+L2 FAIL = 硬门槛, 必须修复. 深度语义审查由 merge 钩子的 L2 checklist 承接."
+                );
                 eprintln!("══════════════════════════════════════════════════════");
             }
             ExitCode::from(shared::exit_code(&findings) as u8)
@@ -213,21 +192,6 @@ fn run_mcp_stdio() -> std::io::Result<()> {
         }
     }
     Ok(())
-}
-
-fn build_review_args(args: &ReviewArgs) -> Vec<String> {
-    let mut vec = Vec::new();
-    if args.post {
-        vec.push("--post".to_string());
-    }
-    if args.post_inline {
-        vec.push("--post-inline".to_string());
-    }
-    if let Some(pr) = args.pr {
-        vec.push("--pr".to_string());
-        vec.push(pr.to_string());
-    }
-    vec
 }
 
 fn build_audit_args(args: &AuditArgs) -> Vec<String> {
