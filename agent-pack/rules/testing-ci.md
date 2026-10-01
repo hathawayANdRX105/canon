@@ -14,7 +14,7 @@
 | CI 全绿，但某个测试的断言从没执行过 | 测试被 `cfg(feature = ...)` 门禁，而 CI 没有任何路径开启这个 feature | CI 日志里搜 `Running <你的测试文件>.rs`，紧跟的是 `running 0 tests`（而不是 `running N tests`） |
 | e2e 测试显示 passed，但耗时正好是 30 秒 / 60 秒 / 90 秒 | CI 里没有 Postgres，测试连不上库，超时后 `return` 跳过——却被记为 passed | 耗时是 30 秒的整数倍；日志里搜不到 `skipping e2e`（这条是 stderr，CI 吞掉了） |
 | 有 61 个测试从来没在 CI 里跑过 | 它们标了 `#[ignore]`，而 CI 从不带 `--ignored` 参数运行 | 全仓 `#[ignore]` 出现在 18 个文件里，CI 一律跳过 |
-| 本地跑绿了，CI 却报 lint 错 | 本地 clippy 版本比 CI 旧 | CI 用 `dtolnay/rust-toolchain@stable`；先跑 `rustup update stable` |
+| 本地跑绿了，CI 却报 lint 错 | CI 工具链比本地新（clippy 新增 lint） | 壳仓 workflow 用 `dtolnay/rust-toolchain@stable`，版本随 runner 漂；**把 CI 钉到本地版本**（改成 `@<本地版本>`，`rustc --version` 查），禁止 `rustup update stable` |
 | 本地跑测试把机器跑死 | 本机可用内存常年不到 2GB，多 crate 一起编译会耗尽内存 | 本地只做 `cargo check -p <crate>`，测试全部交给 CI |
 
 ---
@@ -119,5 +119,5 @@ CI 脚本在 `scripts/ci-affected.sh`。规则：
 - 本地只跑两种命令：`cargo check -p <crate>` 和 3 秒内能跑完的单用例调试。都必须套 `cpulimit -l 65 -i --`。
 - 禁止本地 `cargo test --all`、禁止整个 workspace 编译（内存不足会假死）。
 - CI 未全绿不许合并；CI 失败要拉云端日志，当新任务修复。
-- 本地 clippy 与 CI 同版本：改动前先 `rustup update stable`。
+- 工具链版本以本地为准：CI 报新 lint 时，把壳仓 `NewXapi/ferrite-ci` 的 `dtolnay/rust-toolchain@stable` 钉到本地版本（`rustc --version` 查）；禁止用 `rustup update stable` 升级本地。
 - 新增测试必须确认 CI 真的会执行它——避开上面三种情况。

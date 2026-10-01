@@ -188,7 +188,9 @@ crates/web/<prefix-feature>/
   `cargo test -p <crate> -- <测试名>`）；所有 `cargo test` 交给 PR 的 CI 按 `git diff` 动态选包。
   本机可用内存不多，**严禁**本地跑 `cargo test --all` 或整个 workspace 编译（会假死）。
 - 「通过」= CI 全绿；CI 未全绿不得 closeout / merge。
-  本地 clippy 必须与 CI 同版本（改动前先 `rustup update stable`）。
+  工具链版本**以本地为准**：CI 侧新版 clippy 拦分支（新增 lint）时，
+  把壳仓 `NewXapi/ferrite-ci` 的 workflow 里 `dtolnay/rust-toolchain@stable` 钉到本地版本
+  （`rustc --version` 查），**禁止用 `rustup update stable` 临时升级本地工具链对齐 CI**。
 - **注意三种「看起来通过、其实没验证」的情况**（新增测试前必须读 `.agent/rules/testing-ci.md`）：
   加 feature 门禁的测试 CI 不会执行（显示 `running 0 tests` 但整体绿）；
   e2e 测试在 CI 里因为没有数据库而超时跳过，却记为通过；

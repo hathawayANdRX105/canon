@@ -200,7 +200,7 @@ cpulimit -l 70 -i -- cargo test -p <crate> -- <test_name>
 规则：
 - **所有集成测试/多 crate 联调/重型测试 → CI 跑**，本地不执行 `cargo test --all`
 - 本地 `cargo test` 仅限「改动核心逻辑的单体单测且 3 秒内跑完」的调试场景
-- 本地 clippy 必须先 `rustup update stable`（CI 用 stable，版本差会被新 lint 拦）
+- 工具链版本以本地为准：CI 侧新版 clippy 拦分支时，把壳仓 CI 的 `dtolnay/rust-toolchain` 钉到本地版本；禁止 `rustup update stable`
 
 - 全部子任务 audit 通过 → push PR
 - CI 动态选包跑（按目标仓库 AGENTS.md 的 CI 调度规则执行；有动态选包的仓跑选包；全量 CI 的仓更要本地克制，只跑 -p check）

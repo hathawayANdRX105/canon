@@ -66,7 +66,7 @@ git push origin web-dev && git branch -d webfix/xxx
 ## 4. 发布预备（给 web-dev → main 的 PR 备料）
 
 - 本地跑一次 `cargo clippy -p <改动的 web crate> --all-targets`（clippy 是 merge 期 FAIL，
-  别等 CI 才发现；同版本工具链，改动前 `rustup update stable`）。
+  别等 CI 才发现；工具链版本以本地为准，CI 报新 lint 就把 CI 钉到本地版本，禁止 `rustup update stable`）。
 - 产出 **CRG 审查结论评论稿**：审查范围（base_sha..web-dev）、发现的问题、修复与验证记录
   （Fix/采纳/驳回 + commit 或验证结论）——发布 PR 必须挂这条评论（pr_crg_review FAIL）。
 - 给出发布 PR 需要的 type label 建议（feature/bug/chore/refactor/tests/documentation）。
