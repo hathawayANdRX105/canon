@@ -1,0 +1,120 @@
+/* 动画层：tw-animate-css 命名约定的入场/退场工具类（自供，零 npm 依赖）。
+ *
+ * 机制与上游一致：keyframes 只读 CSS 变量，工具类只设变量——
+ * `.animate-in` 触发 enter 动画，`.fade-in` / `.zoom-in-95` / `.slide-in-from-top-2`
+ * 各自设定起点状态，组合即得 shadcn 标准入场（如 Dialog：animate-in fade-in zoom-in-95）。
+ * 用 @utility 注册（非裸类）：dropdown 的 `data-[state=open]:animate-in` 等
+ * 变体前缀依赖 Tailwind 工具注册才能生成变体产物。
+ * 退场（animate-out）需要「延迟卸载」的包装态才有意义，组件接入时另行处理。
+ * 升级路径：命名与官方 npm 包 tw-animate-css 完全对齐，消费者可无缝换装。 */
+
+/* 图标微动效（生成产物，自带文件头）。@import 必须在最前，故置于本注释之后、
+ * 首条规则之前。缺这层图标退化为静态，不破版。 */
+@import "./icon-anim.css";
+
+@keyframes enter {
+  from {
+    opacity: var(--tw-enter-opacity, 1);
+    transform: translate3d(var(--tw-enter-translate-x, 0), var(--tw-enter-translate-y, 0), 0)
+      scale3d(var(--tw-enter-scale, 1), var(--tw-enter-scale, 1), var(--tw-enter-scale, 1));
+  }
+}
+
+@keyframes exit {
+  to {
+    opacity: var(--tw-exit-opacity, 1);
+    transform: translate3d(var(--tw-exit-translate-x, 0), var(--tw-exit-translate-y, 0), 0)
+      scale3d(var(--tw-exit-scale, 1), var(--tw-exit-scale, 1), var(--tw-exit-scale, 1));
+  }
+}
+
+@utility animate-in {
+  animation: enter 150ms ease-out both;
+}
+
+@utility animate-out {
+  animation: exit 150ms ease-in both;
+}
+
+@utility fade-in {
+  --tw-enter-opacity: 0;
+}
+
+@utility fade-in-0 {
+  --tw-enter-opacity: 0;
+}
+
+@utility fade-out {
+  --tw-exit-opacity: 0;
+}
+
+@utility fade-out-0 {
+  --tw-exit-opacity: 0;
+}
+
+@utility zoom-in-90 {
+  --tw-enter-scale: 0.9;
+}
+
+@utility zoom-in-95 {
+  --tw-enter-scale: 0.95;
+}
+
+@utility zoom-out-95 {
+  --tw-exit-scale: 0.95;
+}
+
+@utility slide-in-from-top-2 {
+  --tw-enter-translate-y: -0.5rem;
+}
+
+@utility slide-in-from-bottom-2 {
+  --tw-enter-translate-y: 0.5rem;
+}
+
+@utility slide-in-from-left-2 {
+  --tw-enter-translate-x: -0.5rem;
+}
+
+@utility slide-in-from-right-2 {
+  --tw-enter-translate-x: 0.5rem;
+}
+
+@utility slide-in-from-top-4 {
+  --tw-enter-translate-y: -1rem;
+}
+
+@utility slide-in-from-bottom-4 {
+  --tw-enter-translate-y: 1rem;
+}
+
+@utility slide-in-from-left-4 {
+  --tw-enter-translate-x: -1rem;
+}
+
+@utility slide-in-from-right-4 {
+  --tw-enter-translate-x: 1rem;
+}
+
+/* ============================================================
+ * 可复用动画 token（2026-09-29：侧边栏家族动画需求）。
+ * 任何组件（sidebar 组折叠 / 侧栏开合 / 浮层 / 面板入场）统一读这一组
+ * 变量，节奏感全站一致；延迟参数取自 react-bits（fast 0.18s / base 0.3s，
+ * 缓动 easeOutExpo 族 [0.22,1,0.36,1] 与 [0.23,1,0.32,1]）。
+ * 放 :root（与 tokens/theme 同层），消费方 CSS 写
+ *   `transition: all var(--ui-motion-base) var(--ui-ease-swift);`
+ * ============================================================ */
+:root {
+  /* 缓动 —— swift = 快进慢停（react-bits 侧栏/面板常用）；spring = 微过冲回弹。 */
+  --ui-ease-swift: cubic-bezier(0.22, 1, 0.36, 1);
+  --ui-ease-spring: cubic-bezier(0.23, 1, 0.32, 1);
+  --ui-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* 时长 —— fast 微交互（hover/按压），base 面板/浮层展开，slow 大位移（侧栏开合）。 */
+  --ui-motion-fast: 180ms;
+  --ui-motion-base: 300ms;
+  --ui-motion-slow: 300ms;
+
+  /* 组折叠（grid-rows 0fr↔1fr）专档：略短于 base，点击反馈更跟手。 */
+  --ui-motion-collapse: 260ms;
+}

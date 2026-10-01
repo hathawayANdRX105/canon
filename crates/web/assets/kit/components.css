@@ -1,0 +1,2311 @@
+/* ui-kit 组件类层 —— 样式真相应住在这，不在 Rust 里。
+ *
+ * 为什么: 原本 49 个 `pub const X: &str = "…tailwind 类串…"` 住在 src/styles.rs
+ * 与 src/panel.rs。样式真相散在 Rust，换主题要回到 49 个字符串里改；而且多一层
+ * 无用转发（`pub const SECTION = "ui-section"` 只是把类名包一层）。styles.rs 已删除，
+ * 现在 **rsx 里直接写类名**，具体 class 串由本文件持有，改样式只动这里。
+ *
+ * 两种机制，选哪个由「markup 里要不要接变体」决定（Tailwind v4.3 实测）：
+ *   @utility ui-*        进 utilities 层，markup 里能写 `hover:ui-*` / `focus:ui-*`。
+ *                        含 hover:/focus:/disabled:/md: 等变体的走这里。
+ *   @layer components   层级低于 utilities，可被 utility 覆盖，但 **markup 里接不了变体**。
+ *                        无变体的静态配方走这里。
+ *
+ * 消费方接入（顺序有要求：@import 必须在文件最前，否则整条 import 失效）:
+ *   @import "tailwindcss";
+ *   @import "ui-kit/assets/tokens.css";
+ *   @import "ui-kit/assets/ui-kit.css";
+ * 然后 rsx 侧写 `class: "ui-section"`。
+ * 消费方若用 @source 扫 Rust 源（ferrite 就是这么做的），ui-* 类会被自动收录。
+ *
+ * 搬迁为**纯搬运**：所有 class 串与搬迁前逐字相同，没有改任何值 ——
+ * 已用「搬迁前后产物 CSS 声明集合双向零差异」验证（各 270 条声明）。
+ *
+ * 已知遗留:
+ *   1. 组件内另有 8 个 class 串常量（INPUT_CLASS / TRACK_CLASS / ITEM_CLASS …）
+ *      依赖 shadcn 的 tailwindcss-animate 工具类与 [&_svg] 任意变体，
+ *      @variant 明确拒绝任意变体，未搬迁。详见 THEMING-DESIGN.md。
+ *   2. 约 20 个 shadcn 逐字搬运常量（badge / sidebar / tabs / button /
+ *      input / combobox / dropdown / sheet / toast / stat_card …）内部写死
+ *      `text-xs` / `text-sm`，绕开了 tokens.css 的尺寸阶。它们的注释声明
+ *      「逐字搬运自 shadcn」，改字号会破坏该对账前提，故本次未动；要统一
+ *      需先决定以哪边为准。
+ */
+
+ → @utility ==== */
+
+/* 响应式卡片栅格 —— 1 列 → md 3 列 → lg 5 列。断点与列数写在 @variant 里，不要写成 &:md（那是无效选择器，浏览器会静默丢弃）。 */
+/* 响应式卡片栅格 —— 1 列 → md 3 列 → lg 5 列。断点与列数写在 @variant 里，不要写成 &:md（那是无效选择器，浏览器会静默丢弃）。 */
+@utility ui-card-grid {
+  @apply grid grid-cols-1 gap-3;
+  @variant md { @apply grid-cols-3; }
+  @variant lg { @apply grid-cols-5; }
+}
+
+/* 关闭按钮 —— 与 CloseButton 组件同款外观。页面自建按钮结构时复用它。 */
+/* 关闭按钮 —— 与 CloseButton 组件同款外观。页面自建按钮结构时复用它。 */
+@utility ui-close-btn {
+  @apply rounded-lg p-1.5 text-muted-foreground transition-colors;
+  &:hover { @apply bg-secondary; }
+  &:hover { @apply text-foreground; }
+}
+
+/* 选择器面板外壳 —— 形似输入框的聚焦面板，focus-within 时描边提亮。全仓只此一处用，主题化改这一条。 */
+@utility ui-field-panel {
+  @apply rounded-xl bg-background px-3 py-2.5 shadow-[var(--ui-ring-sm)];
+  &:focus-within { @apply shadow-[var(--ui-ring-lg)]; }
+}
+
+/* 幽灵按钮 —— 透明底 + 描边，次级动作。次要操作不要和主按钮抢视觉重量时用。 */
+/* 幽灵按钮 —— 透明底 + 描边，次级动作。次要操作不要和主按钮抢视觉重量时用。 */
+@utility ui-ghost-btn {
+  @apply flex-1 rounded-xl border border-border py-2.5 text-sm text-muted-foreground transition-colors;
+  &:hover { @apply bg-secondary; }
+}
+
+/* 输入框 —— 基础输入。聚焦态改边框色并去掉 outline —— 焦点可见性由边框承担。 */
+/* 输入框 —— 基础输入。聚焦态改边框色并去掉 outline —— 焦点可见性由边框承担。 */
+@utility ui-input {
+  @apply w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm;
+  &:focus { @apply border-border; }
+  &:focus { @apply outline-none; }
+}
+
+/* 等宽输入框 —— 与 ui-input 同壳，额外 font-mono。用于 ID / 密钥 / 代码类输入。 */
+/* 等宽输入框 —— 与 ui-input 同壳，额外 font-mono。用于 ID / 密钥 / 代码类输入。 */
+@utility ui-input-mono {
+  @apply w-full rounded-xl border border-border bg-background px-4 py-2.5 font-mono text-sm;
+  &:focus { @apply border-border; }
+  &:focus { @apply outline-none; }
+}
+
+/* 主按钮 —— 页面主操作，一屏最多一个。强调色底 + 反色文字。 */
+/* 主按钮 —— 页面主操作，一屏最多一个。强调色底 + 反色文字。 */
+@utility ui-primary-btn {
+  @apply flex-1 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-all duration-150;
+  box-shadow: var(--ui-shadow-sm);
+  &:hover { @apply bg-zinc-200; box-shadow: var(--ui-shadow-md); }
+  &:active { transform: translateY(1px); box-shadow: var(--ui-shadow-pressed); }
+  &:disabled { @apply cursor-not-allowed opacity-50; box-shadow: none; }
+}
+
+/* 刷新按钮 —— 小号描边按钮，紧凑排布用。 */
+/* 刷新按钮 —— 小号描边按钮，紧凑排布用。 */
+@utility ui-refresh-btn {
+  @apply rounded-xl border border-border bg-background px-3.5 py-2 text-xs font-medium text-foreground transition-colors;
+  &:hover { @apply border-border; }
+  &:hover { @apply text-foreground; }
+}
+
+/* 未激活标签 —— 弱化到 muted-foreground，hover 才提亮。 */
+/* 未激活标签 —— 弱化到 muted-foreground，hover 才提亮。 */
+@utility ui-tab-inactive {
+  @apply relative z-10 flex-1 rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors duration-200 text-muted-foreground;
+  &:hover { @apply text-foreground; }
+}
+
+/* 面板 hover 微交互 —— 内描边从 0.06 提亮到 0.08，"克制"的浮现（Linear 卡片质感）。
+ * 用在 ui-section / 可点面板上；过渡走 transition-shadow，无位移无放大。 */
+@utility ui-hoverable {
+  @apply transition-shadow duration-200;
+  &:hover { box-shadow: var(--ui-ring-md); }
+}
+
+/* 数据表行 hover —— 行高亮，仅背景微提亮，克制。 */
+@utility ui-table-row {
+  @apply transition-colors;
+  &:hover { background: rgb(255 255 255 / 0.03); }
+}
+
+
+/* ============================================================
+ * 选项 popover 面板（OptionPopover）—— 头部行（标题 + 保存 + 关闭）+ 若干组行
+ * （组 = 标签 + 选中数 + 右侧槽 + 小面板内选项按钮）。popover 型，trigger 唤起、遮罩关闭。
+ * 组盒用暗底（dark popover 上的 subtle 提亮盒）；选中按钮亮色底凸显（Secondary）。
+ * 面板细滚动条：thin + 半透明圆角 thumb，overflow-y:auto 只有内容超出才出现。
+ * 选项按钮复用 Button（Ghost/Sm，选中 Secondary）；不自造按钮。
+ * ============================================================ */
+
+/* 面板外壳 —— 绝对定位在 trigger 下方，宽 24rem（批注：窄→加宽）；最高 70vh 细滚动。 */
+@utility ui-pickpop {
+  @apply absolute top-full z-50 mt-2 w-96 rounded-xl border border-border bg-background p-5 text-popover-foreground shadow-lg;
+  max-height: 70vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--foreground) 18%, transparent) transparent;
+  &::-webkit-scrollbar { @apply w-1.5; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb {
+    @apply rounded-full;
+    background: color-mix(in srgb, var(--foreground) 18%, transparent);
+  }
+}
+
+/* 面板头部行：标题左 + 保存/关闭钮右。 */
+@utility ui-pickpop-head {
+  @apply mb-2 flex items-center justify-between gap-2;
+}
+
+/* 组行小面板 —— 底色跟 demo 其它面板（ui-section）同色同组件（bg-card，批注
+ * 「小面板背景用其他那种面板的颜色，同样的组件」）；相邻组间 8px 间隔。 */
+@utility ui-pickgroup {
+  @apply rounded-xl bg-card p-3;
+  & + .ui-pickgroup { @apply mt-2; }
+}
+
+/* 组行头：标签（text-sm，与按钮同字号、muted 色区分）+ 选中数（text-xs、与按钮同色）+ 右侧槽。 */
+@utility ui-pickgroup-head {
+  @apply mb-1.5 flex items-center justify-between gap-2 px-1 text-sm;
+}
+
+/* 组行标签：muted 色区分于选项按钮（按钮为 foreground 色）。 */
+@utility ui-pickgroup-label {
+  @apply font-medium text-muted-foreground;
+}
+
+/* 组行选中数：小号、与按钮同色。 */
+@utility ui-pickgroup-count {
+  @apply text-xs text-foreground tabular-nums;
+}
+
+/* 保存钮：静态底=组小面板同款 secondary（透明白灰，批注 #8-3 美化），
+ * 图标 muted 色；hover 成功绿底 + 慢速过渡。布局类（h-6 w-6 等）在 rsx 侧。 */
+@utility ui-pickpop-save {
+  @apply transition-[background-color,color] ease-in-out;
+  transition-duration: var(--ui-duration-slow);
+  background: var(--secondary);
+  color: var(--muted-foreground);
+  &:hover { background: var(--success); color: var(--success-foreground); }
+}
+
+/* 关闭钮（仅 popover 头内作用域）：盒体与保存钮对齐（h-6 w-6 rounded-md），
+ * 图标缩至 3.5 档；hover 暗红底 + 慢速过渡；不动全仓 ui-close-btn。 */
+ .ui-pickpop-head .ui-close-btn {
+   @apply flex h-6 w-6 items-center justify-center rounded-md;
+   background: var(--secondary);
+   color: var(--muted-foreground);
+   transition: background-color var(--ui-duration-slow) ease-in-out, color var(--ui-duration-slow) ease-in-out;
+ }
+ .ui-pickpop-head .ui-close-btn > svg {
+   @apply h-3.5 w-3.5;
+ }
+ .ui-pickpop-head .ui-close-btn:hover {
+   background: color-mix(in srgb, var(--destructive) 30%, transparent);
+   color: var(--destructive);
+ }
+
+/* ============================================================
+ * 多选面板（MultiSelectPanel）—— 单面板占满宽度，选项以 chip 铺开、按页翻。
+ * chips 选中态用 [data-selected] 属性切换（文字+背景变色）。
+ * 分页器在头部右侧（[<] [n-1] [n] [n+1] [>]），复用 Button（Ghost/IconXs）质感。
+ * ============================================================ */
+
+/* chip 可选按钮 —— badge 形态；[data-selected=true] 时文字/背景换强调色。 */
+@utility ui-chip {
+  @apply inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground transition-colors duration-150;
+  &:hover { @apply bg-secondary; }
+  &[data-selected="true"] {
+    @apply border-transparent bg-primary text-primary-foreground;
+  }
+  &:disabled { @apply cursor-not-allowed opacity-50; }
+}
+
+/* 多选面板外壳 —— 占满宽度，边框 + 卡片底，flex 列（头部行 / 内容区）。 */
+@utility ui-multi-panel {
+  @apply flex w-full min-h-56 flex-col rounded-xl border border-border bg-card/40;
+}
+
+/* 面板标题文字（配合 ui-picker-head 左槽）。 */
+@utility ui-picker-title {
+  @apply text-xs font-medium text-muted-foreground;
+}
+
+/* 面板头部行：标题在左、分页器在右，同一行；底部分隔线。 */
+@utility ui-picker-head {
+  @apply flex items-center justify-between gap-2 border-b border-border/60 px-3 py-2;
+}
+
+/* 面板内容列表 —— 定高可滚，撑满中段。 */
+@utility ui-picker-list {
+  @apply h-48 flex-1 overflow-y-auto p-2;
+}
+
+/* 轻量分页器（rust-ui Pagination 形态）：[<] [n-1] [n] [n+1] [>]，复用 Button（Ghost/IconXs）。
+   按钮自带 data-slot="button" 质感；当前页用 Secondary 高亮。 */
+@utility ui-pager {
+  @apply flex items-center gap-0.5;
+}
+
+/* ==== 无变体 → @layer components ==== */
+
+@layer components {
+  /* 登录卡 —— max-w-md 定宽居中卡，内描边 + 轻投影与毛玻璃。只在登录/注册这类「聚焦单一动作」的页面用。 */
+  .ui-auth-card { @apply w-full max-w-md rounded-2xl bg-card/70 p-8 shadow-[var(--ui-shadow-xl)] backdrop-blur; }
+  /* 危险描边 —— 单色类。 */
+  .ui-b-danger { @apply border-destructive; }
+  /* 信息描边 —— 单色类。 */
+  .ui-b-info { @apply border-sky-500; }
+  /* 面板描边 —— 单色类。 */
+  .ui-b-panel { @apply border-border; }
+  /* 成功描边 —— 单色类。 */
+  .ui-b-success { @apply border-emerald-500; }
+  /* 卡片内容区 —— 与 ui-section 同壳，底色更透（bg-card/60）—— 卡片套卡片时用，避免边界糊成一片。 */
+  .ui-card-content { @apply rounded-xl bg-card/60 p-6 shadow-[var(--ui-ring-sm)]; }
+  /* 危险色 —— 单色类：删除、报错、失效。 */
+  .ui-c-danger { @apply text-destructive; }
+  /* 信息色 —— 单色类。 */
+  .ui-c-info { @apply text-info-foreground; }
+  /* 弱化文字色 —— 单色类：次要说明、占位、辅助信息。 */
+  .ui-c-muted { @apply text-muted-foreground; }
+  /* 反色文字 —— 单色类：压在强调底色上的文字。 */
+  .ui-c-on { @apply text-primary-foreground; }
+  /* 成功色 —— 单色类。 */
+  .ui-c-success { @apply text-success-foreground; }
+  /* 正文色 —— 单色类：前景色。 */
+  .ui-c-text { @apply text-foreground; }
+  /* 警告色 —— 单色类。 */
+  .ui-c-warning { @apply text-warning-foreground; }
+  /* 危险提示条 —— 破坏性操作提示：danger 底 + danger 文字。 */
+  .ui-danger-bar { @apply rounded-xl bg-destructive px-4 py-2 text-xs text-destructive; }
+  /* 信息条 —— 普通提示条：卡底 + 前景文字。 */
+  .ui-info-bar { @apply rounded-xl bg-card px-4 py-2 text-xs text-foreground shadow-[var(--ui-ring-xs)]; }
+  /* 模态遮罩 —— 全屏居中 + 半透明黑底 + 背景模糊。点遮罩关闭由调用方挂 onclick。 */
+  .ui-modal-backdrop { @apply fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm; }
+  /* 模态遮罩的顶部对齐变体 —— 对齐与上边距跟 ui-modal-backdrop 相反，
+     供「设置弹窗」这类贴顶形态使用（omenic web-ui Modal 的 top_aligned）。 */
+  .ui-modal-backdrop-top { @apply fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-4 pt-[14vh] backdrop-blur-sm; }
+  /* 模态内容卡 —— 居中圆角卡，最大宽度 max-w-md。 */
+  .ui-modal-card { @apply w-full max-w-md rounded-2xl bg-card p-5 shadow-[var(--ui-shadow-lg)]; }
+  /* 模态标题行 —— 左标题 + 右关闭按钮的两端布局。 */
+  .ui-modal-header { @apply mb-5 flex items-center justify-between; }
+  /* 页面底 —— 铺满一屏的页面容器：最小高度撑满 + 背景/前景色。应用级根容器用它。 */
+  .ui-page-bg { @apply relative min-h-screen overflow-x-hidden bg-background text-foreground; }
+  /* 区块外壳 —— 最常用的容器：圆角 + 卡底色 + 内描边 + p-6。页面区段、设置分组、弹窗内容都用它。 */
+  .ui-section { @apply rounded-xl bg-card p-6 shadow-[var(--ui-ring-sm)]; }
+  /* 区块标题行 —— 纯布局：mb-4 + flex 两端对齐，不含视觉，与主题无关。 */
+  .ui-section-header { @apply mb-4 flex items-center justify-between; }
+  /* 区块外壳（可滚动） —— 与 ui-section 同壳，额外 scroll-mt-8 —— 锚点跳转时不被吸顶栏遮住。 */
+  .ui-section-scroll { @apply scroll-mt-8 rounded-xl bg-card p-6 shadow-[var(--ui-ring-sm)]; }
+  /* 区块标题文字 —— 中等字号 + medium 字重 + 前景色。 */
+  .ui-section-title { @apply text-lg font-medium text-foreground; }
+  /* 状态胶囊 —— 药丸形小徽标：次级底 + 弱化文字。文案走占位，不写死在样式里。 */
+  .ui-status-pill { @apply rounded-full bg-secondary px-3 py-1 text-xs text-muted-foreground; }
+  /* 危险底色 —— 单色类。 */
+  .ui-s-danger { @apply bg-destructive; }
+  /* 强调面底色 —— 单色类。 */
+  .ui-s-on { @apply bg-primary; }
+  /* 面板底色 —— 单色类：表面填充。 */
+  .ui-s-panel { @apply bg-card; }
+  /* 抬升面底色 —— 单色类：浮在面板之上的层。 */
+  .ui-s-raised { @apply bg-secondary; }
+  /* 成功底色 —— 单色类。 */
+  .ui-s-success { @apply bg-success; }
+  /* 警告底色 —— 单色类。 */
+  .ui-s-warning { @apply bg-warning; }
+  /* 激活标签 —— 前景色用 --primary-foreground，配合 z-10 压在指示条之上。 */
+  .ui-tab-active { @apply relative z-10 flex-1 rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors duration-200 text-primary-foreground; }
+  /* 标签指示条 —— 绝对定位滑块，宽度一半（w-1/2），靠 transform 在标签间平移。动效时长调这里。 */
+  .ui-tab-indicator { @apply absolute inset-y-0 w-1/2 rounded-full bg-primary transition-transform duration-200; }
+  /* 标签页外壳 —— 容器圆角胶囊 + 内部 p-1 留白；激活/未激活子态由 ui-tab-active / ui-tab-inactive 承担。 */
+  .ui-tab-switcher { @apply relative mb-6 flex rounded-full border border-border bg-card p-1; }
+
+  /* ---- 滑动胶囊多标签（react-bits 顶层 tab 的 CSS 版，等宽 N 段）----
+   * 透明横排 + 单个浮动胶囊指示器，靠 width/transform 在段间平移；
+   * hover 跟随、离开回弹到激活段由 Rust 侧 Signal 驱动（SlidingTabBar）。 */
+  .ui-sliding-tabs { @apply relative flex; }
+  .ui-sliding-tab { @apply relative z-10 flex-1 px-3.5 py-1.5 text-sm font-medium transition-colors duration-200; }
+  .ui-sliding-indicator { @apply absolute top-0 left-0 h-full rounded-full bg-foreground/[0.06] transition-all duration-300 ease-out; box-shadow: var(--ui-ring-sm); }
+  /* 弹簧滑行高亮块（SpringSlidePill，dioxus-motion 驱动）——位移由 JS 写
+   * transform: translate（合成器属性，逐帧零 reflow）；width/height 仅在目标
+   * 切换时随弹簧变化。隐藏态由 rsx 追加 `ui-spring-pill-hidden` 类触发
+   * opacity 淡出（位置保留，下次显示从原位弹走）。契约：ui_class_contract
+   * 要求每个定义类块必须含 @apply，故隐藏态用独立类而非属性选择器块。
+   * 底色/层级由调用方经 class 提供（组件自身不带默认底色）。 */
+  .ui-spring-pill { @apply absolute rounded-md pointer-events-none; transition: opacity 150ms linear; }
+  .ui-spring-pill-hidden { @apply opacity-0; }
+  /* Tabs flow 档：激活高亮改由 pill 承担——清掉触发器自身的底色/阴影
+   * （按钮已带 relative z-10，压在下方的 z-0 pill 之上，文字可读）。 */
+  [data-slot="tablist"][data-flow="true"] button[data-slot="tab-trigger"][data-state="active"] {
+      background: transparent;
+      box-shadow: none;
+  }
+  /* 文字类 —— 全部是 tokens.css `role-*` 的薄别名。
+   *
+   * 为什么要留这一层：ui-type-* 是 kit 已发布的类名，消费方（ferrite /
+   * omenic）在用，删掉是破坏性变更。留着的代价从「两份会漂移的字号声明」
+   * 降到「一行 @apply」——Tailwind v4 的 @apply 会把 role-* 的声明内联
+   * 进来，两套类名从此共用 tokens.css 里唯一那份 --ui-type-* 变量。
+   * 消费方迁移到 role-* 后，这一整层可以一次性删掉。 */
+  .ui-type-body { @apply role-body; }
+  .ui-type-button { @apply role-button; }
+  .ui-type-card-title { @apply role-card; }
+  .ui-type-caption { @apply role-caption; }
+  .ui-type-desc { @apply role-desc; }
+  .ui-type-display { @apply role-display; }
+  .ui-type-heading { @apply role-heading; }
+  .ui-type-hint { @apply role-hint; }
+  .ui-type-label { @apply role-label; }
+  .ui-type-mono { @apply role-mono; }
+  .ui-type-numeric { @apply role-numeric; }
+  .ui-type-overline { @apply role-overline; }
+  .ui-type-title { @apply role-title; }
+  .ui-type-value { @apply role-value; }
+
+  /* ---- Linear 式数据表 ---- 表头 / 单元格 / 数值列各一个单色类；行 hover 用 ui-table-row。
+   * 用法：<table class="ui-table"><th class="ui-table-head">… <td class="ui-table-cell">…
+   * 数值列 <td class="ui-table-cell ui-table-num">… 行 <tr class="ui-table-row">… */
+  .ui-table { @apply w-full border-collapse; }
+  .ui-table-head { @apply role-label uppercase tracking-wide text-muted-foreground px-4 py-2.5 border-b border-border; }
+  .ui-table-cell { @apply role-body px-4 py-2.5 border-b border-border/60; }
+  .ui-table-num { @apply text-right tabular-nums; }
+}
+
+/* ============================================================
+ * 实体按钮（tactile button）—— 给 dsh Button 补「点击实体感」。
+ *
+ * 参考 rust-ui 的 shadow-xs 悬浮层（有底变体浮起 1px），再补一个两者都
+ * 没有的 :active 下沉（收回外投影 + 换成内阴影 + 下移 1px）= 实体点击反馈。
+ *
+ * 纯 CSS，按组件已发射的 data-slot="button" + data-variant 属性挂，**不改**
+ * dsh 基串的 class（那批串被 tests/shadcn_class_contract.rs 逐字钉死）。
+ * 放**无层**（unlayered）：让 box-shadow / transform / transition 压过基串里的
+ * transition-colors 等 utility，三态才能真正过渡。
+ * 只给有底变体（primary / secondary / destructive）投影；ghost / link 本无实体，保持扁平。
+ * ============================================================ */
+[data-slot="button"][data-variant="primary"],
+[data-slot="button"][data-variant="secondary"],
+[data-slot="button"][data-variant="destructive"] {
+  box-shadow: var(--ui-shadow-sm);
+  transition: background-color 150ms ease, box-shadow 150ms ease, transform 90ms ease;
+}
+
+[data-slot="button"][data-variant="primary"]:hover,
+[data-slot="button"][data-variant="secondary"]:hover,
+[data-slot="button"][data-variant="destructive"]:hover {
+  box-shadow: var(--ui-shadow-md);
+}
+
+[data-slot="button"][data-variant="primary"]:active,
+[data-slot="button"][data-variant="secondary"]:active,
+[data-slot="button"][data-variant="destructive"]:active {
+  transform: translateY(1px);
+  box-shadow: var(--ui-shadow-pressed);
+}
+
+/* 无底变体的按压反馈：不下沉投影（没有实体），只给 outline / ghost 一个 1px 下沉。 */
+[data-slot="button"][data-variant="outline"]:active,
+[data-slot="button"][data-variant="ghost"]:active {
+  transform: translateY(1px);
+}
+
+/* ============================================================
+ * 选项按钮选中成功动画（OptionPopover 的 PickOptions* / 各处 data-selected 选项钮）：
+ * data-selected 变 true 时 180ms scale 弹入一次；背景切换由 Button 的
+ * transition-colors 承担。无层：压过 utility 层默认。
+ * ============================================================ */
+@keyframes ui-pickopt-pop {
+  from { transform: scale(0.94); }
+}
+
+[data-slot="button"][data-selected="true"] {
+  animation: ui-pickopt-pop 180ms ease;
+}
+
+
+/* ============================================================
+ * widget 宿主基座类 —— PosterCard / RadarFlipCard / StatTabsCard
+ * 依赖的页面级 CSS 基座（正本收进 kit，消费方入口无需再各自复制）。
+ * 2026-09-28：从 ferrite admin-web entry.css 的等价段迁入。
+ * ============================================================ */
+
+.poster-flip { perspective: 1200px; }
+.poster-flip-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+    transition: transform 0.65s cubic-bezier(.2,.7,.2,1);
+}
+.poster-flip-portrait { aspect-ratio: 2/3; width: 100%; cursor: pointer; }
+.poster-flip-inner.is-flipped { transform: rotateY(180deg); }
+.poster-flip-face {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+.poster-flip-back { transform: rotateY(180deg); }
+.card-tilt {
+    transition: transform 0.18s ease-out, border-color 0.15s ease-out;
+    transform-style: preserve-3d;
+    will-change: transform;
+}
+.card-frame::after {
+    content: "";
+    position: absolute;
+    inset: 7px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 9px;
+    pointer-events: none;
+}
+.card-frosted {
+    background:
+        radial-gradient(120% 90% at 20% 0%, rgba(255, 255, 255, 0.10) 0%, transparent 45%),
+        radial-gradient(120% 120% at 85% 100%, rgba(0, 0, 0, 0.55) 0%, transparent 55%),
+        linear-gradient(160deg, #27272a 0%, #18181b 55%, #09090b 100%);
+}
+.card-vignette {
+    box-shadow:
+        inset 0 0 42px rgba(0, 0, 0, 0.62),
+        inset 0 0 8px rgba(0, 0, 0, 0.35);
+}
+.row-text {
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9), 0 0 6px rgba(0, 0, 0, 0.55);
+}
+.card-corner-shade {
+    background:
+        radial-gradient(52% 32% at 3% 2%, rgba(0, 0, 0, 0.42) 0%, rgba(0, 0, 0, 0.16) 48%, transparent 70%),
+        radial-gradient(52% 32% at 97% 2%, rgba(0, 0, 0, 0.38) 0%, rgba(0, 0, 0, 0.14) 48%, transparent 70%),
+        radial-gradient(52% 34% at 98% 98%, rgba(0, 0, 0, 0.40) 0%, rgba(0, 0, 0, 0.15) 48%, transparent 72%),
+        radial-gradient(125% 72% at -2% 102%, rgba(0, 0, 0, 0.62) 0%, rgba(0, 0, 0, 0.30) 44%, transparent 80%);
+}
+
+/* ============================================================
+ * sidebar icon 折叠档（data-collapsible="icon"）：文本槽隐藏、图标居中。
+ * class 常量段只覆盖了 group-label/action/badge 的隐藏；菜单按钮的
+ * label span 与头部文本走属性选择器规则（kit 统一处理，调用方免加类）。
+ * 2026-09-28：demo 批注 #1「折叠之后塌陷，不用图标显示么」修复。
+ * ============================================================ */
+[data-collapsible="icon"] [data-slot="sidebar-menu-button"] > span:last-child {
+    display: none;
+}
+[data-collapsible="icon"] [data-slot="sidebar-menu-button"] {
+    justify-content: center;
+}
+[data-collapsible="icon"] [data-slot="sidebar-header"] .sidebar-header-text {
+    display: none;
+}
+
+/* ============================================================================
+ * 点阵加载动效（dot-matrix 四家族：square / circle / hex / triangle）。
+ *
+ * 从各家族 Rust 内嵌 `const *_MATRIX_CSS` 逐字迁入组件层正本；
+ * 共享基座类去重为一份，家族差异（容器几何 / 变体类 / keyframes）分节保留。
+ * 所有 `--dm-*` 数值引用 theme.css 的「点阵引用变量」区（或实例内联覆盖），
+ * 本层不写死数值。Rust 侧不再内嵌 CSS / 不再发射 `<style>`。
+ *
+ * 驱动分两档（与 Rust 侧一致）：
+ *   - CSS keyframes 型：square 大部分变体 + circle-2（.dm-* 变体类 + @keyframes）；
+ *   - RAF 直写型：square 的 js 变体 + hex/triangle 全部 —— 逐帧写 style.opacity，
+ *     只依赖 .dm-dot 基座 + 内联 base 前缀，不依赖 keyframes。
+ * ============================================================================
+
+/* ---- 共享基座（四家族共用；--dm-* 默认值见 theme.css 点阵引用变量区）---- */
+.dm-root{display:inline-flex;align-items:center;justify-content:center;vertical-align:middle}
+.dm-grid{display:grid}
+.dm-hex-grid{display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100%}
+.dm-hex-row{display:flex;justify-content:center}
+.dm-tri-grid{position:relative;width:100%;height:100%}
+.dm-dot{border-radius:999px;display:block;background:currentColor;opacity:calc(0.5*(var(--dm-opacity-base)+var(--dm-opacity-mid)));--dm-bloom-level:0;transform-origin:center;transform:none;will-change:opacity}
+.dm-bloom .dm-dot{filter:drop-shadow(0 0 calc(var(--dm-dot-size,3px)*0.75*var(--dm-bloom-level,0)) currentColor) drop-shadow(0 0 calc(var(--dm-dot-size,3px)*1.35*var(--dm-bloom-level,0)) currentColor);will-change:opacity,filter}
+.dm-root.dm-bloom-halo.dm-bloom .dm-dot{filter:drop-shadow(0 0 calc(var(--dm-dot-size,3px)*0.92*var(--dm-bloom-level,0)) currentColor) drop-shadow(0 0 calc(var(--dm-dot-size,3px)*1.62*var(--dm-bloom-level,0)) currentColor) drop-shadow(0 0 calc(var(--dm-dot-size,3px)*2.55*var(--dm-bloom-level,0)) currentColor);will-change:opacity,filter}
+.dm-muted .dm-dot{opacity:calc(0.44*var(--dm-opacity-mid));--dm-bloom-level:0}
+.dm-dot.dm-inactive{opacity:0 !important;--dm-bloom-level:0;animation:none !important;visibility:hidden;pointer-events:none;will-change:auto;filter:none}
+
+/* ---- square 家族变体类（CSS keyframes 驱动；js 型变体不挂这些类）---- */
+.dm-path{animation:dm-ripple calc(var(--dm-cycle)*var(--dm-speed,1)) cubic-bezier(0.42,0,0.58,1) infinite;animation-delay:calc(var(--dm-path,0)*0.2333*var(--dm-cycle)*var(--dm-speed,1));will-change:opacity}
+.dm-collapse{animation:dm-collapse calc(var(--dm-cycle)*0.2*var(--dm-speed,1)) ease-in forwards;animation-delay:calc((4 - var(--dm-manhattan,0))*.032*var(--dm-cycle)*var(--dm-speed,1))}
+.dm-diagonal-alt-sweep{animation:dm-diagonal-alt-sweep calc(var(--dm-cycle)*var(--dm-speed,1)) linear infinite;animation-delay:calc((var(--dm-path,0)*0.2 + var(--dm-diagonal-parity,0)*0.5)*var(--dm-cycle)*var(--dm-speed,1));will-change:opacity}
+.dm-spiral-snake{animation:dm-spiral-snake calc(var(--dm-cycle)*var(--dm-speed,1)) linear infinite;animation-delay:calc(var(--dm-spiral-order,0)*0.04*var(--dm-cycle)*var(--dm-speed,1));will-change:opacity}
+.dm-outer-snake{animation:dm-ring-snake calc(var(--dm-cycle)*var(--dm-speed,1)) linear infinite;animation-delay:calc(var(--dm-outer-order,0)*0.0625*var(--dm-cycle)*var(--dm-speed,1));will-change:opacity}
+.dm-middle-snake{animation:dm-ring-snake calc(var(--dm-cycle)*var(--dm-speed,1)) linear infinite;animation-delay:calc(var(--dm-middle-order,0)*0.125*var(--dm-cycle)*var(--dm-speed,1));will-change:opacity}
+.dm-diagonal-snake{animation:dm-diagonal-snake calc(var(--dm-cycle)*var(--dm-speed,1)) linear infinite;animation-delay:calc(var(--dm-diagonal-snake-order,0)*0.04*var(--dm-cycle)*var(--dm-speed,1));will-change:opacity}
+.dm-square6-col-snake{animation:dm-square6-col-snake calc(var(--dm-cycle)*var(--dm-speed,1)) steps(5,end) infinite;animation-delay:calc(var(--dm-col-pos,0)*0.2*var(--dm-cycle)*var(--dm-speed,1));will-change:opacity}
+.dm-ripple-echo{animation:dm-ripple-echo calc(var(--dm-cycle)*var(--dm-speed,1)) ease-in-out infinite;animation-delay:calc((var(--dm-ripple-ring,0)*0.14 + var(--dm-ripple-parity,0)*0.03)*var(--dm-cycle)*var(--dm-speed,1));will-change:opacity}
+.dm-center-origin-ripple{animation:dm-center-origin-ripple calc(var(--dm-cycle)*var(--dm-speed,1)) ease-in-out infinite;animation-delay:calc(var(--dm-center-ripple-ring,0)*0.16*var(--dm-cycle)*var(--dm-speed,1));will-change:opacity}
+.dm-square9-bit{animation-duration:calc(5200ms * var(--dm-speed,1));animation-timing-function:steps(52,end);animation-iteration-count:infinite;will-change:opacity}
+.dm-square9-d1{animation-name:dm-square9-d1}
+.dm-square9-d2{animation-name:dm-square9-d2}
+.dm-square9-d3{animation-name:dm-square9-d3}
+.dm-square9-d4{animation-name:dm-square9-d4}
+.dm-square9-d5{animation-name:dm-square9-d5}
+.dm-square9-d6{animation-name:dm-square9-d6}
+.dm-smooth .dm-dot{transition:opacity 180ms cubic-bezier(0.4,0,0.2,1)}
+
+/* ---- square 家族 keyframes ---- */
+@keyframes dm-ripple{0%,100%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}50%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}}
+@keyframes dm-collapse{0%{opacity:calc(0.95*var(--dm-opacity-peak)+0.05*var(--dm-opacity-mid));--dm-bloom-level:0.75}100%{opacity:calc(0.375*var(--dm-opacity-base));--dm-bloom-level:0}}
+@keyframes dm-diagonal-alt-sweep{0%,100%{opacity:calc(0.5*var(--dm-opacity-base));--dm-bloom-level:0}14%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}30%{opacity:calc(0.75*var(--dm-opacity-base));--dm-bloom-level:0}}
+@keyframes dm-spiral-snake{0%,100%{opacity:calc(0.5*var(--dm-opacity-base));--dm-bloom-level:0}8%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}16%{opacity:calc(0.5*var(--dm-opacity-peak)+0.4*var(--dm-opacity-mid)+0.1*var(--dm-opacity-base));--dm-bloom-level:0}24%{opacity:calc(0.25*var(--dm-opacity-peak)+0.45*var(--dm-opacity-mid)+0.3*var(--dm-opacity-base));--dm-bloom-level:0}32%{opacity:calc(0.5*var(--dm-opacity-mid)+0.5*var(--dm-opacity-base));--dm-bloom-level:0}40%{opacity:calc(0.75*var(--dm-opacity-base));--dm-bloom-level:0}}
+@keyframes dm-diagonal-snake{0%,100%{opacity:calc(0.5*var(--dm-opacity-base));--dm-bloom-level:0}8%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}16%{opacity:calc(0.5*var(--dm-opacity-peak)+0.4*var(--dm-opacity-mid)+0.1*var(--dm-opacity-base));--dm-bloom-level:0}24%{opacity:calc(0.25*var(--dm-opacity-peak)+0.45*var(--dm-opacity-mid)+0.3*var(--dm-opacity-base));--dm-bloom-level:0}32%{opacity:calc(0.5*var(--dm-opacity-mid)+0.5*var(--dm-opacity-base));--dm-bloom-level:0}40%{opacity:calc(0.75*var(--dm-opacity-base));--dm-bloom-level:0}}
+@keyframes dm-ring-snake{0%,100%{opacity:calc(0.5*var(--dm-opacity-base));--dm-bloom-level:0}10%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}20%{opacity:calc(0.45*var(--dm-opacity-peak)+0.45*var(--dm-opacity-mid)+0.1*var(--dm-opacity-base));--dm-bloom-level:0}30%{opacity:calc(0.2*var(--dm-opacity-peak)+0.4*var(--dm-opacity-mid)+0.4*var(--dm-opacity-base));--dm-bloom-level:0}40%{opacity:calc(0.875*var(--dm-opacity-base));--dm-bloom-level:0}}
+@keyframes dm-square6-col-snake{0%,20%{opacity:calc(0.6*var(--dm-opacity-peak)+0.25*var(--dm-opacity-mid)+0.15*var(--dm-opacity-base));--dm-bloom-level:0}20%,40%{opacity:calc(0.3*var(--dm-opacity-peak)+0.5*var(--dm-opacity-mid)+0.2*var(--dm-opacity-base));--dm-bloom-level:0}40%,60%{opacity:calc(0.6*var(--dm-opacity-mid)+0.4*var(--dm-opacity-base));--dm-bloom-level:0}60%,80%{opacity:calc(0.2*var(--dm-opacity-mid)+0.8*var(--dm-opacity-base));--dm-bloom-level:0}80%,100%{opacity:calc(0.625*var(--dm-opacity-base));--dm-bloom-level:0}}
+@keyframes dm-ripple-echo{0%,100%{opacity:calc(0.625*var(--dm-opacity-base));--dm-bloom-level:0}28%{opacity:calc(0.98*var(--dm-opacity-peak));--dm-bloom-level:0.9}56%{opacity:var(--dm-opacity-mid);--dm-bloom-level:0}78%{opacity:calc(0.68*var(--dm-opacity-peak)+0.32*var(--dm-opacity-mid));--dm-bloom-level:0}}
+@keyframes dm-center-origin-ripple{0%,100%{opacity:calc(0.625*var(--dm-opacity-base));--dm-bloom-level:0}34%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}60%{opacity:calc(0.5*(var(--dm-opacity-base)+var(--dm-opacity-mid)));--dm-bloom-level:0}}
+@keyframes dm-square9-d1{0%,3.846154%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}3.846154%,30.769231%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}30.769231%,46.153846%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}46.153846%,50%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}50%,53.846154%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}53.846154%,57.692308%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}57.692308%,65.384615%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}65.384615%,71.153846%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}71.153846%,80.769231%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}80.769231%,84.615385%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}84.615385%,88.461538%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}88.461538%,92.307692%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}92.307692%,100%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}}
+@keyframes dm-square9-d2{0%,5.769231%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}5.769231%,25%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}25%,30.769231%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}30.769231%,36.538462%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}36.538462%,50%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}50%,53.846154%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}53.846154%,57.692308%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}57.692308%,61.538462%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}61.538462%,65.384615%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}65.384615%,76.923077%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}76.923077%,80.769231%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}80.769231%,84.615385%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}84.615385%,88.461538%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}88.461538%,92.307692%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}92.307692%,100%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}}
+@keyframes dm-square9-d3{0%,7.692308%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}7.692308%,25%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}25%,36.538462%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}36.538462%,42.307692%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}42.307692%,46.153846%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}46.153846%,50%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}50%,53.846154%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}53.846154%,57.692308%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}57.692308%,71.153846%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}71.153846%,76.923077%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}76.923077%,80.769231%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}80.769231%,84.615385%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}84.615385%,88.461538%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}88.461538%,92.307692%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}92.307692%,100%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}}
+@keyframes dm-square9-d4{0%,13.461538%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}13.461538%,30.769231%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}30.769231%,50%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}50%,53.846154%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}53.846154%,57.692308%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}57.692308%,61.538462%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}61.538462%,65.384615%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}65.384615%,71.153846%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}71.153846%,84.615385%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}84.615385%,88.461538%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}88.461538%,92.307692%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}92.307692%,96.153846%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}96.153846%,100%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}}
+@keyframes dm-square9-d5{0%,15.384615%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}15.384615%,25%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}25%,30.769231%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}30.769231%,36.538462%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}36.538462%,46.153846%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}46.153846%,50%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}50%,53.846154%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}53.846154%,57.692308%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}57.692308%,65.384615%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}65.384615%,76.923077%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}76.923077%,84.615385%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}84.615385%,88.461538%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}88.461538%,92.307692%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}92.307692%,96.153846%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}96.153846%,100%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}}
+@keyframes dm-square9-d6{0%,17.307692%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}17.307692%,25%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}25%,36.538462%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}36.538462%,42.307692%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}42.307692%,50%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}50%,53.846154%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}53.846154%,57.692308%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}57.692308%,61.538462%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}61.538462%,71.153846%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}71.153846%,76.923077%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}76.923077%,84.615385%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}84.615385%,88.461538%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}88.461538%,92.307692%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}92.307692%,96.153846%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}96.153846%,100%{opacity:var(--dm-opacity-base);--dm-bloom-level:0}}
+
+/* ---- circle 家族变体类 + keyframes（circle-2 纯 CSS；其余 RAF）---- */
+.dm-circular2-ring{animation:dm-circular2-ring calc(var(--dm-cycle)*var(--dm-speed,1)) steps(12,end) infinite;animation-delay:calc(var(--dm-ring-order,0)*0.0833333333*var(--dm-cycle)*var(--dm-speed,1));will-change:opacity}
+@keyframes dm-circular2-ring{
+0%,8.333333%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}
+8.333333%,16.666667%{opacity:calc(0.6*var(--dm-opacity-peak) + 0.4*var(--dm-opacity-mid));--dm-bloom-level:0}
+16.666667%,25%{opacity:calc(0.5*var(--dm-opacity-mid) + 0.5*var(--dm-opacity-base));--dm-bloom-level:0}
+25%,33.333333%{opacity:calc(0.3*var(--dm-opacity-mid) + 0.7*var(--dm-opacity-base));--dm-bloom-level:0}
+33.333333%,41.666667%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}
+41.666667%,50%{opacity:calc(0.6*var(--dm-opacity-peak) + 0.4*var(--dm-opacity-mid));--dm-bloom-level:0}
+50%,58.333333%{opacity:calc(0.5*var(--dm-opacity-mid) + 0.5*var(--dm-opacity-base));--dm-bloom-level:0}
+58.333333%,66.666667%{opacity:calc(0.3*var(--dm-opacity-mid) + 0.7*var(--dm-opacity-base));--dm-bloom-level:0}
+66.666667%,75%{opacity:var(--dm-opacity-peak);--dm-bloom-level:1}
+75%,83.333333%{opacity:calc(0.6*var(--dm-opacity-peak) + 0.4*var(--dm-opacity-mid));--dm-bloom-level:0}
+83.333333%,91.666667%{opacity:calc(0.5*var(--dm-opacity-mid) + 0.5*var(--dm-opacity-base));--dm-bloom-level:0}
+91.666667%,100%{opacity:calc(0.3*var(--dm-opacity-mid) + 0.7*var(--dm-opacity-base));--dm-bloom-level:0}
+}
+/* ---- 降级：prefers-reduced-motion 时停掉全部点阵动画/过渡 ---- */
+@media (prefers-reduced-motion: reduce){
+  .dm-dot,.dm-path,.dm-collapse,.dm-diagonal-alt-sweep,.dm-spiral-snake,.dm-outer-snake,.dm-middle-snake,.dm-diagonal-snake,.dm-square6-col-snake,.dm-ripple-echo,.dm-center-origin-ripple,.dm-square9-bit,.dm-circular2-ring{animation:none !important;transition:none !important}
+}
+ * sidebar icon 折叠档（data-collapsible="icon"）：文本槽隐藏、图标居中。
+ * class 常量段只覆盖了 group-label/action/badge 的隐藏；菜单按钮的
+ * label span 与头部文本走属性选择器规则（kit 统一处理，调用方免加类）。
+ * 2026-09-28：demo 批注 #1「折叠之后塌陷，不用图标显示么」修复。
+ * ============================================================ */
+[data-collapsible="icon"] [data-slot="sidebar-menu-button"] > span:last-child {
+    display: none;
+}
+[data-collapsible="icon"] [data-slot="sidebar-menu-button"] {
+    justify-content: center;
+}
+[data-collapsible="icon"] [data-slot="sidebar-header"] .sidebar-header-text {
+    display: none;
+}
+
+/* ============================================================
+ * sidebar 两级菜单（2026-09-29 demo 侧边栏改造）：
+ * 一级 = 组行（图标 + 组名，点击整行切换该组折叠），二级 = 缩进子项。
+ * - .sidebar-sub-btn：二级项按钮，缩进 + 细字；DOM 常驻，组收起 / icon 档时隐藏。
+ * - .sidebar-flyout：icon 折叠档 hover 一级图标的 fixed 浮层（FLYOUT_JS 管理）。
+ * 滚动条：细轨 + 全透明背景（webkit + firefox 双写）。
+ * ============================================================ */
+/* —— 字号走文字刻度变量（与 theme.css role-* 同一 source；unlayered 压过基串 text-sm）—— */
+/* 一级组行 = role-button 档：16px / 500。 */
+[data-slot="sidebar-menu-button"]:not(.sidebar-sub-btn) {
+    font-size: var(--ui-type-button-size);
+    font-weight: var(--ui-weight-medium);
+}
+/* 一级组行 hover：纯 CSS 轻档（VengenceUI 分类头同款 hover:bg-zinc-800/40
+ * transition-colors）——弹簧 pill 只服务二级项，一级行只做静态色反馈。 */
+[data-slot="sidebar-menu-button"]:not(.sidebar-sub-btn):hover {
+    background: color-mix(in srgb, var(--sidebar-accent) 40%, transparent);
+    transition: background 150ms;
+}
+/* 二级项 = role-hint 档：14px / 400（active 提到 500）。 */
+[data-slot="sidebar-menu-button"].sidebar-sub-btn {
+    padding-left: 30px;           /* 图标宽 + gap 对齐一级文案起点 */
+    font-size: var(--ui-type-hint-size);
+    font-weight: var(--ui-weight-normal);
+    color: var(--muted-foreground);
+    height: 30px;
+}
+[data-slot="sidebar-menu-button"].sidebar-sub-btn:hover {
+    color: var(--sidebar-foreground);
+}
+/* 二级选中态：沿用 DualPaneSidebar 右栏二级的选中配方（批注⑨：那个样式好看，
+ * 两个 sidebar 统一）——accent 底 + accent-foreground + 500。 */
+[data-slot="sidebar-menu-button"].sidebar-sub-btn[data-active="true"] {
+    background: var(--sidebar-accent);
+    color: var(--sidebar-accent-foreground);
+    font-weight: 500;
+}
+.sidebar-sub-label {
+    /* 二级项无图标，纯文案。 */
+}
+
+/* —— 弹簧流动高亮档（SpringSlidePill）：二级子菜单的 hover 高亮由单一弹簧
+ * 滑行块承担（消费方在二级 li 上挂 `data-flow-submenu` 标记 + 渲染 pill）；
+ * 按钮抬到 z-1 压住 z-0 pill，文字保持可读。pill 外观见 .ui-spring-pill。 —— */
+[data-flow-submenu] [data-slot="sidebar-menu-button"].sidebar-sub-btn {
+    position: relative;
+    z-index: 1;
+}
+
+/* 二级项（展开态列表）：文字左缘对齐一级项文字位（一级 p-2 8px + icon 16px + gap-2 8px = 32px），
+ * 字体比一级小一档（16 → 14px，kit 主题未定义 --text-sm 故一级实渲染 16px），颜色暗一档。 */
+[data-slot="sidebar-menu-button"].demo-subtab {
+    padding-left: 32px;
+    font-size: 14px;
+    color: var(--muted-foreground);
+}
+[data-slot="sidebar-menu-button"].demo-subtab:hover,
+[data-slot="sidebar-menu-button"].demo-subtab[data-active="true"] {
+    color: var(--sidebar-accent-foreground);
+}
+
+/* —— icon 折叠档：一级行的 label（非 last-child）隐藏；二级项无图标位，整项隐藏，
+ *     改由 hover 一级图标的 .sidebar-flyout 承接（FLYOUT_JS）。 —— */
+[data-collapsible="icon"] [data-slot="sidebar-menu-button"] > .sidebar-item-label,
+[data-collapsible="icon"] [data-slot="sidebar-menu-button"].sidebar-sub-btn {
+    display: none;
+}
+
+/* —— icon 折叠档 hover 浮层（FLYOUT_JS 创建/定位，.open 显隐） —— */
+.sidebar-flyout {
+    position: fixed;
+    left: 64px;                   /* icon rail w-14 (56px) + 8px 间隙 */
+    z-index: 60;
+    min-width: 180px;
+    padding: 6px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: var(--ui-shadow-lg);
+    opacity: 0;
+    transform: translateX(-4px);
+    pointer-events: none;
+    transition: opacity var(--ui-motion-base) var(--ui-ease-swift), transform var(--ui-motion-base) var(--ui-ease-swift);
+}
+.sidebar-flyout.open {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+}
+.sidebar-flyout-title {
+    padding: 4px 8px 6px;
+    font-size: var(--ui-type-overline-size);
+    font-weight: var(--ui-weight-bold);
+    letter-spacing: var(--ui-tracking-wide);
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+}
+.sidebar-flyout-list {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+/* 弹簧流动高亮盒（FLYOUT_JS 逐帧写 transform；.on 显隐走 150ms 淡入淡出，
+ * 与 .ui-spring-pill 同一语义。背景 = 侧栏二级 pill 同款的 40% accent 层。 */
+.sidebar-flyout-pill {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    z-index: 0;
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--sidebar-accent) 40%, transparent);
+    opacity: 0;
+    transition: opacity 150ms linear;
+    pointer-events: none;
+    will-change: transform;
+}
+.sidebar-flyout-pill.on { opacity: 1; }
+.sidebar-flyout-item {
+    border: 0;
+    padding: 6px 8px;
+    border-radius: 6px;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+    font-size: var(--ui-type-hint-size);
+    color: var(--muted-foreground);
+    position: relative;
+    z-index: 1;             /* 压在 z-0 pill 之上，文字可读（同侧栏二级子菜单档） */
+    transition: color 120ms ease;
+}
+.sidebar-flyout-item:hover {
+    color: var(--sidebar-foreground);
+}
+
+/* —— 侧边栏滚动条：细轨、背景透明 —— */
+/* Firefox */
+[data-slot="sidebar-content"],
+[data-slot="sidebar"] {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(255 255 255 / 18%) transparent;
+}
+/* WebKit / Blink */
+[data-slot="sidebar-content"]::-webkit-scrollbar,
+[data-slot="sidebar"]::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+}
+[data-slot="sidebar-content"]::-webkit-scrollbar-track,
+[data-slot="sidebar"]::-webkit-scrollbar-track {
+    background: transparent;
+}
+[data-slot="sidebar-content"]::-webkit-scrollbar-thumb,
+[data-slot="sidebar"]::-webkit-scrollbar-thumb {
+    background: rgb(255 255 255 / 18%);
+    border-radius: 999px;
+}
+[data-slot="sidebar-content"]::-webkit-scrollbar-thumb:hover,
+[data-slot="sidebar"]::-webkit-scrollbar-thumb:hover {
+    background: rgb(255 255 255 / 30%);
+}
+
+
+/* —— 组折叠动画（批注 3：一级组折叠要有过渡，token 走 animation.css）—— */
+/* grid-rows 0fr↔1fr：外层 li 定行高，内层 ul 裁剪。收起态 li[data-collapsed=true]
+ * 行高归零；transition 用 --ui-motion-collapse + swift 缓动。 */
+[data-slot="sidebar-menu-item"].sidebar-group-sub {
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows var(--ui-motion-collapse) var(--ui-ease-swift);
+}
+[data-slot="sidebar-menu-item"].sidebar-group-sub[data-collapsed="true"] {
+    grid-template-rows: 0fr;
+}
+[data-slot="sidebar-menu-item"].sidebar-group-sub > [data-slot="sidebar-menu"] {
+    overflow: hidden;
+    min-height: 0;
+}
+
+/* 组收起态的一级行尾 + 指示（批注 2：折叠无反馈被当 bug——给可感知线索）。 */
+.sidebar-expand-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    font-size: 0.875rem;
+    font-weight: 400;
+    color: var(--muted-foreground);
+}
+
+/* —— icon 折叠档：整组隐藏（含 + 指示），一级行锁高对齐 —— */
+[data-collapsible="icon"] [data-slot="sidebar-menu-item"].sidebar-group-sub,
+[data-collapsible="icon"] .sidebar-expand-mark {
+    display: none;
+}
+[data-collapsible="icon"] [data-slot="sidebar-menu-button"]:not(.sidebar-sub-btn) {
+    height: 32px;
+    justify-content: center;
+}
+
+/* —— 侧栏开合（展开 ↔ icon rail）：基串 duration-200 ease-linear 升级为
+ * 统一 motion token（批注 3：侧边栏折叠要有动画，token 可复用）—— */
+[data-slot="sidebar"] {
+    transition: width var(--ui-motion-slow) var(--ui-ease-standard),
+                transform var(--ui-motion-slow) var(--ui-ease-standard);
+}
+[data-slot="sidebar-inset"] {
+    transition: margin-left var(--ui-motion-slow) var(--ui-ease-standard);
+}
+
+/* ============================================================
+ * 双栏侧边栏 DualPaneSidebar（ferrite / omenic 形态）：
+ * 左栏 = 一级 icon rail（侧栏折叠后形态），右栏 = 选中一级的二级列表。
+ * 视觉沿用 sidebar 变量；按压/悬停走 tactile 配方；组切换右栏内容过渡。
+ * ============================================================ */
+
+/* 左栏一级行：icon 按钮 + 实体手感（hover 提亮 / active 下沉，同侧栏菜单行）。 */
+[data-slot="dual-pane-rail-item"] {
+    transition: background-color var(--ui-motion-fast) var(--ui-ease-standard),
+                box-shadow var(--ui-motion-fast) var(--ui-ease-standard),
+                transform 90ms var(--ui-ease-standard);
+}
+[data-slot="dual-pane-rail-item"]:hover,
+[data-slot="dual-pane-rail-item"][data-active="true"] {
+    background: var(--sidebar-accent);
+    color: var(--sidebar-foreground);
+    box-shadow: var(--ui-shadow-xs);
+}
+[data-slot="dual-pane-rail-item"]:active {
+    transform: translateY(1px);
+    box-shadow: var(--ui-shadow-pressed);
+}
+[data-slot="dual-pane-rail-item"][data-active="true"] {
+    font-weight: var(--ui-weight-medium);
+}
+
+/* 右栏组头：overline 档（全大写小标签），随组切换。 */
+[data-slot="dual-pane-list-header"] {
+    font-size: var(--ui-type-overline-size);
+    font-weight: var(--ui-weight-bold);
+    letter-spacing: var(--ui-tracking-wide);
+    text-transform: uppercase;
+}
+
+/* 右栏二级行：hint 档字 + tactile；选中高亮。 */
+[data-slot="dual-pane-list-item"] {
+    height: 36px;
+    font-size: var(--ui-type-desc-size);
+    font-weight: var(--ui-weight-normal);
+    transition: background-color var(--ui-motion-fast) var(--ui-ease-standard),
+                box-shadow var(--ui-motion-fast) var(--ui-ease-standard),
+                transform 90ms var(--ui-ease-standard);
+}
+[data-slot="dual-pane-list-item"]:hover {
+    background: var(--sidebar-accent);
+    color: var(--sidebar-foreground);
+    box-shadow: var(--ui-shadow-xs);
+}
+[data-slot="dual-pane-list-item"]:active {
+    transform: translateY(1px);
+    box-shadow: var(--ui-shadow-pressed);
+}
+
+/* 折叠态 popover 内的二级按钮：与右栏 list-item 同型 hover（背景 + 前景 + 轻投影 + 按压位移），
+ * 让 rail → popover 的悬停路径有可见反馈（此前 popover 项无 hover 态）。 */
+[data-slot="dual-pane-rail-popover-item"] {
+    transition: background-color var(--ui-motion-fast) var(--ui-ease-standard),
+                color var(--ui-motion-fast) var(--ui-ease-standard),
+                box-shadow var(--ui-motion-fast) var(--ui-ease-standard),
+                transform 90ms var(--ui-ease-standard);
+}
+[data-slot="dual-pane-rail-popover-item"]:hover {
+    background: var(--sidebar-accent);
+    color: var(--sidebar-foreground);
+    box-shadow: var(--ui-shadow-xs);
+}
+[data-slot="dual-pane-rail-popover-item"]:active {
+    transform: translateY(1px);
+    box-shadow: var(--ui-shadow-pressed);
+}
+
+
+/* —— 双栏 rail 折叠态 hover popover（data-open 驱动；面板常驻 DOM，
+ * 出现/消失都有过渡：opacity + translateX 微位移，swift 缓动同 demo flyout）—— */
+[data-slot="dual-pane-rail-popover"] {
+    opacity: 0;
+    transform: translateX(-4px);
+    pointer-events: none;
+    transition: opacity var(--ui-motion-base) var(--ui-ease-swift),
+                transform var(--ui-motion-base) var(--ui-ease-swift);
+}
+[data-slot="dual-pane-rail-popover"][data-open="true"] {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+}
+
+
+/* ============================================================
+ * demo showcase 复合配方：页面壳 / 区块壳 / 面板骨架 / 重复行。
+ * demo 侧样式真身收敛在本块（值全部引用 theme.css 变量），rsx 只留类名
+ * 与组件 props；改 demo 样式只动这里。text 角色继续走 role-*（theme 文字原子）。
+ * unlayered：与既有的 sidebar / dot-matrix demo 块同级，压过 utility。
+ * ============================================================ */
+
+/* ---- 页面壳（demo/src/main.rs） ---- */
+.demo-page-head {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space-3);
+    border-bottom: 1px solid var(--border);
+    background: var(--background);
+    padding: var(--ui-space-3) var(--ui-space-6);
+}
+.demo-page-body {
+    width: 100%;
+    padding: var(--ui-space-8) var(--ui-space-6);
+}
+/* 点阵 4 面板纵向留白（56px，比区块节奏宽一档）。 */
+.demo-dm-stack {
+    display: grid;
+    gap: var(--ui-space-14);
+}
+
+/* ---- 区块壳（sections/*.rs） ---- */
+/* 默认 24px 纵向节奏（面板间空隙）；--tight 16（点阵族）。 */
+.demo-section {
+    scroll-margin-top: var(--ui-space-8);
+    display: grid;
+    gap: var(--ui-space-6);
+}
+/* 侧栏头文本行（demo main.rs：品牌名 + 副题；icon 折叠档隐藏规则见上方侧栏块）。 */
+.sidebar-header-text {
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space-2);
+    padding: 0.25rem 0.5rem;
+}
+.demo-section--tight {
+    gap: var(--ui-space-4);
+}
+/* 区块标题块（role-title + role-desc，4px 节奏）。 */
+.demo-section-head {
+    display: grid;
+    gap: var(--ui-space-1);
+}
+/* 面板：与 .ui-section（卡壳）并排使用，只补 16px 纵向节奏；--tight 12。 */
+.demo-panel {
+    display: grid;
+    gap: var(--ui-space-4);
+}
+.demo-panel--tight {
+    gap: var(--ui-space-3);
+}
+
+/* ---- 通用行骨架 ---- */
+/* 变体 × 尺寸档行：横排、溢出换行、垂直居中、8px 间距。 */
+.demo-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ui-space-2);
+}
+/* 变体为完整类（可单独使用）：spaced = 12px 间距换行；wide = 24px 间距不换行。 */
+.demo-row--spaced {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ui-space-3);
+}
+.demo-row--wide {
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space-6);
+}
+/* 无对齐轴流排（海报行）。 */
+.demo-flow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ui-space-6);
+}
+/* 双列并排（组件 + 说明）。 */
+.demo-cols {
+    display: flex;
+    gap: var(--ui-space-8);
+}
+/* 两列卡网格（响应式：窄屏单列）。 */
+.demo-grid-2 {
+    display: grid;
+    gap: var(--ui-space-3);
+    grid-template-columns: 1fr;
+}
+@media (min-width: 640px) {
+    .demo-grid-2 {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+/* ---- 点阵族（dm square / circle / hex / triangle，四面板行文一致） ---- */
+/* 与 .ui-section 并排：补实描边 + 行间 hairline。 */
+.dm-panel {
+    border: 1px solid var(--border);
+    overflow: hidden;
+}
+.dm-panel > * + * {
+    border-top: 1px solid var(--border);
+}
+.dm-cell {
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space-5);
+    padding: var(--ui-space-3);
+}
+.dm-cell-label {
+    font-size: var(--ui-type-desc-size);
+    font-family: var(--ui-font-sans);
+    line-height: 1.55;
+    color: var(--muted-foreground);
+}
+
+/* ---- 图标磁贴（icons 区块） ---- */
+.icon-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--ui-space-1-5);
+    padding: var(--ui-space-2);
+    border-radius: var(--ui-radius-md);
+    transition: background-color var(--ui-motion-fast) var(--ui-ease-standard);
+}
+.icon-tile:hover {
+    background: var(--secondary);
+}
+.icon-tile-box {
+    display: flex;
+    height: 2rem;
+    align-items: center;
+    justify-content: center;
+    color: var(--foreground);
+}
+/* 磁贴网格：4 列 → sm 6 列。 */
+.demo-icon-grid {
+    display: grid;
+    gap: var(--ui-space-4);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+@media (min-width: 640px) {
+    .demo-icon-grid {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+}
+
+/* ---- chat 壳（chat 区块） ---- */
+.chat-shell {
+    max-width: 42rem;
+    margin-inline: auto;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: var(--ui-radius-xl);
+    background: var(--card);
+}
+.chat-head {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+}
+.chat-head-avatar {
+    display: flex;
+    width: 1.75rem;
+    height: 1.75rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--ui-radius-full);
+    background: var(--muted);
+    border: 1px solid var(--border);
+}
+.chat-head-name {
+    font-size: var(--ui-type-caption-size);
+    font-weight: var(--ui-weight-medium);
+}
+.chat-head-status {
+    font-size: var(--ui-type-overline-size);
+    color: var(--muted-foreground);
+}
+.chat-messages {
+    height: 420px;
+    overflow-y: auto;
+    padding: 1rem;
+    display: grid;
+    gap: var(--ui-space-4);
+    align-content: start;
+}
+.chat-suggestions {
+    display: grid;
+    gap: var(--ui-space-2);
+    padding-top: var(--ui-space-2);
+}
+/* Composer 卡片（aui ComposerBar：圆角 + 描边 + 卡底 + padding；附件行 + 输入 + 工具条）。 */
+.chat-composer-card {
+    border-radius: var(--ui-radius-xl);
+    border: 1px solid var(--border);
+    background: var(--card);
+    padding: var(--ui-space-3);
+}
+/* 附件行：wrap + 8px gap；与输入区间 10px。 */
+.chat-composer-attachments {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ui-space-2);
+}
+.chat-composer-attachments + .chat-composer-input {
+    margin-top: var(--ui-space-2-5);
+}
+/* 输入区：透明（卡片即框），最小高 44px，上下 padding 兜住行高。 */
+.chat-composer-input {
+    width: 100%;
+    min-height: 2.75rem;
+    background: transparent;
+    border: none;
+    resize: none;
+    outline: none;
+    padding: var(--ui-space-1) var(--ui-space-0-5);
+    font-size: var(--ui-type-desc-size);
+    line-height: 1.5;
+    color: var(--foreground);
+    font-family: inherit;
+}
+.chat-composer-input::placeholder {
+    color: var(--muted-foreground);
+    opacity: 0.7;
+}
+/* 工具条：左槽（attach / 模型 pill）+ 右槽（工具 + send/stop）。 */
+.chat-composer-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ui-space-2);
+    margin-top: var(--ui-space-2);
+}
+.chat-composer-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space-1-5);
+}
+/* 附件 chip（aui ComposerAttachmentChip：paperclip + 名 mono + 尺寸 + ×）。 */
+.chat-attach-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ui-space-2);
+    border-radius: var(--ui-radius-lg);
+    border: 1px solid var(--border);
+    background: var(--muted);
+    padding: var(--ui-space-1-5) var(--ui-space-2-5);
+    color: var(--foreground);
+}
+.chat-attach-chip-name {
+    font-family: var(--ui-font-mono);
+    font-size: var(--ui-type-caption-size);
+    max-width: 12rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.chat-attach-chip-size {
+    font-size: var(--ui-type-overline-size);
+    color: var(--muted-foreground);
+}
+.chat-attach-chip-x {
+    display: flex;
+    color: var(--muted-foreground);
+    transition: color var(--ui-motion-fast) var(--ui-ease-standard);
+}
+.chat-attach-chip-x:hover {
+    color: var(--foreground);
+}
+/* 模型 pill（composer 工具条左槽；icon + 名 + chevron）。 */
+.chat-model-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ui-space-1-5);
+    border-radius: var(--ui-radius-full);
+    border: 1px solid var(--border);
+    background: var(--muted);
+    padding: var(--ui-space-1-5) var(--ui-space-2-5);
+    font-size: var(--ui-type-caption-size);
+    font-weight: var(--ui-weight-medium);
+    color: var(--foreground);
+    transition: background-color var(--ui-motion-fast) var(--ui-ease-standard);
+}
+.chat-model-pill:hover {
+    background: var(--secondary);
+}
+/* attach 圆钮（composer 工具条左槽；圆形 ghost）。 */
+.chat-attach-btn {
+    flex: none;
+    display: flex;
+    width: var(--ui-space-8);
+    height: var(--ui-space-8);
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--ui-radius-full);
+    border: 1px solid var(--border);
+    background: var(--muted);
+    color: var(--muted-foreground);
+    transition: color var(--ui-motion-fast) var(--ui-ease-standard);
+}
+.chat-attach-btn:hover {
+    color: var(--foreground);
+}
+/* 工具槽圆钮（voice / 更多等；圆形 ghost，与 attach 同族）。 */
+.chat-ghost-round {
+    flex: none;
+    display: flex;
+    width: var(--ui-space-8);
+    height: var(--ui-space-8);
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--ui-radius-full);
+    background: var(--muted);
+    color: var(--muted-foreground);
+    transition: color var(--ui-motion-fast) var(--ui-ease-standard);
+}
+.chat-ghost-round:hover {
+    color: var(--foreground);
+}
+/* composer send/stop 圆钮：基座深色（stop），--primary 强调（有稿 send）；disabled 降透明度。 */
+.chat-action-round {
+    flex: none;
+    display: flex;
+    width: 2.25rem;
+    height: 2.25rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--ui-radius-full);
+    background: var(--foreground);
+    color: var(--background);
+}
+.chat-action-round:disabled {
+    opacity: 0.4;
+}
+.chat-action-round--primary {
+    background: var(--primary);
+    color: var(--primary-foreground);
+}
+/* user 气泡（右对齐纸面）。 */
+.chat-msg-user {
+    max-width: 85%;
+    margin-left: auto;
+    padding: 0.5rem 0.875rem;
+    border-radius: var(--ui-radius-2xl);
+    background: var(--muted);
+    color: var(--foreground);
+    font-size: var(--ui-type-caption-size);
+}
+/* assistant 消息块。 */
+.chat-msg-assistant {
+    width: 100%;
+    max-width: 92%;
+}
+/* 逐字正文。 */
+.chat-msg-body {
+    font-size: var(--ui-type-caption-size);
+    line-height: 1.5;
+    color: var(--foreground);
+    display: grid;
+    gap: var(--ui-space-2);
+}
+/* hover 操作条（assistant 块 hover 时显现；不依赖 Tailwind group 机制）。 */
+.chat-msg-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space-1);
+    margin-top: 0.375rem;
+    opacity: 0;
+    transition: opacity var(--ui-motion-fast) var(--ui-ease-standard);
+}
+.chat-msg-assistant:hover .chat-msg-actions {
+    opacity: 1;
+}
+.chat-action-copy {
+    display: flex;
+    width: 1.5rem;
+    height: 1.5rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--ui-radius-md);
+    border: 1px solid var(--border);
+    background: var(--background);
+    color: var(--muted-foreground);
+    transition: color var(--ui-motion-fast) var(--ui-ease-standard);
+}
+.chat-action-copy:hover {
+    color: var(--foreground);
+}
+.chat-action-text {
+    height: 1.5rem;
+    padding-inline: var(--ui-space-2);
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space-1);
+    border-radius: var(--ui-radius-md);
+    border: 1px solid var(--border);
+    background: var(--background);
+    color: var(--muted-foreground);
+    font-size: var(--ui-type-overline-size);
+    transition: color var(--ui-motion-fast) var(--ui-ease-standard);
+}
+.chat-action-text:hover {
+    color: var(--foreground);
+}
+/* reasoning / tool-call 折叠块。 */
+.chat-part {
+    margin-bottom: var(--ui-space-2);
+}
+.chat-reasoning-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: var(--ui-type-overline-size);
+    color: var(--muted-foreground);
+    transition: color var(--ui-motion-fast) var(--ui-ease-standard);
+}
+.chat-reasoning-toggle:hover {
+    color: var(--foreground);
+}
+.chat-reasoning-body {
+    margin-top: 0.375rem;
+    padding-left: 0.625rem;
+    border-left: 2px solid var(--border);
+    font-size: var(--ui-type-overline-size);
+    line-height: 1.25;
+    color: var(--muted-foreground);
+}
+.chat-tool-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space-2);
+    width: 100%;
+    padding-block: 0.25rem;
+    border-radius: var(--ui-radius-md);
+    font-size: 13px;
+    text-align: start;
+    color: var(--muted-foreground);
+    transition: color var(--ui-motion-fast) var(--ui-ease-standard);
+}
+.chat-tool-toggle:hover {
+    color: var(--foreground);
+}
+.chat-tool-query {
+    font-family: var(--ui-font-mono);
+    font-size: var(--ui-type-overline-size);
+    background: var(--muted);
+    color: color-mix(in srgb, var(--foreground) 70%, transparent);
+    border-radius: var(--ui-radius-xs);
+    padding: 0.125rem 0.375rem;
+}
+.chat-tool-detail {
+    margin-top: 0.375rem;
+    border-radius: var(--ui-radius-lg);
+    border: 1px solid var(--border);
+    background: var(--background);
+    padding: var(--ui-space-3);
+    font-size: var(--ui-type-overline-size);
+    display: grid;
+    gap: var(--ui-space-2);
+}
+.chat-tool-detail-label {
+    font-family: var(--ui-font-mono);
+    font-size: 11px;
+    color: var(--muted-foreground);
+    margin-bottom: 0.125rem;
+}
+/* 空态建议 chip（title 实色 + label 弱化）。 */
+.chat-suggestion {
+    border-radius: var(--ui-radius-full);
+    border: 1px solid var(--border);
+    background: var(--background);
+    padding: 0.375rem 0.875rem;
+    font-size: var(--ui-type-caption-size);
+    text-align: start;
+    transition: background-color var(--ui-motion-fast) var(--ui-ease-standard);
+}
+.chat-suggestion:hover {
+    background: var(--muted);
+}
+.chat-suggestion-label {
+    color: var(--muted-foreground);
+}
+/* 分支切换器（[<] i / n [>] 三件套；BranchPicker 组件）。 */
+.chat-branch {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.125rem;
+    border-radius: var(--ui-radius-full);
+    border: 1px solid var(--border);
+    background: var(--background);
+    padding: 0.125rem;
+}
+.chat-branch-btn {
+    display: flex;
+    width: 1.5rem;
+    height: 1.5rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--ui-radius-full);
+    color: var(--muted-foreground);
+    transition:
+        background-color var(--ui-motion-fast) var(--ui-ease-standard),
+        color var(--ui-motion-fast) var(--ui-ease-standard);
+}
+.chat-branch-btn:hover:not(:disabled) {
+    background: var(--muted);
+    color: var(--foreground);
+}
+.chat-branch-btn:disabled {
+    opacity: 0.35;
+}
+.chat-branch-label {
+    padding-inline: 0.25rem;
+    font-size: var(--ui-type-overline-size);
+    color: var(--muted-foreground);
+    font-variant-numeric: tabular-nums;
+}
+/* MarkdownText 渲染容器（chat-markdown 面板、正文富文本）。 */
+.chat-md {
+    color: var(--foreground);
+    font-size: var(--ui-type-caption-size);
+    line-height: 1.6;
+}
+.chat-md > :first-child {
+    margin-top: 0;
+}
+.chat-md > :last-child {
+    margin-bottom: 0;
+}
+.chat-md h1,
+.chat-md h2,
+.chat-md h3,
+.chat-md h4,
+.chat-md h5 {
+    font-weight: 600;
+    margin: 0.75rem 0 0.375rem;
+}
+.chat-md h1 {
+    font-size: 1.125rem;
+}
+.chat-md h2 {
+    font-size: 1rem;
+}
+.chat-md h3,
+.chat-md h4,
+.chat-md h5 {
+    font-size: var(--ui-type-caption-size);
+}
+.chat-md p {
+    margin: 0.375rem 0;
+}
+.chat-md ul,
+.chat-md ol {
+    margin: 0.375rem 0;
+    padding-left: 1.25rem;
+    display: grid;
+    gap: 0.125rem;
+}
+.chat-md ul {
+    list-style: disc;
+}
+.chat-md ol {
+    list-style: decimal;
+}
+.chat-md code {
+    font-family: var(--ui-font-mono);
+    font-size: var(--ui-type-overline-size);
+    background: var(--muted);
+    border-radius: 0.25rem;
+    padding: 0.0625rem 0.3125rem;
+}
+.chat-md pre {
+    position: relative;
+    background: var(--muted);
+    border-radius: var(--ui-radius-lg);
+    padding: 0.625rem 0.75rem;
+    overflow-x: auto;
+    margin: 0.5rem 0;
+}
+.chat-md pre code {
+    background: transparent;
+    padding: 0;
+    font-size: var(--ui-type-caption-size);
+}
+.chat-md-lang {
+    position: absolute;
+    top: 0.375rem;
+    right: 0.5rem;
+    font-family: var(--ui-font-mono);
+    font-size: 10px;
+    color: var(--muted-foreground);
+}
+.chat-md blockquote {
+    border-left: 2px solid var(--border);
+    padding-left: 0.625rem;
+    margin: 0.5rem 0;
+    color: var(--muted-foreground);
+}
+.chat-md a {
+    color: var(--foreground);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+.chat-md a:hover {
+    background: var(--muted);
+}
+.chat-md hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 0.75rem 0;
+}
+/* 可折叠 Todo 清单（TodoList 组件；aui todo-list 配方：状态图标 + 计数 + 尾部折叠）。 */
+.chat-todo {
+    display: flex;
+    width: 100%;
+    max-width: 24rem;
+    flex-direction: column;
+    gap: var(--ui-space-3);
+}
+.chat-todo-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--ui-space-3);
+}
+.chat-todo-title {
+    font-size: var(--ui-type-caption-size);
+    font-weight: var(--ui-weight-medium);
+    color: var(--foreground);
+}
+.chat-todo-desc {
+    font-size: var(--ui-type-overline-size);
+    color: var(--muted-foreground);
+    line-height: 1.4;
+}
+.chat-todo-counter {
+    font-family: var(--ui-font-mono);
+    font-size: var(--ui-type-overline-size);
+    color: var(--muted-foreground);
+    font-variant-numeric: tabular-nums;
+}
+.chat-todo-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-space-1);
+}
+.chat-todo-row {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--ui-space-2-5);
+}
+.chat-todo-glyph {
+    display: flex;
+    width: 1.125rem;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+}
+/* 状态图标盒：done / failed / cancelled 各一框。 */
+.chat-todo-glyph--done,
+.chat-todo-glyph--failed,
+.chat-todo-glyph--cancelled,
+.chat-todo-glyph--pending {
+    width: 0.875rem;
+    height: 0.875rem;
+    border-radius: var(--ui-radius-md);
+}
+.chat-todo-glyph--done {
+    border: 1px solid var(--border);
+    background: var(--muted);
+    color: var(--muted-foreground);
+}
+.chat-todo-glyph--failed {
+    border: 1px solid color-mix(in srgb, var(--destructive) 25%, transparent);
+    background: color-mix(in srgb, var(--destructive) 8%, transparent);
+    color: var(--destructive);
+}
+.chat-todo-glyph--cancelled {
+    border: 1px solid var(--border);
+    color: var(--muted-foreground);
+    font-size: var(--ui-type-overline-size);
+}
+.chat-todo-glyph--pending {
+    border: 1px solid var(--border);
+}
+/* 行内文字区（主句 + 说明）。 */
+.chat-todo-textwrap {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    flex-direction: column;
+    line-height: 1.4;
+}
+.chat-todo-textwrap > span,
+.chat-todo-textwrap > p {
+    overflow-wrap: break-word;
+}
+.chat-todo-textwrap > span {
+    font-size: var(--ui-type-caption-size);
+}
+.chat-todo-text--muted {
+    color: var(--muted-foreground);
+    text-decoration: line-through;
+    text-decoration-thickness: 1.5px;
+}
+.chat-todo-text--failed {
+    color: var(--destructive);
+}
+.chat-todo-text--active {
+    color: var(--foreground);
+}
+.chat-todo-text--pending {
+    color: var(--muted-foreground);
+    opacity: 0.7;
+}
+.chat-todo-sub {
+    font-size: var(--ui-type-overline-size);
+    color: var(--muted-foreground);
+    line-height: 1.4;
+}
+.chat-todo-more {
+    border-radius: var(--ui-radius-full);
+    padding: var(--ui-space-1) var(--ui-space-2);
+    font-size: var(--ui-type-overline-size);
+    font-weight: var(--ui-weight-medium);
+    color: var(--muted-foreground);
+    transition: background-color var(--ui-motion-fast) var(--ui-ease-standard);
+}
+.chat-todo-more:hover {
+    background: var(--secondary);
+    color: var(--foreground);
+}
+
+/* 子代理状态列表（SubAgentList 组件；aui subagent-list 配方：行 + 3px 进度条 + 汇总行）。 */
+.chat-subagent {
+    display: flex;
+    width: 100%;
+    max-width: 22rem;
+    flex-direction: column;
+    gap: var(--ui-space-2);
+}
+.chat-subagent-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-space-2);
+    border-radius: var(--ui-radius-xl);
+    border: 1px solid var(--border);
+    background: var(--card);
+    padding: var(--ui-space-2-5) 0.875rem;
+}
+.chat-subagent-head {
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space-2);
+}
+.chat-subagent-glyph {
+    display: flex;
+    width: var(--ui-space-4);
+    flex: none;
+    align-items: center;
+    justify-content: center;
+}
+.chat-subagent-name {
+    display: block;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    font-size: var(--ui-type-caption-size);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.chat-subagent-model {
+    font-family: var(--ui-font-mono);
+    font-size: var(--ui-type-overline-size);
+    color: var(--muted-foreground);
+}
+.chat-subagent-bar {
+    display: block;
+    height: 3px;
+    overflow: hidden;
+    border-radius: var(--ui-radius-full);
+    background: color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+.chat-subagent-fill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: color-mix(in srgb, var(--foreground) 60%, transparent);
+    transition: width 700ms var(--ui-ease-standard);
+}
+.chat-subagent-fill--done {
+    background: color-mix(in srgb, var(--success) 70%, transparent);
+}
+/* 汇总行：全宽条 + rsx 侧 animate-pulse（与流式光标同款工具类）。 */
+.chat-subagent-card--summary .chat-subagent-fill {
+    width: 100%;
+}
+
+/* 引导表单（ElicitationForm 组件；aui elicitation-form 配方：needs input + 字段 + 三态尾）。 */
+.chat-elicit {
+    display: flex;
+    width: 100%;
+    max-width: 22rem;
+    flex-direction: column;
+    gap: 0.875rem;
+    border-radius: var(--ui-radius-xl);
+    border: 1px solid var(--border);
+    background: var(--card);
+    padding: var(--ui-space-4);
+}
+.chat-elicit-head {
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space-2-5);
+}
+.chat-elicit-head-icon {
+    display: flex;
+    width: 1.75rem;
+    height: 1.75rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--ui-radius-lg);
+    background: color-mix(in srgb, var(--foreground) 5%, transparent);
+    color: var(--muted-foreground);
+}
+.chat-elicit-server {
+    display: block;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    font-size: var(--ui-type-caption-size);
+    font-weight: var(--ui-weight-medium);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.chat-elicit-status {
+    flex: none;
+    font-family: var(--ui-font-mono);
+    font-size: var(--ui-type-overline-size);
+    color: var(--muted-foreground);
+}
+.chat-elicit-message {
+    margin: 0;
+    font-size: var(--ui-type-overline-size);
+    line-height: 1.5;
+    color: var(--muted-foreground);
+}
+.chat-elicit-fields {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-space-2-5);
+}
+.chat-elicit-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-space-1);
+}
+.chat-elicit-label {
+    font-family: var(--ui-font-mono);
+    font-size: var(--ui-type-overline-size);
+    color: var(--muted-foreground);
+}
+.chat-elicit-required {
+    opacity: 0.5;
+}
+.chat-elicit-value {
+    align-self: flex-start;
+    max-width: 100%;
+    border-radius: var(--ui-radius-lg);
+    background: var(--muted);
+    padding: var(--ui-space-1-5) var(--ui-space-2-5);
+    font-size: var(--ui-type-overline-size);
+    color: var(--foreground);
+}
+.chat-elicit-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ui-space-1-5);
+}
+.chat-elicit-chip {
+    border-radius: var(--ui-radius-full);
+    padding: var(--ui-space-1) var(--ui-space-2-5);
+    font-size: var(--ui-type-overline-size);
+    background: var(--muted);
+    color: var(--muted-foreground);
+    transition:
+        background-color var(--ui-motion-fast) var(--ui-ease-standard),
+        color var(--ui-motion-fast) var(--ui-ease-standard);
+}
+.chat-elicit-chip[data-selected="true"] {
+    background: var(--primary);
+    color: var(--primary-foreground);
+}
+.chat-elicit-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ui-space-2);
+}
+.chat-elicit-switch {
+    display: flex;
+    width: 1.75rem;
+    height: var(--ui-space-4);
+    align-items: center;
+    border-radius: var(--ui-radius-full);
+    padding: var(--ui-space-0-5);
+    background: color-mix(in srgb, var(--foreground) 15%, transparent);
+    transition: background-color 200ms var(--ui-ease-standard);
+}
+.chat-elicit-switch[data-on="true"] {
+    background: color-mix(in srgb, var(--foreground) 80%, transparent);
+}
+.chat-elicit-knob {
+    display: block;
+    width: var(--ui-space-3);
+    height: var(--ui-space-3);
+    border-radius: var(--ui-radius-full);
+    background: var(--background);
+    transition: transform 200ms var(--ui-ease-standard);
+}
+.chat-elicit-switch[data-on="true"] .chat-elicit-knob {
+    transform: translateX(0.75rem);
+}
+.chat-elicit-toggle-label {
+    font-size: var(--ui-type-overline-size);
+    color: var(--muted-foreground);
+}
+.chat-elicit-foot {
+    display: flex;
+    height: var(--ui-space-8);
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--ui-space-2);
+}
+.chat-elicit-decline,
+.chat-elicit-accept {
+    border-radius: var(--ui-radius-full);
+    padding: var(--ui-space-2) 0.875rem;
+    font-size: var(--ui-type-overline-size);
+    font-weight: var(--ui-weight-medium);
+    transition:
+        background-color var(--ui-motion-fast) var(--ui-ease-standard),
+        color var(--ui-motion-fast) var(--ui-ease-standard);
+}
+.chat-elicit-decline {
+    color: var(--muted-foreground);
+}
+.chat-elicit-decline:hover {
+    background: color-mix(in srgb, var(--foreground) 6%, transparent);
+    color: var(--foreground);
+}
+.chat-elicit-accept {
+    background: var(--primary);
+    color: var(--primary-foreground);
+}
+.chat-elicit-result {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ui-space-2);
+    font-size: var(--ui-type-overline-size);
+    color: var(--muted-foreground);
+}
+
+/* 选项面板（OptionList 组件；aui option-list 配方：行点选 / 勾选 + Confirm）。 */
+.chat-option {
+    display: flex;
+    width: 100%;
+    max-width: 24rem;
+    flex-direction: column;
+    gap: var(--ui-space-0-5);
+}
+.chat-option-row {
+    display: flex;
+    width: 100%;
+    align-items: flex-start;
+    gap: var(--ui-space-2-5);
+    border-radius: var(--ui-radius-lg);
+    padding: var(--ui-space-2);
+    transition: background-color var(--ui-motion-fast) var(--ui-ease-standard);
+}
+.chat-option-row:hover {
+    background: color-mix(in srgb, var(--foreground) 4%, transparent);
+}
+.chat-option-row--selected {
+    background: color-mix(in srgb, var(--foreground) 4%, transparent);
+}
+.chat-option-row--disabled {
+    opacity: 0.4;
+    pointer-events: none;
+}
+.chat-option-body {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    flex-direction: column;
+}
+.chat-option-label {
+    font-size: var(--ui-type-caption-size);
+    color: var(--foreground);
+}
+.chat-option-desc {
+    font-size: var(--ui-type-overline-size);
+    line-height: 1.4;
+    color: var(--muted-foreground);
+}
+/* single 的 radio 圆点。 */
+.chat-option-dot {
+    flex: none;
+    width: var(--ui-space-4);
+    height: var(--ui-space-4);
+    margin-top: var(--ui-space-0-5);
+    border-radius: 50%;
+    border: 1px solid var(--border);
+}
+.chat-option-dot[data-selected="true"] {
+    border-color: var(--primary);
+    background: var(--primary);
+}
+/* multiple 的勾选框。 */
+.chat-option-box {
+    display: flex;
+    flex: none;
+    width: var(--ui-space-4);
+    height: var(--ui-space-4);
+    margin-top: var(--ui-space-0-5);
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--ui-radius-md);
+    border: 1px solid var(--border);
+}
+.chat-option-box[data-selected="true"] {
+    border-color: var(--primary);
+    background: var(--primary);
+}
+.chat-option-foot {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: var(--ui-space-1);
+}
+.chat-option-confirm {
+    border-radius: var(--ui-radius-full);
+    padding: var(--ui-space-1-5) 0.875rem;
+    font-size: var(--ui-type-overline-size);
+    font-weight: var(--ui-weight-medium);
+    background: var(--primary);
+    color: var(--primary-foreground);
+}
+
+/* ---- 浮层 / 通用小件 ---- */
+/* 药丸触发钮（菜单 trigger、区块内触发按钮共用）。 */
+.demo-pill-btn {
+    border-radius: var(--ui-radius-full);
+    border: 1px solid var(--border);
+    padding: 0.375rem 0.75rem;
+    font-size: var(--ui-type-body-size);
+    line-height: 1.6;
+    color: var(--foreground);
+    transition: background-color var(--ui-motion-fast) var(--ui-ease-standard);
+}
+.demo-pill-btn:hover {
+    background: var(--secondary);
+}
+
+/* 菜单触发钮（DropdownMenu 演示）：比药丸配方更「长方形」——圆角降档 md、
+ * 纵向收紧、icon 固定最右；挂 .ui-anim-scope 后 hover 全钮触发 icon 微动效
+ * （icon-anim 层）。 */
+.demo-menu-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    border-radius: var(--ui-radius-md);
+    border: 1px solid var(--border);
+    padding: 0.25rem 0.75rem;
+    font-size: var(--ui-type-body-size);
+    line-height: 1.6;
+    color: var(--foreground);
+    transition: background-color var(--ui-motion-fast) var(--ui-ease-standard);
+}
+.demo-menu-btn:hover {
+    background: var(--secondary);
+}
+/* 卡行演示盒（buttons-close 的面板标题 + 关闭钮）。 */
+.demo-card-row {
+    display: flex;
+    width: 16rem;
+    align-items: center;
+    justify-content: space-between;
+    border-radius: var(--ui-radius-lg);
+    border: 1px solid var(--border);
+    background: var(--card);
+    padding: var(--ui-space-3);
+}
+/* 气泡快捷操作（widgets MessageBubble actions）。 */
+.bubble-action {
+    padding-inline: 0.375rem;
+    font-size: var(--ui-type-label-size);
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--muted-foreground);
+}
+/* widgets 双气泡纵向叠放。 */
+.demo-stack {
+    max-width: 32rem;
+    display: grid;
+    gap: var(--ui-space-4);
+}
+
+/* ---- 缺失期：骨架卡组合 ---- */
+.skeleton-card {
+    max-width: 24rem;
+    display: grid;
+    gap: var(--ui-space-3);
+    border-radius: var(--ui-radius-lg);
+    border: 1px solid var(--border);
+    padding: var(--ui-space-4);
+}
+.skeleton-row {
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space-3);
+}
+
+/* ---- 令牌区块：色板 / 角色样张行 ---- */
+.swatch-row {
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space-3);
+}
+.swatch {
+    height: 2.5rem;
+    width: 6rem;
+    flex: none;
+    border-radius: var(--ui-radius-md);
+}
+/* 描边样张：双线框（颜色仍走各自的 utility 类）。 */
+.swatch--border {
+    border-width: 2px;
+    border-style: solid;
+}
+.swatch-text {
+    display: grid;
+    gap: var(--ui-space-0-5);
+}
+.role-row {
+    display: grid;
+    gap: var(--ui-space-0-5);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: var(--ui-space-2);
+}
+.role-row:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+}
+
+/* ---- 布局区块：盒内预览件 ---- */
+/* 视口锚定组件的截断预览盒。 */
+.preview-box {
+    height: 18rem;
+    overflow: hidden;
+    border-radius: var(--ui-radius-lg);
+    border: 1px solid var(--border);
+}
+.preview-row-stack {
+    padding: var(--ui-space-2);
+    display: grid;
+    gap: var(--ui-space-3);
+}
+.preview-row {
+    height: 3rem;
+    border-radius: var(--ui-radius-md);
+    background: color-mix(in srgb, var(--card) 60%, transparent);
+    border: 1px solid var(--border);
+    padding: var(--ui-space-3);
+    font-size: var(--ui-type-desc-size);
+    line-height: 1.55;
+    color: var(--muted-foreground);
+}
+/* 两态对照（展开侧栏 mock + icon rail mock + 说明）。 */
+.preview-compare {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ui-space-4);
+}
+.preview-sidebar {
+    width: 14rem;
+    border-radius: var(--ui-radius-lg);
+    border: 1px solid var(--border);
+    background: var(--sidebar);
+    padding: var(--ui-space-2);
+    display: grid;
+    gap: var(--ui-space-1);
+}
+.preview-head-row {
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space-2);
+    padding: 0.375rem 0.5rem;
+}
+.preview-head-row--compact {
+    padding: 0.25rem 0.5rem;
+}
+.preview-item {
+    border-radius: var(--ui-radius-md);
+    padding: 0.375rem 0.5rem;
+    font-size: var(--ui-type-body-size);
+    line-height: 1.6;
+    color: var(--sidebar-foreground);
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space-2);
+}
+.preview-item--active {
+    background: var(--sidebar-accent);
+    color: var(--sidebar-accent-foreground);
+}
+.preview-subitem {
+    border-radius: var(--ui-radius-md);
+    padding: 0.375rem 0.5rem;
+    padding-left: 2rem;
+    font-size: var(--ui-type-hint-size);
+    line-height: 1.5;
+    color: var(--muted-foreground);
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space-2);
+}
+.preview-swatches {
+    width: 1rem;
+    height: 1rem;
+    border-radius: 4px;
+    background: rgb(113 113 122 / 0.4);
+    flex: none;
+}
+.preview-swatches--bright {
+    background: rgb(113 113 122 / 0.6);
+}
+.preview-rail {
+    width: 3.5rem;
+    border-radius: var(--ui-radius-lg);
+    border: 1px solid var(--border);
+    background: var(--sidebar);
+    padding: var(--ui-space-2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--ui-space-1);
+}
+.preview-rail-btn {
+    width: 2rem;
+    height: 2rem;
+    border-radius: var(--ui-radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted-foreground);
+}
+.preview-rail-btn--active {
+    background: var(--sidebar-accent);
+}
+/* 真实实例盒（.sidebar-live-preview 收回 fixed 定位；本类补尺寸与描边）。 */
+.preview-live {
+    height: 20rem;
+    width: 16rem;
+    flex: none;
+    border-radius: var(--ui-radius-lg);
+    border: 1px solid var(--border);
+    background: var(--card);
+    padding: var(--ui-space-1);
+    overflow: hidden;
+}
+/* 左右并排（组件 + 说明）。 */
+.preview-pair {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--ui-space-3);
+}
+.preview-caption {
+    display: grid;
+    gap: var(--ui-space-1);
+    align-self: center;
+}
+.preview-note {
+    font-size: var(--ui-type-desc-size);
+    line-height: 1.55;
+    color: var(--muted-foreground);
+    max-width: 20rem;
+}
+
+/* mini 演示页盒（layout 三块：左固定宽组件列 + 右占位页，420px 定高全宽）。
+ * 左侧栏列用 .sidebar-live-preview（entry.css 收 fixed）收回盒内。 */
+.mini-demo-page {
+    display: flex;
+    height: 420px;
+    width: 100%;
+    overflow: hidden;
+    border-radius: var(--ui-radius-lg);
+    border: 1px solid var(--border);
+    background: var(--card);
+    padding: var(--ui-space-2);
+}
+/* 左列：固定宽不缩（宽度档位走 markup 的 w-* 类）。 */
+.mini-col {
+    flex-shrink: 0;
+}
+/* 右列：占位页（撑满剩余宽，内容居中，左缘 hairline 分界）。 */
+.mini-page {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-left: 1px solid var(--border);
+}
+/* ==== 过程流（ProcessFlow / 思考段行 / 工具行）====
+ * 无变体静态配方 → @layer components（与上文约定一致）。
+ * 颜色走 shadcn 语义类 + tokens.css 变量；shimmer 与换行动画为组件私有
+ * keyframes（前缀 ui-process-*，不与消费方命名冲突）。 */
+@layer components {
+  /* 过程块根 + 头行：24px 高，点击整行切换开合 */
+  .ui-process-root { @apply flex flex-col; }
+  .ui-process-header {
+    @apply flex h-6 items-center gap-1.5 text-sm text-muted-foreground transition-colors;
+  }
+  .ui-process-header:hover { @apply text-foreground; }
+  .ui-process-count { @apply text-xs; }
+
+  /* 过程内容区：左缩进 22px（对齐 aui/omenic 的过程观感），项间距 8px */
+  .ui-process-items {
+    @apply flex flex-col gap-2;
+    margin-top: 4px;
+    padding-left: 22px;
+  }
+  /* 中间文本块（产品侧预渲染 markdown html 的容器） */
+  .ui-process-text {
+    @apply text-sm leading-relaxed text-foreground;
+    overflow-wrap: anywhere;
+  }
+
+  /* 进行中 shimmer 扫光（挂头行 / 工具标题） */
+  .ui-process-shimmer {
+    background: linear-gradient(
+      90deg,
+      var(--muted-foreground) 0%,
+      var(--foreground) 50%,
+      var(--muted-foreground) 100%
+    );
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: ui-process-shimmer-sweep 1.6s linear infinite;
+  }
+  @keyframes ui-process-shimmer-sweep {
+    0% { background-position: 100% 0; }
+    100% { background-position: -100% 0; }
+  }
+
+  /* 思考段头行的「最后完成行」：key 变化重建节点 → 每次完成一行播一次 */
+  .ui-think-line {
+    @apply flex-1 min-w-0 truncate text-xs text-muted-foreground;
+    animation: ui-think-line-in 0.22s ease-out;
+  }
+  @keyframes ui-think-line-in {
+    from { opacity: 0; transform: translateY(3px); }
+    to { opacity: 1; transform: none; }
+  }
+  /* 思考段结算后的头行词（Thought · Ns） */
+  .ui-process-line-label { @apply text-xs text-muted-foreground; }
+  /* 思考段展开体：左描边保留「过程显示」观感（markdown 样式由产品侧 html 自带） */
+  .ui-process-reasoning-body {
+    @apply text-xs leading-relaxed text-muted-foreground;
+    margin-top: 4px;
+    border-left: 1px solid var(--border);
+    padding-left: 12px;
+    overflow-wrap: anywhere;
+  }
+
+  /* 工具行：24px 头 + 展开输出体 */
+  .ui-process-tool-header { @apply flex h-6 items-center gap-2; }
+  .ui-process-kind {
+    @apply text-[10px] font-semibold uppercase text-muted-foreground;
+    font-family: var(--ui-font-mono, ui-monospace, monospace);
+    letter-spacing: 0.04em;
+  }
+  .ui-process-dot { @apply text-xs text-muted-foreground; }
+  .ui-process-title {
+    @apply flex-1 min-w-0 truncate text-xs text-foreground;
+    font-family: var(--ui-font-mono, ui-monospace, monospace);
+  }
+  .ui-process-fail { @apply text-destructive; }
+  .ui-process-ok { @apply text-primary; }
+  .ui-process-tool-body {
+    @apply flex flex-col gap-1.5;
+    margin-top: 2px;
+    padding: 0 0 4px 22px;
+  }
+  .ui-process-summary { @apply text-[13px] leading-5 text-muted-foreground; }
+  .ui-process-output {
+    @apply rounded-lg text-xs text-foreground;
+    font-family: var(--ui-font-mono, ui-monospace, monospace);
+    line-height: 18px;
+    background: var(--secondary);
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    overflow-x: auto;
+  }
+}

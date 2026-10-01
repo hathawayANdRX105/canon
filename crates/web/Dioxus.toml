@@ -1,0 +1,10 @@
+[application]
+name = "canon-flow-web"
+asset_dir = "assets"
+
+# tailwind.out.css 是构建产物（bun run css 再生），kit/ 是 sync-kit 拷贝物。
+[watch]
+ignore = ["assets/tailwind.out.css", "assets/kit/"]
+
+[web.app]
+title = "canon flow"

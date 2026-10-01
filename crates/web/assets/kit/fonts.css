@@ -1,0 +1,10 @@
+/* 字体加载层 —— 杂志/编辑质感字族。
+ *
+ * 生产环境应自托管（@fontsource，Noto CJK 走 unicode-range 切片），避免外网依赖：
+ *   bun add @fontsource-variable/fraunces @fontsource-variable/inter
+ *           @fontsource/ist @fontsource/noto-serif-sc @fontsource/noto-sans-sc
+ * 并在入口 @import 对应 css。下面是 Google Fonts 版，仅 demo 预览用。
+ *
+ * 注意：@import url(...) 必须在任何规则之前，所以本文件要放在消费方
+ * 入口 css 的最顶部。 */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..800&family=Inter:wght@400..800&family=i-ist&family=Noto+Serif+SC:wght@500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap');

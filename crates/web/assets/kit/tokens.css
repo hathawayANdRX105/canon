@@ -1,0 +1,15 @@
+/* tokens.css —— 消费方向后兼容入口（转发器，本身不装真身）。
+ *
+ * 真身已按两层拆到：
+ *   theme.css       变量层 + 文字原子层（:root 颜色与各维度刻度，加 role-* 文字角色）
+ *   components.css  组件层（ui-* 组件类 + 海报卡宿主基座类）
+ *
+ * 消费方按本仓 README 的老写法 import 这俩即可：
+ *   @import "…/assets/tokens.css";
+ *   @import "…/assets/ui-kit.css";
+ * 想直接吃两层，改成 import theme.css / components.css。
+ *
+ * @import 必须在文件最前（本仓既定约定）。顺序即依赖方向：
+ * 变量与文字原子（theme）→ 组件类（components，@apply role-*）。 */
+
+@import "./theme.css";

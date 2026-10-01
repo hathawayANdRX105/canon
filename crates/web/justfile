@@ -1,0 +1,25 @@
+# canon-flow-web 本地开发入口（配方对齐 ui-kit demo）
+UI_KIT := "/home/hathaway/projects/ui-kit"
+
+# 把 ui-kit 的 css 拷进 assets/kit/（copy-sync 既定姿势，同记 rev 到 VERSION）
+sync-kit:
+    mkdir -p assets/kit
+    cp -f {{UI_KIT}}/assets/*.css assets/kit/
+    git -C {{UI_KIT}} rev-parse --short HEAD | tee assets/kit/VERSION
+
+# 生成 tailwind.out.css（dx serve 前的构建产物）
+css:
+    bun run css
+
+css-watch:
+    bun run css:watch
+
+# 起本地 web（10090；10080 在 Chromium unsafe-port 黑名单里，浏览器打不开）；
+# API 端另起 `canon serve`（10081）
+serve: sync-kit
+    bun run css
+    dx serve --platform web --port 10090
+
+# release 构建（dist/）
+build:
+    dx build --release

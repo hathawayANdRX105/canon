@@ -1,0 +1,14 @@
+/* ui-kit.css —— 消费方向后兼容入口（转发器，本身不装真身）。
+ *
+ * 真身已按两层拆到：
+ *   theme.css       变量层 + 文字原子层（:root 颜色与各维度刻度，加 role-* 文字角色）
+ *   components.css  组件层（ui-* 组件类 + 海报卡宿主基座类）
+ *
+ * 消费方老写法 import 本文件即得全部两层（顺序已固定：主题/原子 → 组件）：
+ *   @import "…/assets/ui-kit.css";
+ * 想只取组件层可直接 import components.css（前提 theme.css 已在前面加载）。
+ *
+ * @import 必须在文件最前。 */
+
+@import "./theme.css";
+@import "./components.css";

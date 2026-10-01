@@ -1,0 +1,372 @@
+/* shadcn 语义 token 桥（Tailwind v4）。
+ *
+ * 值来源：dsh（deepseek-harness）design-platform.css 的暗色语义别名体系
+ * （packages/client/ui-theme/src/styles/design-platform.css，
+ * body[data-ds-dark-theme] 段 :248-338 的语义别名 + 其静态色阶 :80-154）。
+ * ferrite 变量名保持 shadcn 契约不变，值按 dsh 别名换算，关键依据：
+ *   --background ← bg-base（design-platform.css:249 ← neutral-bluish-950 :147）
+ *   --foreground ← label-primary（:299 ← neutral-bluish-50 :137）
+ *   --card：对齐维护者指定的存量统计卡观感——原面板类
+ *     bg-zinc-900/60（rgb(24,24,27)@60%）叠页面底色后的合成色
+ *     ≈ rgb(18,18,21)。换算历程：首版取 bg-layer-3 过亮，次版
+ *     bg-layer-1 仍偏亮，均被验收驳回；--popover ← 仍为 bg-layer-3
+ *     （:252 ← neutral-bluish-800 :143，弹层/菜单实证层）
+ *   --primary ← button-primary-fill（:283 = brand-primary :271）
+ *   --secondary ← button-ghost-active-fill（:278 ← neutral-bluish-750 :141）
+ *   --secondary-hover ← button-ghost-active-hover（:279 ← neutral-bluish-700 :140）
+ *   --muted / --accent ← interactive-bg-hover（:292，白 8%）
+ *   --border / --input / --sidebar-border ← border-l2（:266，白 12%）
+ *   --destructive ← state-error-primary（:316 ← red-400 :149）
+ *   --success / --warning ← state-success / state-warn 的 tertiary 容器与
+ *     primary 前景配对（:318-324）
+ *   --sidebar ← specific-sidebar-fill（:333）、--sidebar-accent ←
+ *     specific-sidebar-nav-item-hover（:336）
+ * --destructive-foreground、--chart-1..5、--sidebar-primary(-foreground)
+ * 在 dsh 无对应别名，保留 shadcn 原值。
+ *
+ * ferrite 为纯暗色站点，dark 值同时作为 :root 默认；`.dark` 段保留
+ * 内容相同的镜像，未来接入亮色主题时只需改 :root，组件层零改动。
+ *
+ * @theme inline 把语义变量同构映射为 Tailwind 颜色 token，
+ * 使 bg-primary / text-muted-foreground / border-border 等类可用。
+ */
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --radius: 7px;
+  --background: rgb(8 9 10);
+  --foreground: rgb(247 248 248);
+  --card: rgb(15 16 17);
+  --card-foreground: rgb(247 248 248);
+  --popover: rgb(23 24 26);
+  --popover-foreground: rgb(247 248 248);
+  --primary: rgb(247 248 248);
+  --primary-foreground: rgb(8 9 10);
+  --secondary: rgb(28 29 32);
+  --secondary-foreground: rgb(247 248 248);
+  --secondary-hover: rgb(44 45 49);
+  --muted: rgb(255 255 255 / 6%);
+  --muted-foreground: rgb(138 143 152);
+  --accent: rgb(255 255 255 / 6%);
+  --accent-foreground: rgb(247 248 248);
+  --destructive: rgb(235 90 90);
+  --destructive-foreground: oklch(0.58 0.22 27);
+  --success: rgb(30 55 40);
+  --success-foreground: rgb(52 199 123);
+  --warning: rgb(56 44 20);
+  --warning-foreground: rgb(242 183 5);
+  --border: rgb(255 255 255 / 8%);
+  --input: rgb(255 255 255 / 8%);
+  --ring: rgb(247 248 248);
+  --info: rgb(26 32 46);
+  --info-foreground: rgb(96 165 250);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: rgb(11 12 13);
+  --sidebar-foreground: rgb(247 248 248);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: rgb(30 31 34);
+  --sidebar-accent-foreground: rgb(247 248 248);
+  --sidebar-border: rgb(255 255 255 / 7%);
+  --sidebar-ring: rgb(247 248 248);
+}
+
+/* 与 :root 完全相同的暗色镜像；挂 .dark 类时生效。 */
+.dark {
+  --radius: 7px;
+  --background: rgb(8 9 10);
+  --foreground: rgb(247 248 248);
+  --card: rgb(15 16 17);
+  --card-foreground: rgb(247 248 248);
+  --popover: rgb(23 24 26);
+  --popover-foreground: rgb(247 248 248);
+  --primary: rgb(247 248 248);
+  --primary-foreground: rgb(8 9 10);
+  --secondary: rgb(28 29 32);
+  --secondary-foreground: rgb(247 248 248);
+  --secondary-hover: rgb(44 45 49);
+  --muted: rgb(255 255 255 / 6%);
+  --muted-foreground: rgb(138 143 152);
+  --accent: rgb(255 255 255 / 6%);
+  --accent-foreground: rgb(247 248 248);
+  --destructive: rgb(235 90 90);
+  --destructive-foreground: oklch(0.58 0.22 27);
+  --success: rgb(30 55 40);
+  --success-foreground: rgb(52 199 123);
+  --warning: rgb(56 44 20);
+  --warning-foreground: rgb(242 183 5);
+  --border: rgb(255 255 255 / 8%);
+  --input: rgb(255 255 255 / 8%);
+  --ring: rgb(247 248 248);
+  --info: rgb(26 32 46);
+  --info-foreground: rgb(96 165 250);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: rgb(11 12 13);
+  --sidebar-foreground: rgb(247 248 248);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: rgb(30 31 34);
+  --sidebar-accent-foreground: rgb(247 248 248);
+  --sidebar-border: rgb(255 255 255 / 7%);
+  --sidebar-ring: rgb(247 248 248);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary-hover: var(--secondary-hover);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --radius-sm: calc(var(--radius) * 0.571);  /* 4px  */
+  --radius-md: calc(var(--radius) * 1.143);  /* 8px  */
+  --radius-lg: calc(var(--radius) * 1.714);  /* 12px */
+  --radius-xl: calc(var(--radius) * 2.857);  /* 20px */
+}
+
+/* shadcn 观感基线：等价于官方 `@apply border-border outline-ring/50`。
+ *
+ * Linear 的焦点处理：键盘聚焦时给一圈很克制的 2px 外描边（前景色、偏移 2px），
+ * 不是 Tailwind 默认那圈 box-shadow 光晕。全局挂在所有可聚焦元素上，组件不用
+ * 各自写 focus-visible。 */
+@layer base {
+  * {
+    border-color: var(--border);
+    outline-color: color-mix(in oklab, var(--ring) 50%, transparent);
+  }
+
+  :where(a, button, input, select, textarea, [tabindex], [role="button"]):focus-visible {
+    outline: 2px solid var(--foreground);
+    outline-offset: 2px;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* 文字尺寸阶（type scale）—— 全站唯一的字号真源。
+ *
+ * 三条约定：
+ *   1. 尺寸只在这里定义一次。`.role-*` 与 ui-kit.css 的 `.ui-type-*`
+ *      两套类名读同一批 `--ui-type-*` 变量：ui-type-* 是 `@apply role-*`
+ *      的薄别名（Tailwind v4 的 `@apply` 不吃 `@layer components` 里的类，
+ *      所以本段用 `@utility` 定义才能被跨文件 apply）。改字号只改这一块。
+ *   2. 行高与字距写进角色里，不留给调用方。旧版只有 font-size，于是调用点
+ *      到处补 `leading-5` / `tracking-wide`（src 里 19 处）；字号一放大，
+ *      这些补丁会各自漂移。
+ *   3. 尺寸与主题无关，因此不写进上面那块 `.dark` 颜色镜像。
+ *
+ * 阶梯按中文排版定的：正文 16px 起，最小一档 12px，页面标题 24px。
+ * 旧阶把 11/12/14/18 四档挤在 18px 以下，`role-label` 的 11px 在中文里
+ * 已到可读下限之下，`role-card` 与 `role-body` 同为 14px（卡标题和正文
+ * 看不出层级），`role-caption` 与 `role-desc` 完全同值。CJK 字面满、
+ * 笔画密，同尺寸下比拉丁字母显得更小，所以整条阶比 shadcn 的 text-sm
+ * 基准高一档。
+ */
+/* ------------------------------------------------------------------ */
+:root {
+  --ui-type-display-size: 2.5rem;      /* 40px */
+  --ui-type-value-size: 2.125rem;      /* 34px */
+  --ui-type-title-size: 1.875rem;      /* 30px */
+  --ui-type-heading-size: 1.4375rem;   /* 23px */
+  --ui-type-card-size: 1.25rem;        /* 20px */
+  --ui-type-body-size: 1.0625rem;      /* 17px */
+  --ui-type-button-size: 1rem;         /* 16px */
+  --ui-type-numeric-size: 1rem;        /* 16px */
+  --ui-type-mono-size: 0.9375rem;      /* 15px */
+  --ui-type-desc-size: 0.9375rem;      /* 15px */
+  --ui-type-hint-size: 0.875rem;       /* 14px */
+  --ui-type-label-size: 0.875rem;      /* 14px */
+  --ui-type-caption-size: 0.8125rem;   /* 13px */
+  --ui-type-overline-size: 0.75rem;    /* 12px */
+}
+
+/* ---- 其余刻度：间距 / 圆角 / 阴影 / 字重 / 行高 / 字距 / 字体 / 动效 ----
+ *
+ * 这一段是**纯变量、零选择器**的「主题层」。本轮只补变量、不动任何现有类，
+ * 所以对产物是零行为变更；它是 `todo/css-layering-design.md` §7 路径 A。
+ *
+ * 取值口径：与 Tailwind 内置刻度**逐值对齐**（间距 4px 基数、duration-150/200、
+ * font-medium=500 等），因此日后把 `ui-*` 的 `@apply` 参数换成这些变量时
+ * 视觉不会跳变——这一步是给路径 C 铺路，不是重新设计一套刻度。
+ *
+ * 圆角不另起一套：仓库已有的 `--radius` 是唯一真源，这里只补它没覆盖的
+ * xs / 2xl / full 三档，避免出现两套圆角刻度互相打架。 */
+:root {
+  /* 间距 —— 4px 基数，覆盖仓内实际用到的 p-1..p-14 / gap-1..gap-6 */
+  --ui-space-0: 0;
+  --ui-space-0-5: 0.125rem;   /*  2px */
+  --ui-space-1: 0.25rem;     /*  4px */
+  --ui-space-1-5: 0.375rem;  /*  6px */
+  --ui-space-2: 0.5rem;      /*  8px */
+  --ui-space-2-5: 0.625rem;  /* 10px */
+  --ui-space-3: 0.75rem;     /* 12px */
+  --ui-space-4: 1rem;        /* 16px */
+  --ui-space-5: 1.25rem;     /* 20px */
+  --ui-space-6: 1.5rem;      /* 24px */
+  --ui-space-8: 2rem;        /* 32px */
+  --ui-space-10: 2.5rem;     /* 40px */
+  --ui-space-14: 3.5rem;     /* 56px */
+
+  /* 圆角 —— 照抄 Linear：1 / 4 / 7 / 12 / 20，比 shadcn 默认更收敛。
+   * 上方 @theme inline 的 sm/md/lg/xl 也由 --radius 派生，两处一起构成完整圆角阶。 */
+  --ui-radius-xs: 1px;
+  --ui-radius-sm: 4px;
+  --ui-radius-md: 7px;
+  --ui-radius-lg: 12px;
+  --ui-radius-xl: 20px;
+  --ui-radius-2xl: 28px;
+  --ui-radius-full: 9999px;
+
+  /* 阴影 —— Linear 的「克制」核心：暗底上不用外投影，靠一圈 1px 内描边
+   * 划出边界，元素看着平而不是浮起来。--ui-ring-* 是纯内描边，
+   * --ui-shadow-* 在内描边之上再叠一层很轻的外投影（弹窗才需要）。 */
+  --ui-ring-xs: inset 0 0 0 1px rgb(255 255 255 / 0.04);
+  --ui-ring-sm: inset 0 0 0 1px rgb(255 255 255 / 0.06);
+  --ui-ring-md: inset 0 0 0 1px rgb(255 255 255 / 0.08);
+  --ui-ring-lg: inset 0 0 0 1px rgb(255 255 255 / 0.10);
+
+  --ui-shadow-xs: inset 0 0 0 1px rgb(255 255 255 / 0.05);
+  --ui-shadow-sm: inset 0 0 0 1px rgb(255 255 255 / 0.07), 0 1px 2px rgb(0 0 0 / 0.30);
+  --ui-shadow-md: inset 0 0 0 1px rgb(255 255 255 / 0.08), 0 4px 12px rgb(0 0 0 / 0.34);
+  --ui-shadow-lg: inset 0 0 0 1px rgb(255 255 255 / 0.10), 0 12px 32px rgb(0 0 0 / 0.42);
+  --ui-shadow-xl: inset 0 0 0 1px rgb(255 255 255 / 0.12), 0 24px 56px rgb(0 0 0 / 0.50);
+
+  /* 按压态 —— 实体按钮 :active 用。收回外投影、换成内阴影 + 下移 1px，做出
+   * 「按进表面」的下沉感（配合 --ui-shadow-sm 的悬浮态，形成实体点击反馈）。 */
+  --ui-shadow-pressed: inset 0 2px 5px rgb(0 0 0 / 0.42), inset 0 0 0 1px rgb(255 255 255 / 0.04);
+
+  /* 字重 —— 与 Tailwind font-* 逐值一致 */
+  --ui-weight-normal: 400;
+  --ui-weight-medium: 500;
+  --ui-weight-semibold: 600;
+  --ui-weight-bold: 700;
+  --ui-weight-extrabold: 800;
+
+  /* 行高 —— 角色里的行高是「跟着字号走」的，这里是无数字号时按语义选行高用 */
+  --ui-leading-tight: 1.2;
+  --ui-leading-snug: 1.35;
+  --ui-leading-normal: 1.5;
+  --ui-leading-relaxed: 1.7;
+
+  /* 字距 —— 越大字越松，与「字越大字距越紧」相反，供眉标 / 全大写标签用 */
+  --ui-tracking-tight: -0.01em;
+  --ui-tracking-normal: 0;
+  --ui-tracking-wide: 0.025em;
+  --ui-tracking-wider: 0.05em;
+  --ui-tracking-widest: 0.1em;
+
+  /* 字体族 —— 杂志/编辑质感。
+   * --ui-font-display：大字标题用衬线（Fraunces 拉丁 + 思源宋体 Noto Serif SC 中文），
+   *   杂志的"耐看"味主要来自这里；只给大标题，正文仍用无衬线，admin 才不花。
+   * --ui-font-sans：正文/UI —— Inter（拉丁）+ 思源黑体 Noto Sans SC（中文），
+   *   各平台系统字体兜底。
+   * --ui-font-mono：代码/ID —— i-ist（编辑感等宽，替代 JetBrains），IBM Plex Mono 兜底。
+   * 生产环境用 @fontsource 自托管这几族（Noto CJK 走 unicode-range 切片），
+   * demo 预览走 Google Fonts。 */
+  --ui-font-display: "Fraunces", "Noto Serif SC", "Source Han Serif SC", Georgia, serif;
+  --ui-font-sans: "Inter", "Noto Sans SC", "Source Han Sans SC",
+                  "PingFang SC", "Microsoft YaHei", sans-serif;
+  --ui-font-mono: "i-ist", "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* 动效时长 —— 覆盖仓内实际用到的 150 / 200 / 300 / 500 */
+  --ui-duration-fast: 150ms;
+  --ui-duration-base: 200ms;
+  --ui-duration-slow: 300ms;
+  --ui-duration-slower: 500ms;
+  --ui-ease-standard: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* ============================================================
+ * 点阵引用变量（dot-matrix 四家族 square / circle / hex / triangle 共用）。
+ *
+ * 分层约定（css-layering 路径 A 的组件化实例）：
+ *   本层（主题）只放**默认参考值**；components.css 的 .dm-* 组件类一律
+ *   `var(--dm-*)` 引用，不再写死数值。组件实例可按需局部覆盖——Rust 侧
+ *   root_style 逐实例发射 --dm-speed / --dm-dot-size，以及（可选）
+ *   --dm-opacity-base/mid/peak；内联变量按级联规则压过这里的默认值。
+ * ============================================================ */
+:root {
+  /* 动画基础周期 —— CSS keyframes 型变体按 calc(var(--dm-cycle) * var(--dm-speed, 1)) 折时长 */
+  --dm-cycle: 1500ms;
+  /* 静态透明度梯度三档（base/mid/peak）—— keyframes 与静态首帧读同一真源 */
+  --dm-opacity-base: 0.16;
+  --dm-opacity-mid: 0.32;
+  --dm-opacity-peak: 1;
+  /* 点直径兜底 —— 辉光 drop-shadow 半径按 var(--dm-dot-size) 折；
+   * 实例未发射该变量时（宿主静态首帧）辉光半径退化为 3px。 */
+  --dm-dot-size: 3px;
+}
+
+/* ====================================================================
+ * 文字原子层（并入主题文件，避免为 14 行单独开一个文件）
+ *
+ * 约定：本文件分两段——上面的「变量区」是纯值、零选择器，改主题只动它；
+ * 下面这「文字原子区」是 `@utility role-*`，是带选择器的类，负责把
+ * 变量值变成语义文字角色。等以后出现非文字的原子类（间距/圆角工具类）
+ * 再单独拆出一个 atomic.css。
+ *
+ * 用 `@utility` 而非 `@layer components`：Tailwind v4 的 `@apply` 只认
+ * utilities 层的类，components.css 里的 `ui-type-*` 要跨文件引用
+ * `role-*` 就靠这个。值全部读上面变量区的 `--ui-*`。
+ * ==================================================================== */
+
+/* ---- 大字区：字越大字距越紧，否则中文标题会散开 ---- */
+@utility role-display  { font-size: var(--ui-type-display-size);  font-family: var(--ui-font-display); font-weight: 600; line-height: 1.15; letter-spacing: -0.02em; color: var(--foreground); }
+@utility role-title    { font-size: var(--ui-type-title-size);    font-family: var(--ui-font-display); font-weight: 500; line-height: 1.25; letter-spacing: -0.01em; color: var(--foreground); }
+@utility role-heading  { font-size: var(--ui-type-heading-size);  font-weight: 650; line-height: 1.3;  letter-spacing: -0.01em;  color: var(--foreground); }
+@utility role-value    { font-size: var(--ui-type-value-size);    font-weight: 700; line-height: 1.1;  letter-spacing: -0.025em; font-variant-numeric: tabular-nums; color: var(--foreground); }
+@utility role-card     { font-size: var(--ui-type-card-size);     font-weight: 600; line-height: 1.35; color: var(--foreground); }
+
+/* ---- 正文区 ---- */
+@utility role-body     { font-size: var(--ui-type-body-size);     line-height: 1.6;  color: var(--foreground); }
+@utility role-button   { font-size: var(--ui-type-button-size);   font-weight: 500; line-height: 1.4; }
+@utility role-numeric  { font-size: var(--ui-type-numeric-size);  font-weight: 600; line-height: 1.4; font-variant-numeric: tabular-nums; color: var(--foreground); }
+@utility role-mono     { font-size: var(--ui-type-mono-size);     font-family: var(--ui-font-mono); line-height: 1.5; color: var(--muted-foreground); }
+
+/* ---- 小字区：12px 是地板，再小中文读不动 ---- */
+@utility role-desc     { font-size: var(--ui-type-desc-size);     line-height: 1.55; color: var(--muted-foreground); }
+@utility role-hint     { font-size: var(--ui-type-hint-size);     line-height: 1.5;  color: var(--muted-foreground); }
+@utility role-label    { font-size: var(--ui-type-label-size);    font-weight: 600; line-height: 1.4; color: var(--muted-foreground); }
+@utility role-overline { font-size: var(--ui-type-overline-size);  font-weight: 700; line-height: 1.3;  letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted-foreground); }
+@utility role-caption  { font-size: var(--ui-type-caption-size);  line-height: 1.45; color: var(--muted-foreground); }

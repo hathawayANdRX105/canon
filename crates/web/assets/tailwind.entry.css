@@ -1,0 +1,53 @@
+/* canon-flow-web 的 Tailwind v4 入口（配方抄 ui-kit/demo）。
+ * @import 必须全部在最前，否则整条 import 失效（kit README 既定）。
+ * kit css 是 sync-kit 拷进来的本地副本（assets/kit/，同记 rev 到 VERSION）。 */
+@import "tailwindcss";
+@import "./kit/tokens.css";
+@import "./kit/ui-kit.css";
+@import "./kit/animation.css";
+
+/* v4 CLI 默认不扫 .rs：显式加本应用与 ui-kit 库源。 */
+@source "../src/**/*.rs";
+@source "../../../../ui-kit/src/**/*.rs";
+
+/* 桥接冒烟锚点：保证 token 桥与 kit 类端到端被产物覆盖。 */
+@source inline("bg-primary text-muted-foreground border-border ui-section role-title");
+
+html {
+  color-scheme: dark;
+}
+
+@layer base {
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+      "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+}
+
+/* 业务视图容器（E.2 判据：原生 div + ui-* 类 + role-* 文字角色） */
+.ui-task-card {
+  @apply rounded-lg border border-border/60 bg-card/40 p-3 mb-2;
+}
+.ui-task-card:hover {
+  border-color: var(--border);
+}
+.ui-pipeline {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.ui-pipeline-node {
+  @apply px-2 py-0.5 rounded-full text-xs border border-border/40 text-muted-foreground;
+}
+.ui-pipeline-node-current {
+  @apply bg-primary text-primary-foreground border-primary;
+}
+.ui-state-panel {
+  @apply rounded-lg border border-border/60 bg-card/20 p-3;
+}
+.ui-todo-row {
+  @apply flex items-center gap-2 py-1.5 border-b border-border/30 last:border-0;
+}

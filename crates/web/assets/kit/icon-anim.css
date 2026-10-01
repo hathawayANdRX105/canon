@@ -1,0 +1,8019 @@
+/* icon-anim.css —— 图标 hover 微动效（**生成产物，勿手改**）。
+ *
+ * 由 `scripts/gen_icon_anim.py` 从 animateicons（MIT © Avijit Dey）转出：
+ * framer-motion 的 `Variants` 全是 CSS 可动画属性，故整段机械转成 `@keyframes`，
+ * 不引任何 JS 运行时。触发为纯 CSS `:hover`。
+ *
+ * 改样式改脚本后重跑；`python3 scripts/gen_icon_anim.py --check` 校验产物同步。
+ * 属动画层，由 `animation.css` 顶部 `@import` 引入；缺了这层图标退化为静态。
+ *
+ * 契约：宿主类 `.ui-icon-anim-<icon>` 挂 `<svg>`；部件类 `.ui-icon-anim-<icon>__<part>`
+ * 挂内部 path/circle/rect/g；描边生长部件须自带 `pathLength="1"`（本文件 dash 已归一）。
+ *
+ * 触发有两种，规则同时生成：
+ *   1. 单 icon 按钮 —— hover icon 自身（`.ui-icon-anim-<icon>:hover`）；
+ *   2. 复合（icon 嵌在按钮里）—— 外层加中性类 `.ui-anim-scope`，hover 它任意位置都触发
+ *      （`.ui-anim-scope:hover .ui-icon-anim-<icon>__<part>`）。icon 层不耦合按钮层，
+ *      谁需要「hover 全按钮带动 icon」就在外层套 `.ui-anim-scope`。
+ *
+ * 基准 d = 1000ms（上游 `duration = 1` 折算，各线按其比例乘出毫秒）。
+ */
+
+
+
+/* arrow-right（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/arrow-right-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-arrow-right-nudge-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  20% {
+    transform: translateX(-2px);
+  }
+  60% {
+    transform: translateX(4px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+
+/* 部件 nudge（svg） */
+.ui-icon-anim-arrow-right__nudge {
+}
+.ui-icon-anim-arrow-right:hover .ui-icon-anim-arrow-right__nudge,
+.ui-icon-anim-arrow-right:hover.ui-icon-anim-arrow-right__nudge,
+.ui-anim-scope:hover .ui-icon-anim-arrow-right__nudge {
+  animation: ui-icon-anim-arrow-right-nudge-0 600ms ease-in-out both;
+}
+
+/* arrow-up（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/arrow-up-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-arrow-up-nudge-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  20% {
+    transform: translateY(2px);
+  }
+  60% {
+    transform: translateY(-4px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+
+/* 部件 nudge（svg） */
+.ui-icon-anim-arrow-up__nudge {
+}
+.ui-icon-anim-arrow-up:hover .ui-icon-anim-arrow-up__nudge,
+.ui-icon-anim-arrow-up:hover.ui-icon-anim-arrow-up__nudge,
+.ui-anim-scope:hover .ui-icon-anim-arrow-up__nudge {
+  animation: ui-icon-anim-arrow-up-nudge-0 600ms ease-in-out both;
+}
+
+/* check（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/check-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-check-tick-0 {
+  0% {
+    stroke-dashoffset: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes ui-icon-anim-check-tick-1 {
+  0% {
+    transform: scale(0.9);
+  }
+  60% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-check-tick-2 {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+
+/* 部件 tick（path） */
+.ui-icon-anim-check__tick {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+  stroke-dasharray: 1;
+}
+.ui-icon-anim-check:hover .ui-icon-anim-check__tick,
+.ui-icon-anim-check:hover.ui-icon-anim-check__tick,
+.ui-anim-scope:hover .ui-icon-anim-check__tick {
+  animation:
+    ui-icon-anim-check-tick-0 500ms ease-out both,
+    ui-icon-anim-check-tick-1 550ms ease-in-out both,
+    ui-icon-anim-check-tick-2 250ms ease-out both;
+}
+
+/* chevron-down（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/chevron-down-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-chevron-down-trailing-arrow-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  100% {
+    transform: translateY(9px);
+  }
+}
+
+@keyframes ui-icon-anim-chevron-down-trailing-arrow-1 {
+  0% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.45;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes ui-icon-anim-chevron-down-leading-arrow-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  20% {
+    transform: translateY(-1.5px);
+  }
+  55% {
+    transform: translateY(4px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+
+/* 部件 trailing-arrow（path） */
+.ui-icon-anim-chevron-down__trailing-arrow {
+}
+.ui-icon-anim-chevron-down:hover .ui-icon-anim-chevron-down__trailing-arrow,
+.ui-icon-anim-chevron-down:hover.ui-icon-anim-chevron-down__trailing-arrow,
+.ui-anim-scope:hover .ui-icon-anim-chevron-down__trailing-arrow {
+  animation:
+    ui-icon-anim-chevron-down-trailing-arrow-0 1000ms 80ms ease-out both,
+    ui-icon-anim-chevron-down-trailing-arrow-1 1000ms 80ms ease-out both;
+}
+
+
+/* 部件 leading-arrow（path） */
+.ui-icon-anim-chevron-down__leading-arrow {
+}
+.ui-icon-anim-chevron-down:hover .ui-icon-anim-chevron-down__leading-arrow,
+.ui-icon-anim-chevron-down:hover.ui-icon-anim-chevron-down__leading-arrow,
+.ui-anim-scope:hover .ui-icon-anim-chevron-down__leading-arrow {
+  animation: ui-icon-anim-chevron-down-leading-arrow-0 1000ms ease-in-out both;
+}
+
+/* chevron-left（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/chevron-left-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-chevron-left-trail-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  100% {
+    transform: translateX(-9px);
+  }
+}
+
+@keyframes ui-icon-anim-chevron-left-trail-1 {
+  0% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.45;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes ui-icon-anim-chevron-left-arrow-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  20% {
+    transform: translateX(1.5px);
+  }
+  55% {
+    transform: translateX(-4px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+
+/* 部件 trail（path） */
+.ui-icon-anim-chevron-left__trail {
+}
+.ui-icon-anim-chevron-left:hover .ui-icon-anim-chevron-left__trail,
+.ui-icon-anim-chevron-left:hover.ui-icon-anim-chevron-left__trail,
+.ui-anim-scope:hover .ui-icon-anim-chevron-left__trail {
+  animation:
+    ui-icon-anim-chevron-left-trail-0 1000ms 80ms ease-out both,
+    ui-icon-anim-chevron-left-trail-1 1000ms 80ms ease-out both;
+}
+
+
+/* 部件 arrow（path） */
+.ui-icon-anim-chevron-left__arrow {
+}
+.ui-icon-anim-chevron-left:hover .ui-icon-anim-chevron-left__arrow,
+.ui-icon-anim-chevron-left:hover.ui-icon-anim-chevron-left__arrow,
+.ui-anim-scope:hover .ui-icon-anim-chevron-left__arrow {
+  animation: ui-icon-anim-chevron-left-arrow-0 1000ms ease-in-out both;
+}
+
+/* chevron-right（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/chevron-right-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-chevron-right-trail-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  100% {
+    transform: translateX(9px);
+  }
+}
+
+@keyframes ui-icon-anim-chevron-right-trail-1 {
+  0% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.45;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes ui-icon-anim-chevron-right-arrow-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  20% {
+    transform: translateX(-1.5px);
+  }
+  55% {
+    transform: translateX(4px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+
+/* 部件 trail（path） */
+.ui-icon-anim-chevron-right__trail {
+}
+.ui-icon-anim-chevron-right:hover .ui-icon-anim-chevron-right__trail,
+.ui-icon-anim-chevron-right:hover.ui-icon-anim-chevron-right__trail,
+.ui-anim-scope:hover .ui-icon-anim-chevron-right__trail {
+  animation:
+    ui-icon-anim-chevron-right-trail-0 1000ms 80ms ease-out both,
+    ui-icon-anim-chevron-right-trail-1 1000ms 80ms ease-out both;
+}
+
+
+/* 部件 arrow（path） */
+.ui-icon-anim-chevron-right__arrow {
+}
+.ui-icon-anim-chevron-right:hover .ui-icon-anim-chevron-right__arrow,
+.ui-icon-anim-chevron-right:hover.ui-icon-anim-chevron-right__arrow,
+.ui-anim-scope:hover .ui-icon-anim-chevron-right__arrow {
+  animation: ui-icon-anim-chevron-right-arrow-0 1000ms ease-in-out both;
+}
+
+/* copy（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/copy-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-copy-front-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  50% {
+    transform: translateX(-3px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+@keyframes ui-icon-anim-copy-front-1 {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes ui-icon-anim-copy-front-2 {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes ui-icon-anim-copy-back-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  50% {
+    transform: translateX(3px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+@keyframes ui-icon-anim-copy-back-1 {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(3px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+
+/* 部件 front（rect） */
+.ui-icon-anim-copy__front {
+  transform-box: view-box;
+  transform-origin: 15px 15px;
+}
+.ui-icon-anim-copy:hover .ui-icon-anim-copy__front,
+.ui-icon-anim-copy:hover.ui-icon-anim-copy__front,
+.ui-anim-scope:hover .ui-icon-anim-copy__front {
+  animation:
+    ui-icon-anim-copy-front-0 900ms ease-in-out both,
+    ui-icon-anim-copy-front-1 900ms ease-in-out both,
+    ui-icon-anim-copy-front-2 900ms ease-in-out both;
+}
+
+
+/* 部件 back（path） */
+.ui-icon-anim-copy__back {
+}
+.ui-icon-anim-copy:hover .ui-icon-anim-copy__back,
+.ui-icon-anim-copy:hover.ui-icon-anim-copy__back,
+.ui-anim-scope:hover .ui-icon-anim-copy__back {
+  animation:
+    ui-icon-anim-copy-back-0 900ms ease-in-out both,
+    ui-icon-anim-copy-back-1 900ms ease-in-out both;
+}
+
+/* folder（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/folder-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-folder-folder-0 {
+  0% {
+    transform: scale(1);
+  }
+  33.3333% {
+    transform: scale(1.05);
+  }
+  66.6667% {
+    transform: scale(0.98);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-folder-folder-1 {
+  0% {
+    transform: rotate(0deg);
+  }
+  33.3333% {
+    transform: rotate(-2deg);
+  }
+  66.6667% {
+    transform: rotate(2deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes ui-icon-anim-folder-folder-2 {
+  0% {
+    transform: translateY(0px);
+  }
+  33.3333% {
+    transform: translateY(-2px);
+  }
+  66.6667% {
+    transform: translateY(1px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+
+/* 部件 folder（svg） */
+.ui-icon-anim-folder__folder {
+}
+.ui-icon-anim-folder:hover .ui-icon-anim-folder__folder,
+.ui-icon-anim-folder:hover.ui-icon-anim-folder__folder,
+.ui-anim-scope:hover .ui-icon-anim-folder__folder {
+  animation:
+    ui-icon-anim-folder-folder-0 900ms ease-in-out both,
+    ui-icon-anim-folder-folder-1 900ms ease-in-out both,
+    ui-icon-anim-folder-folder-2 900ms ease-in-out both;
+}
+
+
+/* 部件 folder（path） */
+.ui-icon-anim-folder__folder {
+}
+.ui-icon-anim-folder:hover .ui-icon-anim-folder__folder,
+.ui-icon-anim-folder:hover.ui-icon-anim-folder__folder,
+.ui-anim-scope:hover .ui-icon-anim-folder__folder {
+  animation:
+    ui-icon-anim-folder-folder-0 900ms ease-in-out both,
+    ui-icon-anim-folder-folder-1 900ms ease-in-out both,
+    ui-icon-anim-folder-folder-2 900ms ease-in-out both;
+}
+
+/* log-out（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/log-out-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-log-out-arrow-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  25% {
+    transform: translateX(-1px);
+  }
+  65% {
+    transform: translateX(1.6px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+
+/* 部件 arrow（g） */
+.ui-icon-anim-log-out__arrow {
+}
+.ui-icon-anim-log-out:hover .ui-icon-anim-log-out__arrow,
+.ui-icon-anim-log-out:hover.ui-icon-anim-log-out__arrow,
+.ui-anim-scope:hover .ui-icon-anim-log-out__arrow {
+  animation: ui-icon-anim-log-out-arrow-0 600ms ease-in-out both;
+}
+
+/* menu（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/menu-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-menu-bar-variants-0-0 {
+  0% {
+    transform: scaleX(1);
+  }
+  50% {
+    transform: scaleX(0.8);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes ui-icon-anim-menu-bar-variants-1-0 {
+  0% {
+    transform: scaleX(1);
+  }
+  50% {
+    transform: scaleX(0.6);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes ui-icon-anim-menu-bar-variants-2-0 {
+  0% {
+    transform: scaleX(1);
+  }
+  50% {
+    transform: scaleX(0.4);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+
+/* 部件 bar-variants-0（path） */
+.ui-icon-anim-menu__bar-variants-0 {
+  transform-box: view-box;
+  transform-origin: 20px 6px;
+}
+.ui-icon-anim-menu:hover .ui-icon-anim-menu__bar-variants-0,
+.ui-icon-anim-menu:hover.ui-icon-anim-menu__bar-variants-0,
+.ui-anim-scope:hover .ui-icon-anim-menu__bar-variants-0 {
+  animation: ui-icon-anim-menu-bar-variants-0-0 600ms ease-in-out both;
+}
+
+
+/* 部件 bar-variants-1（path） */
+.ui-icon-anim-menu__bar-variants-1 {
+  transform-box: view-box;
+  transform-origin: 20px 12px;
+}
+.ui-icon-anim-menu:hover .ui-icon-anim-menu__bar-variants-1,
+.ui-icon-anim-menu:hover.ui-icon-anim-menu__bar-variants-1,
+.ui-anim-scope:hover .ui-icon-anim-menu__bar-variants-1 {
+  animation: ui-icon-anim-menu-bar-variants-1-0 600ms 100ms ease-in-out both;
+}
+
+
+/* 部件 bar-variants-2（path） */
+.ui-icon-anim-menu__bar-variants-2 {
+  transform-box: view-box;
+  transform-origin: 20px 18px;
+}
+.ui-icon-anim-menu:hover .ui-icon-anim-menu__bar-variants-2,
+.ui-icon-anim-menu:hover.ui-icon-anim-menu__bar-variants-2,
+.ui-anim-scope:hover .ui-icon-anim-menu__bar-variants-2 {
+  animation: ui-icon-anim-menu-bar-variants-2-0 600ms 200ms ease-in-out both;
+}
+
+/* moon（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/moon-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-moon-moon-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-16deg);
+  }
+  50% {
+    transform: rotate(12deg);
+  }
+  75% {
+    transform: rotate(-6deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+
+/* 部件 moon（path） */
+.ui-icon-anim-moon__moon {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+.ui-icon-anim-moon:hover .ui-icon-anim-moon__moon,
+.ui-icon-anim-moon:hover.ui-icon-anim-moon__moon,
+.ui-anim-scope:hover .ui-icon-anim-moon__moon {
+  animation: ui-icon-anim-moon-moon-0 800ms ease-in-out both;
+}
+
+/* panel-left（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/panel-left-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-panel-left-divider-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  45% {
+    transform: translateX(-4px);
+  }
+  80% {
+    transform: translateX(1px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+
+/* 部件 divider（path） */
+.ui-icon-anim-panel-left__divider {
+}
+.ui-icon-anim-panel-left:hover .ui-icon-anim-panel-left__divider,
+.ui-icon-anim-panel-left:hover.ui-icon-anim-panel-left__divider,
+.ui-anim-scope:hover .ui-icon-anim-panel-left__divider {
+  animation: ui-icon-anim-panel-left-divider-0 700ms ease-in-out both;
+}
+
+/* panel-right（huge 风格）—— hover 触发。
+ * 源：animateicons icons/huge/panel-right-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-panel-right-divider-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  50% {
+    transform: translateX(-3px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+
+/* 部件 divider（path） */
+.ui-icon-anim-panel-right__divider {
+}
+.ui-icon-anim-panel-right:hover .ui-icon-anim-panel-right__divider,
+.ui-icon-anim-panel-right:hover.ui-icon-anim-panel-right__divider,
+.ui-anim-scope:hover .ui-icon-anim-panel-right__divider {
+  animation: ui-icon-anim-panel-right-divider-0 600ms ease-in-out both;
+}
+
+/* paperclip（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/paperclip-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-paperclip-clip-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-10deg);
+  }
+  50% {
+    transform: rotate(8deg);
+  }
+  75% {
+    transform: rotate(-4deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+
+/* 部件 clip（path） */
+.ui-icon-anim-paperclip__clip {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+.ui-icon-anim-paperclip:hover .ui-icon-anim-paperclip__clip,
+.ui-icon-anim-paperclip:hover.ui-icon-anim-paperclip__clip,
+.ui-anim-scope:hover .ui-icon-anim-paperclip__clip {
+  animation: ui-icon-anim-paperclip-clip-0 700ms ease-in-out both;
+}
+
+/* plus（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/plus-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-plus-pop-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(90deg);
+  }
+}
+
+@keyframes ui-icon-anim-plus-pop-1 {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+
+/* 部件 pop（path） */
+.ui-icon-anim-plus__pop {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+.ui-icon-anim-plus:hover .ui-icon-anim-plus__pop,
+.ui-icon-anim-plus:hover.ui-icon-anim-plus__pop,
+.ui-anim-scope:hover .ui-icon-anim-plus__pop {
+  animation:
+    ui-icon-anim-plus-pop-0 500ms ease-in-out both,
+    ui-icon-anim-plus-pop-1 500ms ease-in-out both;
+}
+
+/* save（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/save-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-save-label-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  35% {
+    transform: translateY(-1px);
+  }
+  70% {
+    transform: translateY(-0.2px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes ui-icon-anim-save-shutter-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  35% {
+    transform: translateX(2px);
+  }
+  70% {
+    transform: translateX(-0.4px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+
+/* 部件 label（path） */
+.ui-icon-anim-save__label {
+}
+.ui-icon-anim-save:hover .ui-icon-anim-save__label,
+.ui-icon-anim-save:hover.ui-icon-anim-save__label,
+.ui-anim-scope:hover .ui-icon-anim-save__label {
+  animation: ui-icon-anim-save-label-0 600ms ease-in-out both;
+}
+
+
+/* 部件 shutter（path） */
+.ui-icon-anim-save__shutter {
+}
+.ui-icon-anim-save:hover .ui-icon-anim-save__shutter,
+.ui-icon-anim-save:hover.ui-icon-anim-save__shutter,
+.ui-anim-scope:hover .ui-icon-anim-save__shutter {
+  animation: ui-icon-anim-save-shutter-0 600ms ease-in-out both;
+}
+
+/* search（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/search-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-search-lens-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  25% {
+    transform: translateX(2px);
+  }
+  50% {
+    transform: translateX(-2px);
+  }
+  75% {
+    transform: translateX(1px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+@keyframes ui-icon-anim-search-lens-1 {
+  0% {
+    transform: translateY(0px);
+  }
+  25% {
+    transform: translateY(-1px);
+  }
+  50% {
+    transform: translateY(2px);
+  }
+  75% {
+    transform: translateY(-1px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes ui-icon-anim-search-lens-2 {
+  0% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(6deg);
+  }
+  50% {
+    transform: rotate(-6deg);
+  }
+  75% {
+    transform: rotate(4deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+
+/* 部件 lens（g） */
+.ui-icon-anim-search__lens {
+}
+.ui-icon-anim-search:hover .ui-icon-anim-search__lens,
+.ui-icon-anim-search:hover.ui-icon-anim-search__lens,
+.ui-anim-scope:hover .ui-icon-anim-search__lens {
+  animation:
+    ui-icon-anim-search-lens-0 1000ms ease-in-out both,
+    ui-icon-anim-search-lens-1 1000ms ease-in-out both,
+    ui-icon-anim-search-lens-2 1000ms ease-in-out both;
+}
+
+/* send（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/send-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-send-plane-0 {
+  0% {
+    animation-timing-function: ease-in;
+    transform: translateX(0px);
+  }
+  40% {
+    animation-timing-function: ease-in-out;
+    transform: translateX(12px);
+  }
+  45% {
+    animation-timing-function: ease-out;
+    transform: translateX(-12px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+@keyframes ui-icon-anim-send-plane-1 {
+  0% {
+    animation-timing-function: ease-in;
+    transform: translateY(0px);
+  }
+  40% {
+    animation-timing-function: ease-in-out;
+    transform: translateY(-12px);
+  }
+  45% {
+    animation-timing-function: ease-out;
+    transform: translateY(12px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes ui-icon-anim-send-plane-2 {
+  0% {
+    animation-timing-function: ease-in;
+    opacity: 1;
+  }
+  40% {
+    animation-timing-function: ease-in-out;
+    opacity: 0;
+  }
+  45% {
+    animation-timing-function: ease-out;
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+
+/* 部件 plane（g） */
+.ui-icon-anim-send__plane {
+}
+.ui-icon-anim-send:hover .ui-icon-anim-send__plane,
+.ui-icon-anim-send:hover.ui-icon-anim-send__plane,
+.ui-anim-scope:hover .ui-icon-anim-send__plane {
+  animation:
+    ui-icon-anim-send-plane-0 900ms ease-in both,
+    ui-icon-anim-send-plane-1 900ms ease-in both,
+    ui-icon-anim-send-plane-2 900ms ease-in both;
+}
+
+/* settings（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/settings-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-settings-gear-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  40% {
+    transform: rotate(30deg);
+  }
+  75% {
+    transform: rotate(-6deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes ui-icon-anim-settings-gear-1 {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.05);
+  }
+  75% {
+    transform: scale(1.02);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-settings-hub-0 {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.25);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+
+/* 部件 gear（path） */
+.ui-icon-anim-settings__gear {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+.ui-icon-anim-settings:hover .ui-icon-anim-settings__gear,
+.ui-icon-anim-settings:hover.ui-icon-anim-settings__gear,
+.ui-anim-scope:hover .ui-icon-anim-settings__gear {
+  animation:
+    ui-icon-anim-settings-gear-0 900ms ease-in-out both,
+    ui-icon-anim-settings-gear-1 900ms ease-in-out both;
+}
+
+
+/* 部件 hub（circle） */
+.ui-icon-anim-settings__hub {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+.ui-icon-anim-settings:hover .ui-icon-anim-settings__hub,
+.ui-icon-anim-settings:hover.ui-icon-anim-settings__hub,
+.ui-anim-scope:hover .ui-icon-anim-settings__hub {
+  animation: ui-icon-anim-settings-hub-0 600ms ease-in-out both;
+}
+
+/* square-check（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/square-check-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-square-check-box-0 {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.06);
+  }
+  70% {
+    transform: scale(0.97);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-square-check-tick-0 {
+  0% {
+    stroke-dashoffset: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes ui-icon-anim-square-check-tick-1 {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+
+/* 部件 box（rect） */
+.ui-icon-anim-square-check__box {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+.ui-icon-anim-square-check:hover .ui-icon-anim-square-check__box,
+.ui-icon-anim-square-check:hover.ui-icon-anim-square-check__box,
+.ui-anim-scope:hover .ui-icon-anim-square-check__box {
+  animation: ui-icon-anim-square-check-box-0 600ms ease-in-out both;
+}
+
+
+/* tick：opacity 上游未写 ease，取 framer-motion 默认 easeInOut。 */
+/* 部件 tick（path） */
+.ui-icon-anim-square-check__tick {
+  stroke-dasharray: 1;
+}
+.ui-icon-anim-square-check:hover .ui-icon-anim-square-check__tick,
+.ui-icon-anim-square-check:hover.ui-icon-anim-square-check__tick,
+.ui-anim-scope:hover .ui-icon-anim-square-check__tick {
+  animation:
+    ui-icon-anim-square-check-tick-0 450ms 150ms ease-out both,
+    ui-icon-anim-square-check-tick-1 250ms 150ms ease-in-out both;
+}
+
+/* stop（huge 风格）—— hover 触发。
+ * 源：animateicons icons/huge/stop-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-stop-stop-0 {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(0.82);
+  }
+  70% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+
+/* 部件 stop（path） */
+.ui-icon-anim-stop__stop {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+.ui-icon-anim-stop:hover .ui-icon-anim-stop__stop,
+.ui-icon-anim-stop:hover.ui-icon-anim-stop__stop,
+.ui-anim-scope:hover .ui-icon-anim-stop__stop {
+  animation: ui-icon-anim-stop-stop-0 500ms ease-in-out both;
+}
+
+/* sun（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/sun-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-sun-svg-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(12deg);
+  }
+}
+
+@keyframes ui-icon-anim-sun-center-0 {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-sun-ray-0 {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+
+/* 部件 svg（svg） */
+.ui-icon-anim-sun__svg {
+}
+.ui-icon-anim-sun:hover .ui-icon-anim-sun__svg,
+.ui-icon-anim-sun:hover.ui-icon-anim-sun__svg,
+.ui-anim-scope:hover .ui-icon-anim-sun__svg {
+  animation: ui-icon-anim-sun-svg-0 1000ms ease-in-out both;
+}
+
+
+/* 部件 center（circle） */
+.ui-icon-anim-sun__center {
+}
+.ui-icon-anim-sun:hover .ui-icon-anim-sun__center,
+.ui-icon-anim-sun:hover.ui-icon-anim-sun__center,
+.ui-anim-scope:hover .ui-icon-anim-sun__center {
+  animation: ui-icon-anim-sun-center-0 1000ms ease-in-out both;
+}
+
+
+/* 部件 ray（path） */
+.ui-icon-anim-sun__ray {
+}
+.ui-icon-anim-sun:hover .ui-icon-anim-sun__ray,
+.ui-icon-anim-sun:hover.ui-icon-anim-sun__ray,
+.ui-anim-scope:hover .ui-icon-anim-sun__ray {
+  animation: ui-icon-anim-sun-ray-0 1000ms ease-in-out both;
+}
+
+
+/* 部件 ray（path） */
+.ui-icon-anim-sun__ray {
+}
+.ui-icon-anim-sun:hover .ui-icon-anim-sun__ray,
+.ui-icon-anim-sun:hover.ui-icon-anim-sun__ray,
+.ui-anim-scope:hover .ui-icon-anim-sun__ray {
+  animation: ui-icon-anim-sun-ray-0 1000ms ease-in-out both;
+}
+
+
+/* 部件 ray（path） */
+.ui-icon-anim-sun__ray {
+}
+.ui-icon-anim-sun:hover .ui-icon-anim-sun__ray,
+.ui-icon-anim-sun:hover.ui-icon-anim-sun__ray,
+.ui-anim-scope:hover .ui-icon-anim-sun__ray {
+  animation: ui-icon-anim-sun-ray-0 1000ms ease-in-out both;
+}
+
+
+/* 部件 ray（path） */
+.ui-icon-anim-sun__ray {
+}
+.ui-icon-anim-sun:hover .ui-icon-anim-sun__ray,
+.ui-icon-anim-sun:hover.ui-icon-anim-sun__ray,
+.ui-anim-scope:hover .ui-icon-anim-sun__ray {
+  animation: ui-icon-anim-sun-ray-0 1000ms ease-in-out both;
+}
+
+
+/* 部件 ray（path） */
+.ui-icon-anim-sun__ray {
+}
+.ui-icon-anim-sun:hover .ui-icon-anim-sun__ray,
+.ui-icon-anim-sun:hover.ui-icon-anim-sun__ray,
+.ui-anim-scope:hover .ui-icon-anim-sun__ray {
+  animation: ui-icon-anim-sun-ray-0 1000ms ease-in-out both;
+}
+
+
+/* 部件 ray（path） */
+.ui-icon-anim-sun__ray {
+}
+.ui-icon-anim-sun:hover .ui-icon-anim-sun__ray,
+.ui-icon-anim-sun:hover.ui-icon-anim-sun__ray,
+.ui-anim-scope:hover .ui-icon-anim-sun__ray {
+  animation: ui-icon-anim-sun-ray-0 1000ms ease-in-out both;
+}
+
+
+/* 部件 ray（path） */
+.ui-icon-anim-sun__ray {
+}
+.ui-icon-anim-sun:hover .ui-icon-anim-sun__ray,
+.ui-icon-anim-sun:hover.ui-icon-anim-sun__ray,
+.ui-anim-scope:hover .ui-icon-anim-sun__ray {
+  animation: ui-icon-anim-sun-ray-0 1000ms ease-in-out both;
+}
+
+
+/* 部件 ray（path） */
+.ui-icon-anim-sun__ray {
+}
+.ui-icon-anim-sun:hover .ui-icon-anim-sun__ray,
+.ui-icon-anim-sun:hover.ui-icon-anim-sun__ray,
+.ui-anim-scope:hover .ui-icon-anim-sun__ray {
+  animation: ui-icon-anim-sun-ray-0 1000ms ease-in-out both;
+}
+
+/* terminal（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/terminal-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-terminal-cursor-0 {
+  0% {
+    opacity: 1;
+  }
+  25% {
+    opacity: 0.1;
+  }
+  50% {
+    opacity: 1;
+  }
+  75% {
+    opacity: 0.1;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes ui-icon-anim-terminal-prompt-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  40% {
+    transform: translateX(2px);
+  }
+  75% {
+    transform: translateX(-0.4px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+
+/* 部件 cursor（path） */
+.ui-icon-anim-terminal__cursor {
+}
+.ui-icon-anim-terminal:hover .ui-icon-anim-terminal__cursor,
+.ui-icon-anim-terminal:hover.ui-icon-anim-terminal__cursor,
+.ui-anim-scope:hover .ui-icon-anim-terminal__cursor {
+  animation: ui-icon-anim-terminal-cursor-0 700ms 150ms ease-in-out both;
+}
+
+
+/* 部件 prompt（path） */
+.ui-icon-anim-terminal__prompt {
+}
+.ui-icon-anim-terminal:hover .ui-icon-anim-terminal__prompt,
+.ui-icon-anim-terminal:hover.ui-icon-anim-terminal__prompt,
+.ui-anim-scope:hover .ui-icon-anim-terminal__prompt {
+  animation: ui-icon-anim-terminal-prompt-0 500ms ease-in-out both;
+}
+
+/* trash（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/trash-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-trash-bin-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  55% {
+    transform: translateY(0px);
+  }
+  75% {
+    transform: translateY(1px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes ui-icon-anim-trash-bin-1 {
+  0% {
+    transform: scaleY(1);
+  }
+  55% {
+    transform: scaleY(1);
+  }
+  75% {
+    transform: scaleY(0.94);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes ui-icon-anim-trash-lid-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  20% {
+    transform: rotate(-24deg);
+  }
+  55% {
+    transform: rotate(-24deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+
+/* 部件 bin（path） */
+.ui-icon-anim-trash__bin {
+  transform-box: view-box;
+  transform-origin: 12px 22px;
+}
+.ui-icon-anim-trash:hover .ui-icon-anim-trash__bin,
+.ui-icon-anim-trash:hover.ui-icon-anim-trash__bin,
+.ui-anim-scope:hover .ui-icon-anim-trash__bin {
+  animation:
+    ui-icon-anim-trash-bin-0 900ms ease-out both,
+    ui-icon-anim-trash-bin-1 900ms ease-out both;
+}
+
+
+/* 部件 lid（g） */
+.ui-icon-anim-trash__lid {
+  transform-box: view-box;
+  transform-origin: 3px 6px;
+}
+.ui-icon-anim-trash:hover .ui-icon-anim-trash__lid,
+.ui-icon-anim-trash:hover.ui-icon-anim-trash__lid,
+.ui-anim-scope:hover .ui-icon-anim-trash__lid {
+  animation: ui-icon-anim-trash-lid-0 900ms ease-in-out both;
+}
+
+/* user（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/user-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-user-body-0 {
+  0% {
+    transform: scaleY(1);
+  }
+  35% {
+    transform: scaleY(0.88);
+  }
+  70% {
+    transform: scaleY(1.04);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes ui-icon-anim-user-head-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  35% {
+    transform: translateY(-1.5px);
+  }
+  70% {
+    transform: translateY(0.5px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+
+/* 部件 body（path） */
+.ui-icon-anim-user__body {
+  transform-box: view-box;
+  transform-origin: 12px 21px;
+}
+.ui-icon-anim-user:hover .ui-icon-anim-user__body,
+.ui-icon-anim-user:hover.ui-icon-anim-user__body,
+.ui-anim-scope:hover .ui-icon-anim-user__body {
+  animation: ui-icon-anim-user-body-0 600ms ease-in-out both;
+}
+
+
+/* 部件 head（circle） */
+.ui-icon-anim-user__head {
+}
+.ui-icon-anim-user:hover .ui-icon-anim-user__head,
+.ui-icon-anim-user:hover.ui-icon-anim-user__head,
+.ui-anim-scope:hover .ui-icon-anim-user__head {
+  animation: ui-icon-anim-user-head-0 600ms ease-in-out both;
+}
+
+/* x（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/x-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-x-cross-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(90deg);
+  }
+}
+
+@keyframes ui-icon-anim-x-cross-1 {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+
+/* 部件 cross（g） */
+.ui-icon-anim-x__cross {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+.ui-icon-anim-x:hover .ui-icon-anim-x__cross,
+.ui-icon-anim-x:hover.ui-icon-anim-x__cross,
+.ui-anim-scope:hover .ui-icon-anim-x__cross {
+  animation:
+    ui-icon-anim-x-cross-0 500ms ease-in-out both,
+    ui-icon-anim-x-cross-1 500ms ease-in-out both;
+}
+
+/* mail（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/mail-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-mail-flap-0 {
+  0% {
+    transform: scaleY(1);
+  }
+  40% {
+    transform: scaleY(-0.8);
+  }
+  65% {
+    transform: scaleY(-0.8);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+
+/* 部件 flap（path） */
+.ui-icon-anim-mail__flap {
+  transform-box: view-box;
+  transform-origin: 12px 7px;
+}
+.ui-icon-anim-mail:hover .ui-icon-anim-mail__flap,
+.ui-icon-anim-mail:hover.ui-icon-anim-mail__flap,
+.ui-anim-scope:hover .ui-icon-anim-mail__flap {
+  animation: ui-icon-anim-mail-flap-0 800ms ease-in-out both;
+}
+
+/* bookmark（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/bookmark-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-bookmark-bookmark-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes ui-icon-anim-bookmark-bookmark-1 {
+  0% {
+    transform: scaleY(1);
+  }
+  33.3333% {
+    transform: scaleY(1.1);
+  }
+  66.6667% {
+    transform: scaleY(0.95);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes ui-icon-anim-bookmark-bookmark-2 {
+  0% {
+    transform: scaleX(1);
+  }
+  33.3333% {
+    transform: scaleX(0.97);
+  }
+  66.6667% {
+    transform: scaleX(1.02);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+
+/* 部件 bookmark（svg） */
+.ui-icon-anim-bookmark__bookmark {
+}
+.ui-icon-anim-bookmark:hover .ui-icon-anim-bookmark__bookmark,
+.ui-icon-anim-bookmark:hover.ui-icon-anim-bookmark__bookmark,
+.ui-anim-scope:hover .ui-icon-anim-bookmark__bookmark {
+  animation:
+    ui-icon-anim-bookmark-bookmark-0 550ms ease-out both,
+    ui-icon-anim-bookmark-bookmark-1 550ms ease-out both,
+    ui-icon-anim-bookmark-bookmark-2 550ms ease-out both;
+}
+
+/* phone（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/phone-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-phone-pulse-0 {
+  0% {
+    transform: scale(0.3);
+  }
+  100% {
+    transform: scale(1.5);
+  }
+}
+
+@keyframes ui-icon-anim-phone-phone-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-8deg);
+  }
+  50% {
+    transform: rotate(8deg);
+  }
+  75% {
+    transform: rotate(-6deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+
+/* 部件 pulse（circle） */
+.ui-icon-anim-phone__pulse {
+}
+.ui-icon-anim-phone:hover .ui-icon-anim-phone__pulse,
+.ui-icon-anim-phone:hover.ui-icon-anim-phone__pulse,
+.ui-anim-scope:hover .ui-icon-anim-phone__pulse {
+  animation: ui-icon-anim-phone-pulse-0 900ms ease-out both;
+}
+
+
+/* 部件 phone（path） */
+.ui-icon-anim-phone__phone {
+}
+.ui-icon-anim-phone:hover .ui-icon-anim-phone__phone,
+.ui-icon-anim-phone:hover.ui-icon-anim-phone__phone,
+.ui-anim-scope:hover .ui-icon-anim-phone__phone {
+  animation: ui-icon-anim-phone-phone-0 900ms ease-in-out both;
+}
+
+/* mic-off（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/mic-off-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-mic-off-body-0 {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes ui-icon-anim-mic-off-slash-0 {
+  0% {
+    stroke-dashoffset: 29;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+
+/* 部件 body（g） */
+.ui-icon-anim-mic-off__body {
+}
+.ui-icon-anim-mic-off:hover .ui-icon-anim-mic-off__body,
+.ui-icon-anim-mic-off:hover.ui-icon-anim-mic-off__body,
+.ui-anim-scope:hover .ui-icon-anim-mic-off__body {
+  animation: ui-icon-anim-mic-off-body-0 700ms ease-in-out both;
+}
+
+
+/* 部件 slash（path） */
+.ui-icon-anim-mic-off__slash {
+}
+.ui-icon-anim-mic-off:hover .ui-icon-anim-mic-off__slash,
+.ui-icon-anim-mic-off:hover.ui-icon-anim-mic-off__slash,
+.ui-anim-scope:hover .ui-icon-anim-mic-off__slash {
+  animation: ui-icon-anim-mic-off-slash-0 450ms 100ms ease-out both;
+}
+
+/* image（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/image-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-image-sun-0 {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.35);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-image-hill-0 {
+  0% {
+    transform: scaleY(1);
+  }
+  35% {
+    transform: scaleY(1.15);
+  }
+  70% {
+    transform: scaleY(0.97);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+
+/* 部件 sun（circle） */
+.ui-icon-anim-image__sun {
+  transform-box: view-box;
+  transform-origin: 9px 9px;
+}
+.ui-icon-anim-image:hover .ui-icon-anim-image__sun,
+.ui-icon-anim-image:hover.ui-icon-anim-image__sun,
+.ui-anim-scope:hover .ui-icon-anim-image__sun {
+  animation: ui-icon-anim-image-sun-0 600ms ease-in-out both;
+}
+
+
+/* 部件 hill（path） */
+.ui-icon-anim-image__hill {
+  transform-box: view-box;
+  transform-origin: 12px 21px;
+}
+.ui-icon-anim-image:hover .ui-icon-anim-image__hill,
+.ui-icon-anim-image:hover.ui-icon-anim-image__hill,
+.ui-anim-scope:hover .ui-icon-anim-image__hill {
+  animation: ui-icon-anim-image-hill-0 600ms 80ms ease-in-out both;
+}
+
+/* compass（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/compass-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-compass-ring-0 {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.06);
+  }
+  70% {
+    transform: scale(0.98);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-compass-needle-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(190deg);
+  }
+  78% {
+    transform: rotate(172deg);
+  }
+  100% {
+    transform: rotate(180deg);
+  }
+}
+
+
+/* 部件 ring（circle） */
+.ui-icon-anim-compass__ring {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+.ui-icon-anim-compass:hover .ui-icon-anim-compass__ring,
+.ui-icon-anim-compass:hover.ui-icon-anim-compass__ring,
+.ui-anim-scope:hover .ui-icon-anim-compass__ring {
+  animation: ui-icon-anim-compass-ring-0 900ms ease-in-out both;
+}
+
+
+/* 部件 needle（path） */
+.ui-icon-anim-compass__needle {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+.ui-icon-anim-compass:hover .ui-icon-anim-compass__needle,
+.ui-icon-anim-compass:hover.ui-icon-anim-compass__needle,
+.ui-anim-scope:hover .ui-icon-anim-compass__needle {
+  animation: ui-icon-anim-compass-needle-0 1000ms ease-in-out both;
+}
+
+/* chart-line（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/chart-line-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-chart-line-chart-0 {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-chart-line-path-0 {
+  0% {
+    stroke-dashoffset: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes ui-icon-anim-chart-line-path-1 {
+  0% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+
+/* 部件 chart（svg） */
+.ui-icon-anim-chart-line__chart {
+}
+.ui-icon-anim-chart-line:hover .ui-icon-anim-chart-line__chart,
+.ui-icon-anim-chart-line:hover.ui-icon-anim-chart-line__chart,
+.ui-anim-scope:hover .ui-icon-anim-chart-line__chart {
+  animation: ui-icon-anim-chart-line-chart-0 400ms ease-in-out both;
+}
+
+
+/* 部件 path（path） */
+.ui-icon-anim-chart-line__path {
+  stroke-dasharray: 1;
+}
+.ui-icon-anim-chart-line:hover .ui-icon-anim-chart-line__path,
+.ui-icon-anim-chart-line:hover.ui-icon-anim-chart-line__path,
+.ui-anim-scope:hover .ui-icon-anim-chart-line__path {
+  animation:
+    ui-icon-anim-chart-line-path-0 600ms ease-in-out both,
+    ui-icon-anim-chart-line-path-1 600ms ease-in-out both;
+}
+
+
+/* 部件 path（path） */
+.ui-icon-anim-chart-line__path {
+  stroke-dasharray: 1;
+}
+.ui-icon-anim-chart-line:hover .ui-icon-anim-chart-line__path,
+.ui-icon-anim-chart-line:hover.ui-icon-anim-chart-line__path,
+.ui-anim-scope:hover .ui-icon-anim-chart-line__path {
+  animation:
+    ui-icon-anim-chart-line-path-0 600ms ease-in-out both,
+    ui-icon-anim-chart-line-path-1 600ms ease-in-out both;
+}
+
+/* globe（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/globe-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-globe-meridian-0 {
+  0% {
+    transform: scaleX(1);
+  }
+  50% {
+    transform: scaleX(-1);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+
+/* 部件 meridian（path） */
+.ui-icon-anim-globe__meridian {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+.ui-icon-anim-globe:hover .ui-icon-anim-globe__meridian,
+.ui-icon-anim-globe:hover.ui-icon-anim-globe__meridian,
+.ui-anim-scope:hover .ui-icon-anim-globe__meridian {
+  animation: ui-icon-anim-globe-meridian-0 900ms ease-in-out both;
+}
+
+/* anchor（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/anchor-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-anchor-anchor-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(12deg);
+  }
+  50% {
+    transform: rotate(-9deg);
+  }
+  75% {
+    transform: rotate(6deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+
+/* 部件 anchor（g） */
+.ui-icon-anim-anchor__anchor {
+  transform-box: view-box;
+  transform-origin: 12px 4px;
+}
+.ui-icon-anim-anchor:hover .ui-icon-anim-anchor__anchor,
+.ui-icon-anim-anchor:hover.ui-icon-anim-anchor__anchor,
+.ui-anim-scope:hover .ui-icon-anim-anchor__anchor {
+  animation: ui-icon-anim-anchor-anchor-0 1000ms ease-in-out both;
+}
+
+/* gift（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/gift-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-gift-ribbon-0 {
+  0% {
+    transform: scaleY(1);
+  }
+  40% {
+    transform: scaleY(1.06);
+  }
+  75% {
+    transform: scaleY(1);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes ui-icon-anim-gift-lid-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  40% {
+    transform: rotate(-5.5deg);
+  }
+  75% {
+    transform: rotate(1.5deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes ui-icon-anim-gift-bow-0 {
+  0% {
+    transform: scaleY(1);
+  }
+  40% {
+    transform: scaleY(0.92);
+  }
+  75% {
+    transform: scaleY(1);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+
+/* 部件 ribbon（path） */
+.ui-icon-anim-gift__ribbon {
+  transform-box: view-box;
+  transform-origin: 12px 21px;
+}
+.ui-icon-anim-gift:hover .ui-icon-anim-gift__ribbon,
+.ui-icon-anim-gift:hover.ui-icon-anim-gift__ribbon,
+.ui-anim-scope:hover .ui-icon-anim-gift__ribbon {
+  animation: ui-icon-anim-gift-ribbon-0 700ms ease-in-out both;
+}
+
+
+/* 部件 lid（g） */
+.ui-icon-anim-gift__lid {
+  transform-box: view-box;
+  transform-origin: 3px 11px;
+}
+.ui-icon-anim-gift:hover .ui-icon-anim-gift__lid,
+.ui-icon-anim-gift:hover.ui-icon-anim-gift__lid,
+.ui-anim-scope:hover .ui-icon-anim-gift__lid {
+  animation: ui-icon-anim-gift-lid-0 700ms ease-in-out both;
+}
+
+
+/* 部件 bow（path） */
+.ui-icon-anim-gift__bow {
+  transform-box: view-box;
+  transform-origin: 12px 7px;
+}
+.ui-icon-anim-gift:hover .ui-icon-anim-gift__bow,
+.ui-icon-anim-gift:hover.ui-icon-anim-gift__bow,
+.ui-anim-scope:hover .ui-icon-anim-gift__bow {
+  animation: ui-icon-anim-gift-bow-0 700ms ease-in-out both;
+}
+
+/* signal（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/signal-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-signal-dot-0 {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.7);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+
+/* 部件 dot（path） */
+.ui-icon-anim-signal__dot {
+  transform-box: view-box;
+  transform-origin: 2px 20px;
+}
+.ui-icon-anim-signal:hover .ui-icon-anim-signal__dot,
+.ui-icon-anim-signal:hover.ui-icon-anim-signal__dot,
+.ui-anim-scope:hover .ui-icon-anim-signal__dot {
+  animation: ui-icon-anim-signal-dot-0 400ms ease-in-out both;
+}
+
+/* cpu（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/cpu-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-cpu-pin-variants-0-0 {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.2;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes ui-icon-anim-cpu-pin-variants-1-0 {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.2;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes ui-icon-anim-cpu-pin-variants-2-0 {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.2;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes ui-icon-anim-cpu-pin-variants-3-0 {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.2;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes ui-icon-anim-cpu-pin-variants-4-0 {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.2;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes ui-icon-anim-cpu-pin-variants-5-0 {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.2;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes ui-icon-anim-cpu-pin-variants-6-0 {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.2;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes ui-icon-anim-cpu-pin-variants-7-0 {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.2;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes ui-icon-anim-cpu-pin-variants-8-0 {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.2;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes ui-icon-anim-cpu-pin-variants-9-0 {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.2;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes ui-icon-anim-cpu-pin-variants-10-0 {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.2;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes ui-icon-anim-cpu-pin-variants-11-0 {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.2;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes ui-icon-anim-cpu-core-0 {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(0.75);
+  }
+  70% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+
+/* 部件 pin-variants-0（path） */
+.ui-icon-anim-cpu__pin-variants-0 {
+}
+.ui-icon-anim-cpu:hover .ui-icon-anim-cpu__pin-variants-0,
+.ui-icon-anim-cpu:hover.ui-icon-anim-cpu__pin-variants-0,
+.ui-anim-scope:hover .ui-icon-anim-cpu__pin-variants-0 {
+  animation: ui-icon-anim-cpu-pin-variants-0-0 400ms ease-in-out both;
+}
+
+
+/* 部件 pin-variants-1（path） */
+.ui-icon-anim-cpu__pin-variants-1 {
+}
+.ui-icon-anim-cpu:hover .ui-icon-anim-cpu__pin-variants-1,
+.ui-icon-anim-cpu:hover.ui-icon-anim-cpu__pin-variants-1,
+.ui-anim-scope:hover .ui-icon-anim-cpu__pin-variants-1 {
+  animation: ui-icon-anim-cpu-pin-variants-1-0 400ms 25ms ease-in-out both;
+}
+
+
+/* 部件 pin-variants-2（path） */
+.ui-icon-anim-cpu__pin-variants-2 {
+}
+.ui-icon-anim-cpu:hover .ui-icon-anim-cpu__pin-variants-2,
+.ui-icon-anim-cpu:hover.ui-icon-anim-cpu__pin-variants-2,
+.ui-anim-scope:hover .ui-icon-anim-cpu__pin-variants-2 {
+  animation: ui-icon-anim-cpu-pin-variants-2-0 400ms 50ms ease-in-out both;
+}
+
+
+/* 部件 pin-variants-3（path） */
+.ui-icon-anim-cpu__pin-variants-3 {
+}
+.ui-icon-anim-cpu:hover .ui-icon-anim-cpu__pin-variants-3,
+.ui-icon-anim-cpu:hover.ui-icon-anim-cpu__pin-variants-3,
+.ui-anim-scope:hover .ui-icon-anim-cpu__pin-variants-3 {
+  animation: ui-icon-anim-cpu-pin-variants-3-0 400ms 75ms ease-in-out both;
+}
+
+
+/* 部件 pin-variants-4（path） */
+.ui-icon-anim-cpu__pin-variants-4 {
+}
+.ui-icon-anim-cpu:hover .ui-icon-anim-cpu__pin-variants-4,
+.ui-icon-anim-cpu:hover.ui-icon-anim-cpu__pin-variants-4,
+.ui-anim-scope:hover .ui-icon-anim-cpu__pin-variants-4 {
+  animation: ui-icon-anim-cpu-pin-variants-4-0 400ms 100ms ease-in-out both;
+}
+
+
+/* 部件 pin-variants-5（path） */
+.ui-icon-anim-cpu__pin-variants-5 {
+}
+.ui-icon-anim-cpu:hover .ui-icon-anim-cpu__pin-variants-5,
+.ui-icon-anim-cpu:hover.ui-icon-anim-cpu__pin-variants-5,
+.ui-anim-scope:hover .ui-icon-anim-cpu__pin-variants-5 {
+  animation: ui-icon-anim-cpu-pin-variants-5-0 400ms 125ms ease-in-out both;
+}
+
+
+/* 部件 pin-variants-6（path） */
+.ui-icon-anim-cpu__pin-variants-6 {
+}
+.ui-icon-anim-cpu:hover .ui-icon-anim-cpu__pin-variants-6,
+.ui-icon-anim-cpu:hover.ui-icon-anim-cpu__pin-variants-6,
+.ui-anim-scope:hover .ui-icon-anim-cpu__pin-variants-6 {
+  animation: ui-icon-anim-cpu-pin-variants-6-0 400ms 150ms ease-in-out both;
+}
+
+
+/* 部件 pin-variants-7（path） */
+.ui-icon-anim-cpu__pin-variants-7 {
+}
+.ui-icon-anim-cpu:hover .ui-icon-anim-cpu__pin-variants-7,
+.ui-icon-anim-cpu:hover.ui-icon-anim-cpu__pin-variants-7,
+.ui-anim-scope:hover .ui-icon-anim-cpu__pin-variants-7 {
+  animation: ui-icon-anim-cpu-pin-variants-7-0 400ms 175ms ease-in-out both;
+}
+
+
+/* 部件 pin-variants-8（path） */
+.ui-icon-anim-cpu__pin-variants-8 {
+}
+.ui-icon-anim-cpu:hover .ui-icon-anim-cpu__pin-variants-8,
+.ui-icon-anim-cpu:hover.ui-icon-anim-cpu__pin-variants-8,
+.ui-anim-scope:hover .ui-icon-anim-cpu__pin-variants-8 {
+  animation: ui-icon-anim-cpu-pin-variants-8-0 400ms 200ms ease-in-out both;
+}
+
+
+/* 部件 pin-variants-9（path） */
+.ui-icon-anim-cpu__pin-variants-9 {
+}
+.ui-icon-anim-cpu:hover .ui-icon-anim-cpu__pin-variants-9,
+.ui-icon-anim-cpu:hover.ui-icon-anim-cpu__pin-variants-9,
+.ui-anim-scope:hover .ui-icon-anim-cpu__pin-variants-9 {
+  animation: ui-icon-anim-cpu-pin-variants-9-0 400ms 225ms ease-in-out both;
+}
+
+
+/* 部件 pin-variants-10（path） */
+.ui-icon-anim-cpu__pin-variants-10 {
+}
+.ui-icon-anim-cpu:hover .ui-icon-anim-cpu__pin-variants-10,
+.ui-icon-anim-cpu:hover.ui-icon-anim-cpu__pin-variants-10,
+.ui-anim-scope:hover .ui-icon-anim-cpu__pin-variants-10 {
+  animation: ui-icon-anim-cpu-pin-variants-10-0 400ms 250ms ease-in-out both;
+}
+
+
+/* 部件 pin-variants-11（path） */
+.ui-icon-anim-cpu__pin-variants-11 {
+}
+.ui-icon-anim-cpu:hover .ui-icon-anim-cpu__pin-variants-11,
+.ui-icon-anim-cpu:hover.ui-icon-anim-cpu__pin-variants-11,
+.ui-anim-scope:hover .ui-icon-anim-cpu__pin-variants-11 {
+  animation: ui-icon-anim-cpu-pin-variants-11-0 400ms 275ms ease-in-out both;
+}
+
+
+/* 部件 core（rect） */
+.ui-icon-anim-cpu__core {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+.ui-icon-anim-cpu:hover .ui-icon-anim-cpu__core,
+.ui-icon-anim-cpu:hover.ui-icon-anim-cpu__core,
+.ui-anim-scope:hover .ui-icon-anim-cpu__core {
+  animation: ui-icon-anim-cpu-core-0 600ms 100ms ease-in-out both;
+}
+
+/* crown（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/crown-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-crown-crown-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  30% {
+    transform: translateY(-5px);
+  }
+  70% {
+    transform: translateY(0.8px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes ui-icon-anim-crown-crown-1 {
+  0% {
+    transform: rotate(0deg);
+  }
+  30% {
+    transform: rotate(-8deg);
+  }
+  70% {
+    transform: rotate(4deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes ui-icon-anim-crown-crown-2 {
+  0% {
+    opacity: 1;
+  }
+  30% {
+    opacity: 0;
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes ui-icon-anim-crown-base-0 {
+  0% {
+    transform: scaleX(1);
+  }
+  60% {
+    transform: scaleX(1);
+  }
+  72% {
+    transform: scaleX(0.8);
+  }
+  86% {
+    transform: scaleX(1.06);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+
+/* 部件 crown（path） */
+.ui-icon-anim-crown__crown {
+  transform-box: view-box;
+  transform-origin: 12px 17px;
+}
+.ui-icon-anim-crown:hover .ui-icon-anim-crown__crown,
+.ui-icon-anim-crown:hover.ui-icon-anim-crown__crown,
+.ui-anim-scope:hover .ui-icon-anim-crown__crown {
+  animation:
+    ui-icon-anim-crown-crown-0 800ms ease-in-out both,
+    ui-icon-anim-crown-crown-1 800ms ease-in-out both,
+    ui-icon-anim-crown-crown-2 800ms ease-in-out both;
+}
+
+
+/* 部件 base（path） */
+.ui-icon-anim-crown__base {
+  transform-box: view-box;
+  transform-origin: 12px 21px;
+}
+.ui-icon-anim-crown:hover .ui-icon-anim-crown__base,
+.ui-icon-anim-crown:hover.ui-icon-anim-crown__base,
+.ui-anim-scope:hover .ui-icon-anim-crown__base {
+  animation: ui-icon-anim-crown-base-0 800ms ease-in-out both;
+}
+
+/* calendar（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/calendar-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-calendar-ring-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  40% {
+    transform: translateY(1.6px);
+  }
+  75% {
+    transform: translateY(-0.3px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes ui-icon-anim-calendar-body-0 {
+  0% {
+    transform: scaleY(1);
+  }
+  40% {
+    transform: scaleY(1);
+  }
+  65% {
+    transform: scaleY(0.96);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+
+/* 部件 ring（path） */
+.ui-icon-anim-calendar__ring {
+}
+.ui-icon-anim-calendar:hover .ui-icon-anim-calendar__ring,
+.ui-icon-anim-calendar:hover.ui-icon-anim-calendar__ring,
+.ui-anim-scope:hover .ui-icon-anim-calendar__ring {
+  animation: ui-icon-anim-calendar-ring-0 600ms ease-in-out both;
+}
+
+
+/* 部件 ring（path） */
+.ui-icon-anim-calendar__ring {
+}
+.ui-icon-anim-calendar:hover .ui-icon-anim-calendar__ring,
+.ui-icon-anim-calendar:hover.ui-icon-anim-calendar__ring,
+.ui-anim-scope:hover .ui-icon-anim-calendar__ring {
+  animation: ui-icon-anim-calendar-ring-0 600ms ease-in-out both;
+}
+
+
+/* 部件 body（g） */
+.ui-icon-anim-calendar__body {
+  transform-box: view-box;
+  transform-origin: 12px 21px;
+}
+.ui-icon-anim-calendar:hover .ui-icon-anim-calendar__body,
+.ui-icon-anim-calendar:hover.ui-icon-anim-calendar__body,
+.ui-anim-scope:hover .ui-icon-anim-calendar__body {
+  animation: ui-icon-anim-calendar-body-0 600ms ease-in-out both;
+}
+
+/* ruler（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/ruler-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-ruler-ruler-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  40% {
+    transform: rotate(-6deg);
+  }
+  75% {
+    transform: rotate(4deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes ui-icon-anim-ruler-tick-variants-0-0 {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  50% {
+    stroke-dashoffset: -0.5;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes ui-icon-anim-ruler-tick-variants-1-0 {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  50% {
+    stroke-dashoffset: -0.5;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes ui-icon-anim-ruler-tick-variants-2-0 {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  50% {
+    stroke-dashoffset: -0.5;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes ui-icon-anim-ruler-tick-variants-3-0 {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  50% {
+    stroke-dashoffset: -0.5;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+
+/* 部件 ruler（g） */
+.ui-icon-anim-ruler__ruler {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+.ui-icon-anim-ruler:hover .ui-icon-anim-ruler__ruler,
+.ui-icon-anim-ruler:hover.ui-icon-anim-ruler__ruler,
+.ui-anim-scope:hover .ui-icon-anim-ruler__ruler {
+  animation: ui-icon-anim-ruler-ruler-0 700ms ease-in-out both;
+}
+
+
+/* 部件 tick-variants-0（path） */
+.ui-icon-anim-ruler__tick-variants-0 {
+  stroke-dasharray: 1;
+}
+.ui-icon-anim-ruler:hover .ui-icon-anim-ruler__tick-variants-0,
+.ui-icon-anim-ruler:hover.ui-icon-anim-ruler__tick-variants-0,
+.ui-anim-scope:hover .ui-icon-anim-ruler__tick-variants-0 {
+  animation: ui-icon-anim-ruler-tick-variants-0-0 400ms 100ms ease-in-out both;
+}
+
+
+/* 部件 tick-variants-1（path） */
+.ui-icon-anim-ruler__tick-variants-1 {
+  stroke-dasharray: 1;
+}
+.ui-icon-anim-ruler:hover .ui-icon-anim-ruler__tick-variants-1,
+.ui-icon-anim-ruler:hover.ui-icon-anim-ruler__tick-variants-1,
+.ui-anim-scope:hover .ui-icon-anim-ruler__tick-variants-1 {
+  animation: ui-icon-anim-ruler-tick-variants-1-0 400ms 200ms ease-in-out both;
+}
+
+
+/* 部件 tick-variants-2（path） */
+.ui-icon-anim-ruler__tick-variants-2 {
+  stroke-dasharray: 1;
+}
+.ui-icon-anim-ruler:hover .ui-icon-anim-ruler__tick-variants-2,
+.ui-icon-anim-ruler:hover.ui-icon-anim-ruler__tick-variants-2,
+.ui-anim-scope:hover .ui-icon-anim-ruler__tick-variants-2 {
+  animation: ui-icon-anim-ruler-tick-variants-2-0 400ms 300ms ease-in-out both;
+}
+
+
+/* 部件 tick-variants-3（path） */
+.ui-icon-anim-ruler__tick-variants-3 {
+  stroke-dasharray: 1;
+}
+.ui-icon-anim-ruler:hover .ui-icon-anim-ruler__tick-variants-3,
+.ui-icon-anim-ruler:hover.ui-icon-anim-ruler__tick-variants-3,
+.ui-anim-scope:hover .ui-icon-anim-ruler__tick-variants-3 {
+  animation: ui-icon-anim-ruler-tick-variants-3-0 400ms 400ms ease-in-out both;
+}
+
+/* megaphone（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/megaphone-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-megaphone-shout-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-8deg);
+  }
+  50% {
+    transform: rotate(6deg);
+  }
+  75% {
+    transform: rotate(-3deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes ui-icon-anim-megaphone-shout-1 {
+  0% {
+    transform: translateX(0px);
+  }
+  25% {
+    transform: translateX(1.2px);
+  }
+  50% {
+    transform: translateX(-0.5px);
+  }
+  75% {
+    transform: translateX(0.3px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+
+/* 部件 shout（g） */
+.ui-icon-anim-megaphone__shout {
+  transform-box: view-box;
+  transform-origin: 5px 11px;
+}
+.ui-icon-anim-megaphone:hover .ui-icon-anim-megaphone__shout,
+.ui-icon-anim-megaphone:hover.ui-icon-anim-megaphone__shout,
+.ui-anim-scope:hover .ui-icon-anim-megaphone__shout {
+  animation:
+    ui-icon-anim-megaphone-shout-0 800ms ease-in-out both,
+    ui-icon-anim-megaphone-shout-1 800ms ease-in-out both;
+}
+
+/* repeat（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/repeat-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-repeat-forward-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  35% {
+    transform: translateX(1.5px);
+  }
+  70% {
+    transform: translateX(-0.45px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+@keyframes ui-icon-anim-repeat-backward-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  35% {
+    transform: translateX(-1.5px);
+  }
+  70% {
+    transform: translateX(0.45px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+
+/* 部件 forward（g） */
+.ui-icon-anim-repeat__forward {
+}
+.ui-icon-anim-repeat:hover .ui-icon-anim-repeat__forward,
+.ui-icon-anim-repeat:hover.ui-icon-anim-repeat__forward,
+.ui-anim-scope:hover .ui-icon-anim-repeat__forward {
+  animation: ui-icon-anim-repeat-forward-0 600ms ease-in-out both;
+}
+
+
+/* 部件 backward（g） */
+.ui-icon-anim-repeat__backward {
+}
+.ui-icon-anim-repeat:hover .ui-icon-anim-repeat__backward,
+.ui-icon-anim-repeat:hover.ui-icon-anim-repeat__backward,
+.ui-anim-scope:hover .ui-icon-anim-repeat__backward {
+  animation: ui-icon-anim-repeat-backward-0 600ms ease-in-out both;
+}
+
+/* key（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/key-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-key-key-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  40% {
+    transform: rotate(11deg);
+  }
+  75% {
+    transform: rotate(-5deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+
+/* 部件 key（g） */
+.ui-icon-anim-key__key {
+  transform-box: view-box;
+  transform-origin: 7.5px 15.5px;
+}
+.ui-icon-anim-key:hover .ui-icon-anim-key__key,
+.ui-icon-anim-key:hover.ui-icon-anim-key__key,
+.ui-anim-scope:hover .ui-icon-anim-key__key {
+  animation: ui-icon-anim-key-key-0 700ms ease-in-out both;
+}
+
+/* shuffle（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/shuffle-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-shuffle-head-variants-0-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  35% {
+    transform: translateX(1px);
+  }
+  70% {
+    transform: translateX(-0.2px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+@keyframes ui-icon-anim-shuffle-head-variants-0-1 {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.15);
+  }
+  70% {
+    transform: scale(0.97);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-shuffle-head-variants-1-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  35% {
+    transform: translateX(1px);
+  }
+  70% {
+    transform: translateX(-0.2px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+@keyframes ui-icon-anim-shuffle-head-variants-1-1 {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.15);
+  }
+  70% {
+    transform: scale(0.97);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+
+/* 部件 head-variants-0（path） */
+.ui-icon-anim-shuffle__head-variants-0 {
+  transform-box: view-box;
+  transform-origin: 22px 18px;
+}
+.ui-icon-anim-shuffle:hover .ui-icon-anim-shuffle__head-variants-0,
+.ui-icon-anim-shuffle:hover.ui-icon-anim-shuffle__head-variants-0,
+.ui-anim-scope:hover .ui-icon-anim-shuffle__head-variants-0 {
+  animation:
+    ui-icon-anim-shuffle-head-variants-0-0 600ms 120ms ease-in-out both,
+    ui-icon-anim-shuffle-head-variants-0-1 600ms 120ms ease-in-out both;
+}
+
+
+/* 部件 head-variants-1（path） */
+.ui-icon-anim-shuffle__head-variants-1 {
+  transform-box: view-box;
+  transform-origin: 22px 6px;
+}
+.ui-icon-anim-shuffle:hover .ui-icon-anim-shuffle__head-variants-1,
+.ui-icon-anim-shuffle:hover.ui-icon-anim-shuffle__head-variants-1,
+.ui-anim-scope:hover .ui-icon-anim-shuffle__head-variants-1 {
+  animation:
+    ui-icon-anim-shuffle-head-variants-1-0 600ms ease-in-out both,
+    ui-icon-anim-shuffle-head-variants-1-1 600ms ease-in-out both;
+}
+
+/* heart（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/heart-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-heart-heart-0 {
+  0% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.13);
+  }
+  50% {
+    transform: scale(0.97);
+  }
+  75% {
+    transform: scale(1.07);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+
+/* 部件 heart（path） */
+.ui-icon-anim-heart__heart {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+.ui-icon-anim-heart:hover .ui-icon-anim-heart__heart,
+.ui-icon-anim-heart:hover.ui-icon-anim-heart__heart,
+.ui-anim-scope:hover .ui-icon-anim-heart__heart {
+  animation: ui-icon-anim-heart-heart-0 800ms ease-in-out both;
+}
+
+/* umbrella（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/umbrella-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-umbrella-canopy-0 {
+  0% {
+    transform: scaleX(1);
+  }
+  35% {
+    transform: scaleX(1.04);
+  }
+  70% {
+    transform: scaleX(0.99);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes ui-icon-anim-umbrella-canopy-1 {
+  0% {
+    transform: scaleY(1);
+  }
+  35% {
+    transform: scaleY(0.84);
+  }
+  70% {
+    transform: scaleY(1.04);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+
+/* 部件 canopy（g） */
+.ui-icon-anim-umbrella__canopy {
+  transform-box: view-box;
+  transform-origin: 12px 13px;
+}
+.ui-icon-anim-umbrella:hover .ui-icon-anim-umbrella__canopy,
+.ui-icon-anim-umbrella:hover.ui-icon-anim-umbrella__canopy,
+.ui-anim-scope:hover .ui-icon-anim-umbrella__canopy {
+  animation:
+    ui-icon-anim-umbrella-canopy-0 600ms ease-in-out both,
+    ui-icon-anim-umbrella-canopy-1 600ms ease-in-out both;
+}
+
+/* box（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/box-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-box-box-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  35% {
+    transform: translateY(-1px);
+  }
+  70% {
+    transform: translateY(0.4px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes ui-icon-anim-box-box-1 {
+  0% {
+    transform: scaleY(1);
+  }
+  35% {
+    transform: scaleY(1.04);
+  }
+  70% {
+    transform: scaleY(0.94);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+
+/* 部件 box（g） */
+.ui-icon-anim-box__box {
+  transform-box: view-box;
+  transform-origin: 12px 22px;
+}
+.ui-icon-anim-box:hover .ui-icon-anim-box__box,
+.ui-icon-anim-box:hover.ui-icon-anim-box__box,
+.ui-anim-scope:hover .ui-icon-anim-box__box {
+  animation:
+    ui-icon-anim-box-box-0 600ms ease-in-out both,
+    ui-icon-anim-box-box-1 600ms ease-in-out both;
+}
+
+/* folder-plus（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/folder-plus-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-folder-plus-folder-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  35% {
+    transform: translateY(-1.2px);
+  }
+  70% {
+    transform: translateY(0.4px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes ui-icon-anim-folder-plus-plus-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(90deg);
+  }
+}
+
+@keyframes ui-icon-anim-folder-plus-plus-1 {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.3);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+
+/* 部件 folder（g） */
+.ui-icon-anim-folder-plus__folder {
+}
+.ui-icon-anim-folder-plus:hover .ui-icon-anim-folder-plus__folder,
+.ui-icon-anim-folder-plus:hover.ui-icon-anim-folder-plus__folder,
+.ui-anim-scope:hover .ui-icon-anim-folder-plus__folder {
+  animation: ui-icon-anim-folder-plus-folder-0 600ms ease-in-out both;
+}
+
+
+/* 部件 plus（path） */
+.ui-icon-anim-folder-plus__plus {
+  transform-box: view-box;
+  transform-origin: 12px 13px;
+}
+.ui-icon-anim-folder-plus:hover .ui-icon-anim-folder-plus__plus,
+.ui-icon-anim-folder-plus:hover.ui-icon-anim-folder-plus__plus,
+.ui-anim-scope:hover .ui-icon-anim-folder-plus__plus {
+  animation:
+    ui-icon-anim-folder-plus-plus-0 500ms 100ms ease-in-out both,
+    ui-icon-anim-folder-plus-plus-1 500ms 100ms ease-in-out both;
+}
+
+/* star（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/star-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-star-star-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-12deg);
+  }
+  50% {
+    transform: rotate(10deg);
+  }
+  75% {
+    transform: rotate(-5deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes ui-icon-anim-star-star-1 {
+  0% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.06);
+  }
+  50% {
+    transform: scale(0.97);
+  }
+  75% {
+    transform: scale(1.02);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+
+/* 部件 star（path） */
+.ui-icon-anim-star__star {
+  transform-box: view-box;
+  transform-origin: 12px 12.5px;
+}
+.ui-icon-anim-star:hover .ui-icon-anim-star__star,
+.ui-icon-anim-star:hover.ui-icon-anim-star__star,
+.ui-anim-scope:hover .ui-icon-anim-star__star {
+  animation:
+    ui-icon-anim-star-star-0 800ms ease-in-out both,
+    ui-icon-anim-star-star-1 800ms ease-in-out both;
+}
+
+/* list（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/list-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-list-dot-variants-0-0 {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.7);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-list-dot-variants-1-0 {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.7);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-list-dot-variants-2-0 {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.7);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-list-row-variants-0-0 {
+  0% {
+    transform: scaleX(1);
+  }
+  50% {
+    transform: scaleX(0.55);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes ui-icon-anim-list-row-variants-1-0 {
+  0% {
+    transform: scaleX(1);
+  }
+  50% {
+    transform: scaleX(0.55);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes ui-icon-anim-list-row-variants-2-0 {
+  0% {
+    transform: scaleX(1);
+  }
+  50% {
+    transform: scaleX(0.55);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+
+/* 部件 dot-variants-0（path） */
+.ui-icon-anim-list__dot-variants-0 {
+  transform-box: view-box;
+  transform-origin: 3px 5px;
+}
+.ui-icon-anim-list:hover .ui-icon-anim-list__dot-variants-0,
+.ui-icon-anim-list:hover.ui-icon-anim-list__dot-variants-0,
+.ui-anim-scope:hover .ui-icon-anim-list__dot-variants-0 {
+  animation: ui-icon-anim-list-dot-variants-0-0 400ms ease-in-out both;
+}
+
+
+/* 部件 dot-variants-1（path） */
+.ui-icon-anim-list__dot-variants-1 {
+  transform-box: view-box;
+  transform-origin: 3px 12px;
+}
+.ui-icon-anim-list:hover .ui-icon-anim-list__dot-variants-1,
+.ui-icon-anim-list:hover.ui-icon-anim-list__dot-variants-1,
+.ui-anim-scope:hover .ui-icon-anim-list__dot-variants-1 {
+  animation: ui-icon-anim-list-dot-variants-1-0 400ms 120ms ease-in-out both;
+}
+
+
+/* 部件 dot-variants-2（path） */
+.ui-icon-anim-list__dot-variants-2 {
+  transform-box: view-box;
+  transform-origin: 3px 19px;
+}
+.ui-icon-anim-list:hover .ui-icon-anim-list__dot-variants-2,
+.ui-icon-anim-list:hover.ui-icon-anim-list__dot-variants-2,
+.ui-anim-scope:hover .ui-icon-anim-list__dot-variants-2 {
+  animation: ui-icon-anim-list-dot-variants-2-0 400ms 240ms ease-in-out both;
+}
+
+
+/* 部件 row-variants-0（path） */
+.ui-icon-anim-list__row-variants-0 {
+  transform-box: view-box;
+  transform-origin: 8px 5px;
+}
+.ui-icon-anim-list:hover .ui-icon-anim-list__row-variants-0,
+.ui-icon-anim-list:hover.ui-icon-anim-list__row-variants-0,
+.ui-anim-scope:hover .ui-icon-anim-list__row-variants-0 {
+  animation: ui-icon-anim-list-row-variants-0-0 500ms 50ms ease-in-out both;
+}
+
+
+/* 部件 row-variants-1（path） */
+.ui-icon-anim-list__row-variants-1 {
+  transform-box: view-box;
+  transform-origin: 8px 12px;
+}
+.ui-icon-anim-list:hover .ui-icon-anim-list__row-variants-1,
+.ui-icon-anim-list:hover.ui-icon-anim-list__row-variants-1,
+.ui-anim-scope:hover .ui-icon-anim-list__row-variants-1 {
+  animation: ui-icon-anim-list-row-variants-1-0 500ms 170ms ease-in-out both;
+}
+
+
+/* 部件 row-variants-2（path） */
+.ui-icon-anim-list__row-variants-2 {
+  transform-box: view-box;
+  transform-origin: 8px 19px;
+}
+.ui-icon-anim-list:hover .ui-icon-anim-list__row-variants-2,
+.ui-icon-anim-list:hover.ui-icon-anim-list__row-variants-2,
+.ui-anim-scope:hover .ui-icon-anim-list__row-variants-2 {
+  animation: ui-icon-anim-list-row-variants-2-0 500ms 290ms ease-in-out both;
+}
+
+/* layers（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/layers-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-layers-top-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(3px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes ui-icon-anim-layers-bottom-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+
+/* 部件 top（path） */
+.ui-icon-anim-layers__top {
+}
+.ui-icon-anim-layers:hover .ui-icon-anim-layers__top,
+.ui-icon-anim-layers:hover.ui-icon-anim-layers__top,
+.ui-anim-scope:hover .ui-icon-anim-layers__top {
+  animation: ui-icon-anim-layers-top-0 600ms ease-in-out both;
+}
+
+
+/* 部件 bottom（path） */
+.ui-icon-anim-layers__bottom {
+}
+.ui-icon-anim-layers:hover .ui-icon-anim-layers__bottom,
+.ui-icon-anim-layers:hover.ui-icon-anim-layers__bottom,
+.ui-anim-scope:hover .ui-icon-anim-layers__bottom {
+  animation: ui-icon-anim-layers-bottom-0 600ms ease-in-out both;
+}
+
+/* heart-pulse（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/heart-pulse-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-heart-pulse-heart-0 {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.07);
+  }
+  70% {
+    transform: scale(0.97);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-heart-pulse-pulse-0 {
+  0% {
+    transform: scaleY(1);
+  }
+  35% {
+    transform: scaleY(1.4);
+  }
+  70% {
+    transform: scaleY(0.8);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+
+/* 部件 heart（path） */
+.ui-icon-anim-heart-pulse__heart {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+.ui-icon-anim-heart-pulse:hover .ui-icon-anim-heart-pulse__heart,
+.ui-icon-anim-heart-pulse:hover.ui-icon-anim-heart-pulse__heart,
+.ui-anim-scope:hover .ui-icon-anim-heart-pulse__heart {
+  animation: ui-icon-anim-heart-pulse-heart-0 600ms ease-in-out both;
+}
+
+
+/* 部件 pulse（path） */
+.ui-icon-anim-heart-pulse__pulse {
+  transform-box: view-box;
+  transform-origin: 12px 13px;
+}
+.ui-icon-anim-heart-pulse:hover .ui-icon-anim-heart-pulse__pulse,
+.ui-icon-anim-heart-pulse:hover.ui-icon-anim-heart-pulse__pulse,
+.ui-anim-scope:hover .ui-icon-anim-heart-pulse__pulse {
+  animation: ui-icon-anim-heart-pulse-pulse-0 600ms 50ms ease-in-out both;
+}
+
+/* calendar-days（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/calendar-days-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-calendar-days-ring-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  40% {
+    transform: translateY(1.6px);
+  }
+  75% {
+    transform: translateY(-0.3px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+
+/* 部件 ring（path） */
+.ui-icon-anim-calendar-days__ring {
+}
+.ui-icon-anim-calendar-days:hover .ui-icon-anim-calendar-days__ring,
+.ui-icon-anim-calendar-days:hover.ui-icon-anim-calendar-days__ring,
+.ui-anim-scope:hover .ui-icon-anim-calendar-days__ring {
+  animation: ui-icon-anim-calendar-days-ring-0 600ms ease-in-out both;
+}
+
+
+/* 部件 ring（path） */
+.ui-icon-anim-calendar-days__ring {
+}
+.ui-icon-anim-calendar-days:hover .ui-icon-anim-calendar-days__ring,
+.ui-icon-anim-calendar-days:hover.ui-icon-anim-calendar-days__ring,
+.ui-anim-scope:hover .ui-icon-anim-calendar-days__ring {
+  animation: ui-icon-anim-calendar-days-ring-0 600ms ease-in-out both;
+}
+
+/* download（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/download-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-download-arrow-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  40% {
+    transform: translateY(2.5px);
+  }
+  75% {
+    transform: translateY(-0.5px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes ui-icon-anim-download-tray-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  40% {
+    transform: translateY(0.8px);
+  }
+  75% {
+    transform: translateY(-0.2px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+
+/* 部件 arrow（g） */
+.ui-icon-anim-download__arrow {
+}
+.ui-icon-anim-download:hover .ui-icon-anim-download__arrow,
+.ui-icon-anim-download:hover.ui-icon-anim-download__arrow,
+.ui-anim-scope:hover .ui-icon-anim-download__arrow {
+  animation: ui-icon-anim-download-arrow-0 600ms ease-in-out both;
+}
+
+
+/* 部件 tray（path） */
+.ui-icon-anim-download__tray {
+}
+.ui-icon-anim-download:hover .ui-icon-anim-download__tray,
+.ui-icon-anim-download:hover.ui-icon-anim-download__tray,
+.ui-anim-scope:hover .ui-icon-anim-download__tray {
+  animation: ui-icon-anim-download-tray-0 500ms 150ms ease-in-out both;
+}
+
+/* user-plus（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/user-plus-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-user-plus-head-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  35% {
+    transform: translateY(-1.5px);
+  }
+  70% {
+    transform: translateY(0.5px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes ui-icon-anim-user-plus-plus-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(180deg);
+  }
+}
+
+@keyframes ui-icon-anim-user-plus-plus-1 {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.25);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+
+/* 部件 head（circle） */
+.ui-icon-anim-user-plus__head {
+}
+.ui-icon-anim-user-plus:hover .ui-icon-anim-user-plus__head,
+.ui-icon-anim-user-plus:hover.ui-icon-anim-user-plus__head,
+.ui-anim-scope:hover .ui-icon-anim-user-plus__head {
+  animation: ui-icon-anim-user-plus-head-0 600ms ease-in-out both;
+}
+
+
+/* 部件 plus（g） */
+.ui-icon-anim-user-plus__plus {
+  transform-box: view-box;
+  transform-origin: 19px 11px;
+}
+.ui-icon-anim-user-plus:hover .ui-icon-anim-user-plus__plus,
+.ui-icon-anim-user-plus:hover.ui-icon-anim-user-plus__plus,
+.ui-anim-scope:hover .ui-icon-anim-user-plus__plus {
+  animation:
+    ui-icon-anim-user-plus-plus-0 500ms ease-in-out both,
+    ui-icon-anim-user-plus-plus-1 500ms ease-in-out both;
+}
+
+/* zoom-in（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/zoom-in-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-zoom-in-lens-0 {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.1);
+  }
+  75% {
+    transform: scale(0.97);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-zoom-in-plus-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(90deg);
+  }
+}
+
+@keyframes ui-icon-anim-zoom-in-plus-1 {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.3);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+
+/* 部件 lens（g） */
+.ui-icon-anim-zoom-in__lens {
+  transform-box: view-box;
+  transform-origin: 11px 11px;
+}
+.ui-icon-anim-zoom-in:hover .ui-icon-anim-zoom-in__lens,
+.ui-icon-anim-zoom-in:hover.ui-icon-anim-zoom-in__lens,
+.ui-anim-scope:hover .ui-icon-anim-zoom-in__lens {
+  animation: ui-icon-anim-zoom-in-lens-0 600ms ease-in-out both;
+}
+
+
+/* 部件 plus（g） */
+.ui-icon-anim-zoom-in__plus {
+  transform-box: view-box;
+  transform-origin: 11px 11px;
+}
+.ui-icon-anim-zoom-in:hover .ui-icon-anim-zoom-in__plus,
+.ui-icon-anim-zoom-in:hover.ui-icon-anim-zoom-in__plus,
+.ui-anim-scope:hover .ui-icon-anim-zoom-in__plus {
+  animation:
+    ui-icon-anim-zoom-in-plus-0 500ms ease-in-out both,
+    ui-icon-anim-zoom-in-plus-1 500ms ease-in-out both;
+}
+
+/* files（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/files-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-files-back-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  35% {
+    transform: translateX(-1px);
+  }
+  70% {
+    transform: translateX(0.2px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+@keyframes ui-icon-anim-files-back-1 {
+  0% {
+    transform: translateY(0px);
+  }
+  35% {
+    transform: translateY(1px);
+  }
+  70% {
+    transform: translateY(-0.2px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes ui-icon-anim-files-front-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  35% {
+    transform: translateX(1px);
+  }
+  70% {
+    transform: translateX(-0.2px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+@keyframes ui-icon-anim-files-front-1 {
+  0% {
+    transform: translateY(0px);
+  }
+  35% {
+    transform: translateY(-1px);
+  }
+  70% {
+    transform: translateY(0.2px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+
+/* 部件 back（g） */
+.ui-icon-anim-files__back {
+}
+.ui-icon-anim-files:hover .ui-icon-anim-files__back,
+.ui-icon-anim-files:hover.ui-icon-anim-files__back,
+.ui-anim-scope:hover .ui-icon-anim-files__back {
+  animation:
+    ui-icon-anim-files-back-0 600ms ease-in-out both,
+    ui-icon-anim-files-back-1 600ms ease-in-out both;
+}
+
+
+/* 部件 front（g） */
+.ui-icon-anim-files__front {
+}
+.ui-icon-anim-files:hover .ui-icon-anim-files__front,
+.ui-icon-anim-files:hover.ui-icon-anim-files__front,
+.ui-anim-scope:hover .ui-icon-anim-files__front {
+  animation:
+    ui-icon-anim-files-front-0 600ms ease-in-out both,
+    ui-icon-anim-files-front-1 600ms ease-in-out both;
+}
+
+/* car（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/car-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-car-car-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  35% {
+    transform: translateX(0.8px);
+  }
+  70% {
+    transform: translateX(-0.2px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+@keyframes ui-icon-anim-car-car-1 {
+  0% {
+    transform: rotate(0deg);
+  }
+  35% {
+    transform: rotate(-6deg);
+  }
+  70% {
+    transform: rotate(2deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+
+/* 部件 car（g） */
+.ui-icon-anim-car__car {
+  transform-box: view-box;
+  transform-origin: 7px 19px;
+}
+.ui-icon-anim-car:hover .ui-icon-anim-car__car,
+.ui-icon-anim-car:hover.ui-icon-anim-car__car,
+.ui-anim-scope:hover .ui-icon-anim-car__car {
+  animation:
+    ui-icon-anim-car-car-0 600ms ease-in-out both,
+    ui-icon-anim-car-car-1 600ms ease-in-out both;
+}
+
+/* pin（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/pin-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-pin-pin-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  30% {
+    transform: translateY(1px);
+  }
+  60% {
+    transform: translateY(0.3px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes ui-icon-anim-pin-pin-1 {
+  0% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-9deg);
+  }
+  50% {
+    transform: rotate(7deg);
+  }
+  75% {
+    transform: rotate(-3deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+
+/* 部件 pin（g） */
+.ui-icon-anim-pin__pin {
+  transform-box: view-box;
+  transform-origin: 12px 22px;
+}
+.ui-icon-anim-pin:hover .ui-icon-anim-pin__pin,
+.ui-icon-anim-pin:hover.ui-icon-anim-pin__pin,
+.ui-anim-scope:hover .ui-icon-anim-pin__pin {
+  animation:
+    ui-icon-anim-pin-pin-0 500ms ease-in-out both,
+    ui-icon-anim-pin-pin-1 700ms ease-in-out both;
+}
+
+/* database（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/database-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-database-lid-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  35% {
+    transform: translateY(-1px);
+  }
+  70% {
+    transform: translateY(0.3px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes ui-icon-anim-database-disk-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  35% {
+    transform: translateY(2.5px);
+  }
+  70% {
+    transform: translateY(-0.6px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+
+/* 部件 lid（ellipse） */
+.ui-icon-anim-database__lid {
+}
+.ui-icon-anim-database:hover .ui-icon-anim-database__lid,
+.ui-icon-anim-database:hover.ui-icon-anim-database__lid,
+.ui-anim-scope:hover .ui-icon-anim-database__lid {
+  animation: ui-icon-anim-database-lid-0 600ms ease-in-out both;
+}
+
+
+/* 部件 disk（path） */
+.ui-icon-anim-database__disk {
+}
+.ui-icon-anim-database:hover .ui-icon-anim-database__disk,
+.ui-icon-anim-database:hover.ui-icon-anim-database__disk,
+.ui-anim-scope:hover .ui-icon-anim-database__disk {
+  animation: ui-icon-anim-database-disk-0 600ms 60ms ease-in-out both;
+}
+
+/* chart-area（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/chart-area-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-chart-area-area-0 {
+  0% {
+    transform: scaleY(1);
+  }
+  35% {
+    transform: scaleY(0.5);
+  }
+  75% {
+    transform: scaleY(1.06);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+
+/* 部件 area（path） */
+.ui-icon-anim-chart-area__area {
+  transform-box: view-box;
+  transform-origin: 12px 17px;
+}
+.ui-icon-anim-chart-area:hover .ui-icon-anim-chart-area__area,
+.ui-icon-anim-chart-area:hover.ui-icon-anim-chart-area__area,
+.ui-anim-scope:hover .ui-icon-anim-chart-area__area {
+  animation: ui-icon-anim-chart-area-area-0 600ms ease-in-out both;
+}
+
+/* shield（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/shield-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-shield-shield-0 {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(0.88);
+  }
+  65% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-shield-shield-1 {
+  0% {
+    transform: translateY(0px);
+  }
+  30% {
+    transform: translateY(1px);
+  }
+  65% {
+    transform: translateY(-1px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+
+/* 部件 shield（path） */
+.ui-icon-anim-shield__shield {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+.ui-icon-anim-shield:hover .ui-icon-anim-shield__shield,
+.ui-icon-anim-shield:hover.ui-icon-anim-shield__shield,
+.ui-anim-scope:hover .ui-icon-anim-shield__shield {
+  animation:
+    ui-icon-anim-shield-shield-0 600ms ease-in-out both,
+    ui-icon-anim-shield-shield-1 600ms ease-in-out both;
+}
+
+/* truck（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/truck-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-truck-drive-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  30% {
+    transform: translateX(-1px);
+  }
+  70% {
+    transform: translateX(1px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+@keyframes ui-icon-anim-truck-body-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  35% {
+    transform: translateY(-1px);
+  }
+  70% {
+    transform: translateY(0.3px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+
+/* 部件 drive（g） */
+.ui-icon-anim-truck__drive {
+}
+.ui-icon-anim-truck:hover .ui-icon-anim-truck__drive,
+.ui-icon-anim-truck:hover.ui-icon-anim-truck__drive,
+.ui-anim-scope:hover .ui-icon-anim-truck__drive {
+  animation: ui-icon-anim-truck-drive-0 700ms ease-in-out both;
+}
+
+
+/* 部件 body（g） */
+.ui-icon-anim-truck__body {
+}
+.ui-icon-anim-truck:hover .ui-icon-anim-truck__body,
+.ui-icon-anim-truck:hover.ui-icon-anim-truck__body,
+.ui-anim-scope:hover .ui-icon-anim-truck__body {
+  animation: ui-icon-anim-truck-body-0 600ms 50ms ease-in-out both;
+}
+
+/* upload（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/upload-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-upload-arrow-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  35% {
+    transform: translateY(-1.5px);
+  }
+  70% {
+    transform: translateY(0.4px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes ui-icon-anim-upload-tray-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  35% {
+    transform: translateY(0.7px);
+  }
+  70% {
+    transform: translateY(-0.2px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+
+/* 部件 arrow（g） */
+.ui-icon-anim-upload__arrow {
+}
+.ui-icon-anim-upload:hover .ui-icon-anim-upload__arrow,
+.ui-icon-anim-upload:hover.ui-icon-anim-upload__arrow,
+.ui-anim-scope:hover .ui-icon-anim-upload__arrow {
+  animation: ui-icon-anim-upload-arrow-0 600ms ease-in-out both;
+}
+
+
+/* 部件 tray（path） */
+.ui-icon-anim-upload__tray {
+}
+.ui-icon-anim-upload:hover .ui-icon-anim-upload__tray,
+.ui-icon-anim-upload:hover.ui-icon-anim-upload__tray,
+.ui-anim-scope:hover .ui-icon-anim-upload__tray {
+  animation: ui-icon-anim-upload-tray-0 600ms ease-in-out both;
+}
+
+/* flame（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/flame-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-flame-flame-0 {
+  0% {
+    transform: scaleX(1);
+  }
+  25% {
+    transform: scaleX(0.93);
+  }
+  50% {
+    transform: scaleX(1.04);
+  }
+  75% {
+    transform: scaleX(0.98);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes ui-icon-anim-flame-flame-1 {
+  0% {
+    transform: scaleY(1);
+  }
+  25% {
+    transform: scaleY(1.08);
+  }
+  50% {
+    transform: scaleY(0.95);
+  }
+  75% {
+    transform: scaleY(1.03);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes ui-icon-anim-flame-flame-2 {
+  0% {
+    transform: skewX(0deg);
+  }
+  25% {
+    transform: skewX(-5deg);
+  }
+  50% {
+    transform: skewX(4deg);
+  }
+  75% {
+    transform: skewX(-2deg);
+  }
+  100% {
+    transform: skewX(0deg);
+  }
+}
+
+
+/* 部件 flame（path） */
+.ui-icon-anim-flame__flame {
+  transform-box: view-box;
+  transform-origin: 12px 21px;
+}
+.ui-icon-anim-flame:hover .ui-icon-anim-flame__flame,
+.ui-icon-anim-flame:hover.ui-icon-anim-flame__flame,
+.ui-anim-scope:hover .ui-icon-anim-flame__flame {
+  animation:
+    ui-icon-anim-flame-flame-0 800ms ease-in-out both,
+    ui-icon-anim-flame-flame-1 800ms ease-in-out both,
+    ui-icon-anim-flame-flame-2 800ms ease-in-out both;
+}
+
+/* mouse（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/mouse-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-mouse-wheel-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  40% {
+    transform: translateY(3px);
+  }
+  75% {
+    transform: translateY(-0.6px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+
+/* 部件 wheel（path） */
+.ui-icon-anim-mouse__wheel {
+}
+.ui-icon-anim-mouse:hover .ui-icon-anim-mouse__wheel,
+.ui-icon-anim-mouse:hover.ui-icon-anim-mouse__wheel,
+.ui-anim-scope:hover .ui-icon-anim-mouse__wheel {
+  animation: ui-icon-anim-mouse-wheel-0 600ms ease-in-out both;
+}
+
+/* briefcase（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/briefcase-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-briefcase-case-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  35% {
+    transform: translateY(-1px);
+  }
+  70% {
+    transform: translateY(0px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes ui-icon-anim-briefcase-case-1 {
+  0% {
+    transform: rotate(0deg);
+  }
+  35% {
+    transform: rotate(-5deg);
+  }
+  70% {
+    transform: rotate(4deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+
+/* 部件 case（g） */
+.ui-icon-anim-briefcase__case {
+  transform-box: view-box;
+  transform-origin: 12px 3px;
+}
+.ui-icon-anim-briefcase:hover .ui-icon-anim-briefcase__case,
+.ui-icon-anim-briefcase:hover.ui-icon-anim-briefcase__case,
+.ui-anim-scope:hover .ui-icon-anim-briefcase__case {
+  animation:
+    ui-icon-anim-briefcase-case-0 700ms ease-in-out both,
+    ui-icon-anim-briefcase-case-1 700ms ease-in-out both;
+}
+
+/* users（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/users-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-users-side-head-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  35% {
+    transform: translateY(-1.2px);
+  }
+  70% {
+    transform: translateY(0.4px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes ui-icon-anim-users-head-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  35% {
+    transform: translateY(-1.5px);
+  }
+  70% {
+    transform: translateY(0.5px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+
+/* 部件 side-head（path） */
+.ui-icon-anim-users__side-head {
+}
+.ui-icon-anim-users:hover .ui-icon-anim-users__side-head,
+.ui-icon-anim-users:hover.ui-icon-anim-users__side-head,
+.ui-anim-scope:hover .ui-icon-anim-users__side-head {
+  animation: ui-icon-anim-users-side-head-0 600ms 100ms ease-in-out both;
+}
+
+
+/* 部件 head（circle） */
+.ui-icon-anim-users__head {
+}
+.ui-icon-anim-users:hover .ui-icon-anim-users__head,
+.ui-icon-anim-users:hover.ui-icon-anim-users__head,
+.ui-anim-scope:hover .ui-icon-anim-users__head {
+  animation: ui-icon-anim-users-head-0 600ms ease-in-out both;
+}
+
+/* gauge（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/gauge-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-gauge-needle-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  30% {
+    transform: rotate(-95deg);
+  }
+  65% {
+    transform: rotate(25deg);
+  }
+  85% {
+    transform: rotate(-5deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+
+/* 部件 needle（path） */
+.ui-icon-anim-gauge__needle {
+  transform-box: view-box;
+  transform-origin: 12px 14px;
+}
+.ui-icon-anim-gauge:hover .ui-icon-anim-gauge__needle,
+.ui-icon-anim-gauge:hover.ui-icon-anim-gauge__needle,
+.ui-anim-scope:hover .ui-icon-anim-gauge__needle {
+  animation: ui-icon-anim-gauge-needle-0 900ms ease-in-out both;
+}
+
+/* at-sign（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/at-sign-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-at-sign-core-0 {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.8);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-at-sign-spin-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  40% {
+    transform: rotate(24deg);
+  }
+  75% {
+    transform: rotate(-8deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+
+/* 部件 core（circle） */
+.ui-icon-anim-at-sign__core {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+.ui-icon-anim-at-sign:hover .ui-icon-anim-at-sign__core,
+.ui-icon-anim-at-sign:hover.ui-icon-anim-at-sign__core,
+.ui-anim-scope:hover .ui-icon-anim-at-sign__core {
+  animation: ui-icon-anim-at-sign-core-0 500ms 200ms ease-in-out both;
+}
+
+
+/* 部件 spin（path） */
+.ui-icon-anim-at-sign__spin {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+.ui-icon-anim-at-sign:hover .ui-icon-anim-at-sign__spin,
+.ui-icon-anim-at-sign:hover.ui-icon-anim-at-sign__spin,
+.ui-anim-scope:hover .ui-icon-anim-at-sign__spin {
+  animation: ui-icon-anim-at-sign-spin-0 800ms ease-in-out both;
+}
+
+/* bell（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/bell-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-bell-bell-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-18deg);
+  }
+  50% {
+    transform: rotate(14deg);
+  }
+  75% {
+    transform: rotate(-9deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes ui-icon-anim-bell-clapper-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  50% {
+    transform: translateX(4px);
+  }
+  75% {
+    transform: translateX(-2.5px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+
+/* 部件 bell（svg） */
+.ui-icon-anim-bell__bell {
+}
+.ui-icon-anim-bell:hover .ui-icon-anim-bell__bell,
+.ui-icon-anim-bell:hover.ui-icon-anim-bell__bell,
+.ui-anim-scope:hover .ui-icon-anim-bell__bell {
+  animation: ui-icon-anim-bell-bell-0 1000ms ease-in-out both;
+}
+
+
+/* 部件 clapper（path） */
+.ui-icon-anim-bell__clapper {
+}
+.ui-icon-anim-bell:hover .ui-icon-anim-bell__clapper,
+.ui-icon-anim-bell:hover.ui-icon-anim-bell__clapper,
+.ui-anim-scope:hover .ui-icon-anim-bell__clapper {
+  animation: ui-icon-anim-bell-clapper-0 1000ms 40ms ease-in-out both;
+}
+
+/* calendar-check（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/calendar-check-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-calendar-check-ring-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  40% {
+    transform: translateY(1.6px);
+  }
+  75% {
+    transform: translateY(-0.3px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes ui-icon-anim-calendar-check-tick-0 {
+  0% {
+    stroke-dashoffset: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes ui-icon-anim-calendar-check-tick-1 {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+
+/* 部件 ring（path） */
+.ui-icon-anim-calendar-check__ring {
+}
+.ui-icon-anim-calendar-check:hover .ui-icon-anim-calendar-check__ring,
+.ui-icon-anim-calendar-check:hover.ui-icon-anim-calendar-check__ring,
+.ui-anim-scope:hover .ui-icon-anim-calendar-check__ring {
+  animation: ui-icon-anim-calendar-check-ring-0 600ms ease-in-out both;
+}
+
+
+/* 部件 ring（path） */
+.ui-icon-anim-calendar-check__ring {
+}
+.ui-icon-anim-calendar-check:hover .ui-icon-anim-calendar-check__ring,
+.ui-icon-anim-calendar-check:hover.ui-icon-anim-calendar-check__ring,
+.ui-anim-scope:hover .ui-icon-anim-calendar-check__ring {
+  animation: ui-icon-anim-calendar-check-ring-0 600ms ease-in-out both;
+}
+
+
+/* tick：opacity 上游未写 ease，取 framer-motion 默认 easeInOut。 */
+/* 部件 tick（path） */
+.ui-icon-anim-calendar-check__tick {
+  stroke-dasharray: 1;
+}
+.ui-icon-anim-calendar-check:hover .ui-icon-anim-calendar-check__tick,
+.ui-icon-anim-calendar-check:hover.ui-icon-anim-calendar-check__tick,
+.ui-anim-scope:hover .ui-icon-anim-calendar-check__tick {
+  animation:
+    ui-icon-anim-calendar-check-tick-0 450ms 200ms ease-out both,
+    ui-icon-anim-calendar-check-tick-1 250ms 200ms ease-in-out both;
+}
+
+/* shopping-cart（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/shopping-cart-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-shopping-cart-cart-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  35% {
+    transform: translateX(-1.2px);
+  }
+  70% {
+    transform: translateX(0.9px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+@keyframes ui-icon-anim-shopping-cart-wheel-variants-0-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  35% {
+    transform: translateY(-1px);
+  }
+  70% {
+    transform: translateY(0.3px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes ui-icon-anim-shopping-cart-wheel-variants-1-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  35% {
+    transform: translateY(-1px);
+  }
+  70% {
+    transform: translateY(0.3px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+
+/* 部件 cart（g） */
+.ui-icon-anim-shopping-cart__cart {
+}
+.ui-icon-anim-shopping-cart:hover .ui-icon-anim-shopping-cart__cart,
+.ui-icon-anim-shopping-cart:hover.ui-icon-anim-shopping-cart__cart,
+.ui-anim-scope:hover .ui-icon-anim-shopping-cart__cart {
+  animation: ui-icon-anim-shopping-cart-cart-0 700ms ease-in-out both;
+}
+
+
+/* 部件 wheel-variants-0（circle） */
+.ui-icon-anim-shopping-cart__wheel-variants-0 {
+}
+.ui-icon-anim-shopping-cart:hover .ui-icon-anim-shopping-cart__wheel-variants-0,
+.ui-icon-anim-shopping-cart:hover.ui-icon-anim-shopping-cart__wheel-variants-0,
+.ui-anim-scope:hover .ui-icon-anim-shopping-cart__wheel-variants-0 {
+  animation: ui-icon-anim-shopping-cart-wheel-variants-0-0 500ms 100ms ease-in-out both;
+}
+
+
+/* 部件 wheel-variants-1（circle） */
+.ui-icon-anim-shopping-cart__wheel-variants-1 {
+}
+.ui-icon-anim-shopping-cart:hover .ui-icon-anim-shopping-cart__wheel-variants-1,
+.ui-icon-anim-shopping-cart:hover.ui-icon-anim-shopping-cart__wheel-variants-1,
+.ui-anim-scope:hover .ui-icon-anim-shopping-cart__wheel-variants-1 {
+  animation: ui-icon-anim-shopping-cart-wheel-variants-1-0 500ms 200ms ease-in-out both;
+}
+
+/* mic（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/mic-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-mic-capsule-0 {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.1);
+  }
+  70% {
+    transform: scale(0.96);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-mic-stand-0 {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.06);
+  }
+  70% {
+    transform: scale(0.97);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+
+/* 部件 capsule（rect） */
+.ui-icon-anim-mic__capsule {
+  transform-box: view-box;
+  transform-origin: 12px 8.5px;
+}
+.ui-icon-anim-mic:hover .ui-icon-anim-mic__capsule,
+.ui-icon-anim-mic:hover.ui-icon-anim-mic__capsule,
+.ui-anim-scope:hover .ui-icon-anim-mic__capsule {
+  animation: ui-icon-anim-mic-capsule-0 600ms ease-in-out both;
+}
+
+
+/* 部件 stand（g） */
+.ui-icon-anim-mic__stand {
+  transform-box: view-box;
+  transform-origin: 12px 10px;
+}
+.ui-icon-anim-mic:hover .ui-icon-anim-mic__stand,
+.ui-icon-anim-mic:hover.ui-icon-anim-mic__stand,
+.ui-anim-scope:hover .ui-icon-anim-mic__stand {
+  animation: ui-icon-anim-mic-stand-0 600ms 100ms ease-in-out both;
+}
+
+/* trophy（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/trophy-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-trophy-trophy-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  25% {
+    transform: translateY(-2px);
+  }
+  50% {
+    transform: translateY(0px);
+  }
+  75% {
+    transform: translateY(-1px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes ui-icon-anim-trophy-trophy-1 {
+  0% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-8deg);
+  }
+  50% {
+    transform: rotate(6deg);
+  }
+  75% {
+    transform: rotate(-3deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+
+/* 部件 trophy（g） */
+.ui-icon-anim-trophy__trophy {
+  transform-box: view-box;
+  transform-origin: 12px 22px;
+}
+.ui-icon-anim-trophy:hover .ui-icon-anim-trophy__trophy,
+.ui-icon-anim-trophy:hover.ui-icon-anim-trophy__trophy,
+.ui-anim-scope:hover .ui-icon-anim-trophy__trophy {
+  animation:
+    ui-icon-anim-trophy-trophy-0 800ms ease-in-out both,
+    ui-icon-anim-trophy-trophy-1 800ms ease-in-out both;
+}
+
+/* hourglass（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/hourglass-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-hourglass-flip-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(180deg);
+  }
+}
+
+
+/* 部件 flip（g） */
+.ui-icon-anim-hourglass__flip {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+.ui-icon-anim-hourglass:hover .ui-icon-anim-hourglass__flip,
+.ui-icon-anim-hourglass:hover.ui-icon-anim-hourglass__flip,
+.ui-anim-scope:hover .ui-icon-anim-hourglass__flip {
+  animation: ui-icon-anim-hourglass-flip-0 900ms ease-in-out both;
+}
+
+/* file-plus（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/file-plus-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-file-plus-page-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  35% {
+    transform: translateY(-1px);
+  }
+  70% {
+    transform: translateY(0.4px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes ui-icon-anim-file-plus-plus-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(90deg);
+  }
+}
+
+@keyframes ui-icon-anim-file-plus-plus-1 {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.3);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+
+/* 部件 page（g） */
+.ui-icon-anim-file-plus__page {
+}
+.ui-icon-anim-file-plus:hover .ui-icon-anim-file-plus__page,
+.ui-icon-anim-file-plus:hover.ui-icon-anim-file-plus__page,
+.ui-anim-scope:hover .ui-icon-anim-file-plus__page {
+  animation: ui-icon-anim-file-plus-page-0 600ms ease-in-out both;
+}
+
+
+/* 部件 plus（path） */
+.ui-icon-anim-file-plus__plus {
+  transform-box: view-box;
+  transform-origin: 12px 15px;
+}
+.ui-icon-anim-file-plus:hover .ui-icon-anim-file-plus__plus,
+.ui-icon-anim-file-plus:hover.ui-icon-anim-file-plus__plus,
+.ui-anim-scope:hover .ui-icon-anim-file-plus__plus {
+  animation:
+    ui-icon-anim-file-plus-plus-0 500ms ease-in-out both,
+    ui-icon-anim-file-plus-plus-1 500ms ease-in-out both;
+}
+
+/* link（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/link-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-link-link-variants-right-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  50% {
+    transform: translateX(2px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+@keyframes ui-icon-anim-link-link-variants-right-1 {
+  0% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(3deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes ui-icon-anim-link-link-variants-left-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  50% {
+    transform: translateX(-2px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+@keyframes ui-icon-anim-link-link-variants-left-1 {
+  0% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(-3deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+
+/* 部件 link-variants-right（path） */
+.ui-icon-anim-link__link-variants-right {
+}
+.ui-icon-anim-link:hover .ui-icon-anim-link__link-variants-right,
+.ui-icon-anim-link:hover.ui-icon-anim-link__link-variants-right,
+.ui-anim-scope:hover .ui-icon-anim-link__link-variants-right {
+  animation:
+    ui-icon-anim-link-link-variants-right-0 900ms ease-in-out both,
+    ui-icon-anim-link-link-variants-right-1 900ms ease-in-out both;
+}
+
+
+/* 部件 link-variants-left（path） */
+.ui-icon-anim-link__link-variants-left {
+}
+.ui-icon-anim-link:hover .ui-icon-anim-link__link-variants-left,
+.ui-icon-anim-link:hover.ui-icon-anim-link__link-variants-left,
+.ui-anim-scope:hover .ui-icon-anim-link__link-variants-left {
+  animation:
+    ui-icon-anim-link-link-variants-left-0 900ms ease-in-out both,
+    ui-icon-anim-link-link-variants-left-1 900ms ease-in-out both;
+}
+
+/* printer（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/printer-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-printer-sheet-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  35% {
+    transform: translateY(-3px);
+  }
+  75% {
+    transform: translateY(0.6px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+
+/* 部件 sheet（rect） */
+.ui-icon-anim-printer__sheet {
+}
+.ui-icon-anim-printer:hover .ui-icon-anim-printer__sheet,
+.ui-icon-anim-printer:hover.ui-icon-anim-printer__sheet,
+.ui-anim-scope:hover .ui-icon-anim-printer__sheet {
+  animation: ui-icon-anim-printer-sheet-0 700ms ease-in-out both;
+}
+
+/* code（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/code-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-code-group-0 {
+  0% {
+    transform: scaleX(1);
+  }
+  50% {
+    transform: scaleX(0.75);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes ui-icon-anim-code-left-bracket-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  50% {
+    transform: translateX(3px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+@keyframes ui-icon-anim-code-left-bracket-1 {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes ui-icon-anim-code-right-bracket-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  50% {
+    transform: translateX(-3px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+@keyframes ui-icon-anim-code-right-bracket-1 {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+
+/* 部件 group（g） */
+.ui-icon-anim-code__group {
+}
+.ui-icon-anim-code:hover .ui-icon-anim-code__group,
+.ui-icon-anim-code:hover.ui-icon-anim-code__group,
+.ui-anim-scope:hover .ui-icon-anim-code__group {
+  animation: ui-icon-anim-code-group-0 480ms ease-out both;
+}
+
+
+/* 部件 left-bracket（path） */
+.ui-icon-anim-code__left-bracket {
+}
+.ui-icon-anim-code:hover .ui-icon-anim-code__left-bracket,
+.ui-icon-anim-code:hover.ui-icon-anim-code__left-bracket,
+.ui-anim-scope:hover .ui-icon-anim-code__left-bracket {
+  animation:
+    ui-icon-anim-code-left-bracket-0 550ms ease-out both,
+    ui-icon-anim-code-left-bracket-1 550ms ease-out both;
+}
+
+
+/* 部件 right-bracket（path） */
+.ui-icon-anim-code__right-bracket {
+}
+.ui-icon-anim-code:hover .ui-icon-anim-code__right-bracket,
+.ui-icon-anim-code:hover.ui-icon-anim-code__right-bracket,
+.ui-anim-scope:hover .ui-icon-anim-code__right-bracket {
+  animation:
+    ui-icon-anim-code-right-bracket-0 550ms 90ms ease-out both,
+    ui-icon-anim-code-right-bracket-1 550ms 90ms ease-out both;
+}
+
+/* puzzle（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/puzzle-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-puzzle-puzzle-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  40% {
+    transform: translateX(-1.5px);
+  }
+  70% {
+    transform: translateX(0px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+@keyframes ui-icon-anim-puzzle-puzzle-1 {
+  0% {
+    transform: translateY(0px);
+  }
+  40% {
+    transform: translateY(-1.5px);
+  }
+  70% {
+    transform: translateY(0px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes ui-icon-anim-puzzle-puzzle-2 {
+  0% {
+    transform: rotate(0deg);
+  }
+  40% {
+    transform: rotate(-10deg);
+  }
+  70% {
+    transform: rotate(2deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes ui-icon-anim-puzzle-puzzle-3 {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(0.94);
+  }
+  70% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+
+/* 部件 puzzle（path） */
+.ui-icon-anim-puzzle__puzzle {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+.ui-icon-anim-puzzle:hover .ui-icon-anim-puzzle__puzzle,
+.ui-icon-anim-puzzle:hover.ui-icon-anim-puzzle__puzzle,
+.ui-anim-scope:hover .ui-icon-anim-puzzle__puzzle {
+  animation:
+    ui-icon-anim-puzzle-puzzle-0 700ms ease-in-out both,
+    ui-icon-anim-puzzle-puzzle-1 700ms ease-in-out both,
+    ui-icon-anim-puzzle-puzzle-2 700ms ease-in-out both,
+    ui-icon-anim-puzzle-puzzle-3 700ms ease-in-out both;
+}
+
+/* bug（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/bug-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-bug-body-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-6deg);
+  }
+  50% {
+    transform: rotate(6deg);
+  }
+  75% {
+    transform: rotate(-4deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes ui-icon-anim-bug-body-1 {
+  0% {
+    transform: translateY(0px);
+  }
+  25% {
+    transform: translateY(-0.8px);
+  }
+  50% {
+    transform: translateY(0px);
+  }
+  75% {
+    transform: translateY(-0.8px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+
+/* 部件 body（g） */
+.ui-icon-anim-bug__body {
+  transform-box: view-box;
+  transform-origin: 12px 13px;
+}
+.ui-icon-anim-bug:hover .ui-icon-anim-bug__body,
+.ui-icon-anim-bug:hover.ui-icon-anim-bug__body,
+.ui-anim-scope:hover .ui-icon-anim-bug__body {
+  animation:
+    ui-icon-anim-bug-body-0 800ms ease-in-out both,
+    ui-icon-anim-bug-body-1 800ms ease-in-out both;
+}
+
+/* map-pin（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/map-pin-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-map-pin-pin-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-8deg);
+  }
+  50% {
+    transform: rotate(6deg);
+  }
+  75% {
+    transform: rotate(-3deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+
+/* 部件 pin（g） */
+.ui-icon-anim-map-pin__pin {
+  transform-box: view-box;
+  transform-origin: 12px 22px;
+}
+.ui-icon-anim-map-pin:hover .ui-icon-anim-map-pin__pin,
+.ui-icon-anim-map-pin:hover.ui-icon-anim-map-pin__pin,
+.ui-anim-scope:hover .ui-icon-anim-map-pin__pin {
+  animation: ui-icon-anim-map-pin-pin-0 1100ms ease-in-out both;
+}
+
+/* bell-off（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/bell-off-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-bell-off-body-0 {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes ui-icon-anim-bell-off-slash-0 {
+  0% {
+    stroke-dashoffset: 31;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+
+/* 部件 body（g） */
+.ui-icon-anim-bell-off__body {
+}
+.ui-icon-anim-bell-off:hover .ui-icon-anim-bell-off__body,
+.ui-icon-anim-bell-off:hover.ui-icon-anim-bell-off__body,
+.ui-anim-scope:hover .ui-icon-anim-bell-off__body {
+  animation: ui-icon-anim-bell-off-body-0 700ms ease-in-out both;
+}
+
+
+/* 部件 slash（path） */
+.ui-icon-anim-bell-off__slash {
+}
+.ui-icon-anim-bell-off:hover .ui-icon-anim-bell-off__slash,
+.ui-icon-anim-bell-off:hover.ui-icon-anim-bell-off__slash,
+.ui-anim-scope:hover .ui-icon-anim-bell-off__slash {
+  animation: ui-icon-anim-bell-off-slash-0 450ms 100ms ease-in-out both;
+}
+
+/* inbox（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/inbox-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-inbox-tray-0 {
+  0% {
+    transform: scaleY(1);
+  }
+  35% {
+    transform: scaleY(1.7);
+  }
+  70% {
+    transform: scaleY(0.9);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+
+/* 部件 tray（polyline） */
+.ui-icon-anim-inbox__tray {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+.ui-icon-anim-inbox:hover .ui-icon-anim-inbox__tray,
+.ui-icon-anim-inbox:hover.ui-icon-anim-inbox__tray,
+.ui-anim-scope:hover .ui-icon-anim-inbox__tray {
+  animation: ui-icon-anim-inbox-tray-0 600ms ease-in-out both;
+}
+
+/* scan（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/scan-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-scan-corner-variants-0-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  35% {
+    transform: translateX(1.5px);
+  }
+  70% {
+    transform: translateX(-0.3px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+@keyframes ui-icon-anim-scan-corner-variants-0-1 {
+  0% {
+    transform: translateY(0px);
+  }
+  35% {
+    transform: translateY(1.5px);
+  }
+  70% {
+    transform: translateY(-0.3px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes ui-icon-anim-scan-corner-variants-1-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  35% {
+    transform: translateX(-1.5px);
+  }
+  70% {
+    transform: translateX(0.3px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+@keyframes ui-icon-anim-scan-corner-variants-1-1 {
+  0% {
+    transform: translateY(0px);
+  }
+  35% {
+    transform: translateY(1.5px);
+  }
+  70% {
+    transform: translateY(-0.3px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes ui-icon-anim-scan-corner-variants-2-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  35% {
+    transform: translateX(-1.5px);
+  }
+  70% {
+    transform: translateX(0.3px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+@keyframes ui-icon-anim-scan-corner-variants-2-1 {
+  0% {
+    transform: translateY(0px);
+  }
+  35% {
+    transform: translateY(-1.5px);
+  }
+  70% {
+    transform: translateY(0.3px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes ui-icon-anim-scan-corner-variants-3-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  35% {
+    transform: translateX(1.5px);
+  }
+  70% {
+    transform: translateX(-0.3px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+@keyframes ui-icon-anim-scan-corner-variants-3-1 {
+  0% {
+    transform: translateY(0px);
+  }
+  35% {
+    transform: translateY(-1.5px);
+  }
+  70% {
+    transform: translateY(0.3px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+
+/* 部件 corner-variants-0（path） */
+.ui-icon-anim-scan__corner-variants-0 {
+}
+.ui-icon-anim-scan:hover .ui-icon-anim-scan__corner-variants-0,
+.ui-icon-anim-scan:hover.ui-icon-anim-scan__corner-variants-0,
+.ui-anim-scope:hover .ui-icon-anim-scan__corner-variants-0 {
+  animation:
+    ui-icon-anim-scan-corner-variants-0-0 600ms ease-in-out both,
+    ui-icon-anim-scan-corner-variants-0-1 600ms ease-in-out both;
+}
+
+
+/* 部件 corner-variants-1（path） */
+.ui-icon-anim-scan__corner-variants-1 {
+}
+.ui-icon-anim-scan:hover .ui-icon-anim-scan__corner-variants-1,
+.ui-icon-anim-scan:hover.ui-icon-anim-scan__corner-variants-1,
+.ui-anim-scope:hover .ui-icon-anim-scan__corner-variants-1 {
+  animation:
+    ui-icon-anim-scan-corner-variants-1-0 600ms ease-in-out both,
+    ui-icon-anim-scan-corner-variants-1-1 600ms ease-in-out both;
+}
+
+
+/* 部件 corner-variants-2（path） */
+.ui-icon-anim-scan__corner-variants-2 {
+}
+.ui-icon-anim-scan:hover .ui-icon-anim-scan__corner-variants-2,
+.ui-icon-anim-scan:hover.ui-icon-anim-scan__corner-variants-2,
+.ui-anim-scope:hover .ui-icon-anim-scan__corner-variants-2 {
+  animation:
+    ui-icon-anim-scan-corner-variants-2-0 600ms ease-in-out both,
+    ui-icon-anim-scan-corner-variants-2-1 600ms ease-in-out both;
+}
+
+
+/* 部件 corner-variants-3（path） */
+.ui-icon-anim-scan__corner-variants-3 {
+}
+.ui-icon-anim-scan:hover .ui-icon-anim-scan__corner-variants-3,
+.ui-icon-anim-scan:hover.ui-icon-anim-scan__corner-variants-3,
+.ui-anim-scope:hover .ui-icon-anim-scan__corner-variants-3 {
+  animation:
+    ui-icon-anim-scan-corner-variants-3-0 600ms ease-in-out both,
+    ui-icon-anim-scan-corner-variants-3-1 600ms ease-in-out both;
+}
+
+/* wifi（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/wifi-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-wifi-dot-0 {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.7);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-wifi-arc-variants-0-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  35% {
+    transform: translateY(-1.5px);
+  }
+  70% {
+    transform: translateY(0.4px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes ui-icon-anim-wifi-arc-variants-1-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  35% {
+    transform: translateY(-1.5px);
+  }
+  70% {
+    transform: translateY(0.4px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes ui-icon-anim-wifi-arc-variants-2-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  35% {
+    transform: translateY(-1.5px);
+  }
+  70% {
+    transform: translateY(0.4px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+
+/* 部件 dot（path） */
+.ui-icon-anim-wifi__dot {
+  transform-box: view-box;
+  transform-origin: 12px 20px;
+}
+.ui-icon-anim-wifi:hover .ui-icon-anim-wifi__dot,
+.ui-icon-anim-wifi:hover.ui-icon-anim-wifi__dot,
+.ui-anim-scope:hover .ui-icon-anim-wifi__dot {
+  animation: ui-icon-anim-wifi-dot-0 400ms ease-in-out both;
+}
+
+
+/* 部件 arc-variants-0（path） */
+.ui-icon-anim-wifi__arc-variants-0 {
+}
+.ui-icon-anim-wifi:hover .ui-icon-anim-wifi__arc-variants-0,
+.ui-icon-anim-wifi:hover.ui-icon-anim-wifi__arc-variants-0,
+.ui-anim-scope:hover .ui-icon-anim-wifi__arc-variants-0 {
+  animation: ui-icon-anim-wifi-arc-variants-0-0 600ms 260ms ease-in-out both;
+}
+
+
+/* 部件 arc-variants-1（path） */
+.ui-icon-anim-wifi__arc-variants-1 {
+}
+.ui-icon-anim-wifi:hover .ui-icon-anim-wifi__arc-variants-1,
+.ui-icon-anim-wifi:hover.ui-icon-anim-wifi__arc-variants-1,
+.ui-anim-scope:hover .ui-icon-anim-wifi__arc-variants-1 {
+  animation: ui-icon-anim-wifi-arc-variants-1-0 600ms 180ms ease-in-out both;
+}
+
+
+/* 部件 arc-variants-2（path） */
+.ui-icon-anim-wifi__arc-variants-2 {
+}
+.ui-icon-anim-wifi:hover .ui-icon-anim-wifi__arc-variants-2,
+.ui-icon-anim-wifi:hover.ui-icon-anim-wifi__arc-variants-2,
+.ui-anim-scope:hover .ui-icon-anim-wifi__arc-variants-2 {
+  animation: ui-icon-anim-wifi-arc-variants-2-0 600ms 100ms ease-in-out both;
+}
+
+/* network（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/network-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-network-node-variants-0-0 {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.2);
+  }
+  75% {
+    transform: scale(0.96);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-network-node-variants-1-0 {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.2);
+  }
+  75% {
+    transform: scale(0.96);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-network-branch-0 {
+  0% {
+    transform: scaleX(0);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes ui-icon-anim-network-branch-1 {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes ui-icon-anim-network-stem-0 {
+  0% {
+    stroke-dashoffset: -1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes ui-icon-anim-network-stem-1 {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+
+/* 部件 node-variants-0（rect） */
+.ui-icon-anim-network__node-variants-0 {
+  transform-box: view-box;
+  transform-origin: 19px 19px;
+}
+.ui-icon-anim-network:hover .ui-icon-anim-network__node-variants-0,
+.ui-icon-anim-network:hover.ui-icon-anim-network__node-variants-0,
+.ui-anim-scope:hover .ui-icon-anim-network__node-variants-0 {
+  animation: ui-icon-anim-network-node-variants-0-0 400ms 550ms ease-in-out both;
+}
+
+
+/* 部件 node-variants-0（rect） */
+.ui-icon-anim-network__node-variants-0 {
+  transform-box: view-box;
+  transform-origin: 5px 19px;
+}
+.ui-icon-anim-network:hover .ui-icon-anim-network__node-variants-0,
+.ui-icon-anim-network:hover.ui-icon-anim-network__node-variants-0,
+.ui-anim-scope:hover .ui-icon-anim-network__node-variants-0 {
+  animation: ui-icon-anim-network-node-variants-0-0 400ms 550ms ease-in-out both;
+}
+
+
+/* 部件 node-variants-1（rect） */
+.ui-icon-anim-network__node-variants-1 {
+  transform-box: view-box;
+  transform-origin: 12px 5px;
+}
+.ui-icon-anim-network:hover .ui-icon-anim-network__node-variants-1,
+.ui-icon-anim-network:hover.ui-icon-anim-network__node-variants-1,
+.ui-anim-scope:hover .ui-icon-anim-network__node-variants-1 {
+  animation: ui-icon-anim-network-node-variants-1-0 400ms ease-in-out both;
+}
+
+
+/* branch：opacity 上游未写 ease，取 framer-motion 默认 easeInOut。 */
+/* 部件 branch（path） */
+.ui-icon-anim-network__branch {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+.ui-icon-anim-network:hover .ui-icon-anim-network__branch,
+.ui-icon-anim-network:hover.ui-icon-anim-network__branch,
+.ui-anim-scope:hover .ui-icon-anim-network__branch {
+  animation:
+    ui-icon-anim-network-branch-0 300ms 300ms ease-out both,
+    ui-icon-anim-network-branch-1 250ms 300ms ease-in-out both;
+}
+
+
+/* stem：opacity 上游未写 ease，取 framer-motion 默认 easeInOut。 */
+/* 部件 stem（path） */
+.ui-icon-anim-network__stem {
+  stroke-dasharray: 1;
+}
+.ui-icon-anim-network:hover .ui-icon-anim-network__stem,
+.ui-icon-anim-network:hover.ui-icon-anim-network__stem,
+.ui-anim-scope:hover .ui-icon-anim-network__stem {
+  animation:
+    ui-icon-anim-network-stem-0 250ms 100ms ease-out both,
+    ui-icon-anim-network-stem-1 250ms 100ms ease-in-out both;
+}
+
+/* git-branch（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/git-branch-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-git-branch-node-variants-0-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  35% {
+    transform: translateY(-1.8px);
+  }
+  70% {
+    transform: translateY(0.5px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes ui-icon-anim-git-branch-node-variants-1-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  35% {
+    transform: translateY(-1.8px);
+  }
+  70% {
+    transform: translateY(0.5px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+
+/* 部件 node-variants-0（circle） */
+.ui-icon-anim-git-branch__node-variants-0 {
+}
+.ui-icon-anim-git-branch:hover .ui-icon-anim-git-branch__node-variants-0,
+.ui-icon-anim-git-branch:hover.ui-icon-anim-git-branch__node-variants-0,
+.ui-anim-scope:hover .ui-icon-anim-git-branch__node-variants-0 {
+  animation: ui-icon-anim-git-branch-node-variants-0-0 600ms 120ms ease-in-out both;
+}
+
+
+/* 部件 node-variants-1（circle） */
+.ui-icon-anim-git-branch__node-variants-1 {
+}
+.ui-icon-anim-git-branch:hover .ui-icon-anim-git-branch__node-variants-1,
+.ui-icon-anim-git-branch:hover.ui-icon-anim-git-branch__node-variants-1,
+.ui-anim-scope:hover .ui-icon-anim-git-branch__node-variants-1 {
+  animation: ui-icon-anim-git-branch-node-variants-1-0 600ms ease-in-out both;
+}
+
+/* clock（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/clock-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-clock-minute-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+
+/* 部件 minute（path） */
+.ui-icon-anim-clock__minute {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+.ui-icon-anim-clock:hover .ui-icon-anim-clock__minute,
+.ui-icon-anim-clock:hover.ui-icon-anim-clock__minute,
+.ui-anim-scope:hover .ui-icon-anim-clock__minute {
+  animation: ui-icon-anim-clock-minute-0 900ms ease-in-out both;
+}
+
+/* credit-card（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/credit-card-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-credit-card-card-0 {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-credit-card-card-1 {
+  0% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(-5deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes ui-icon-anim-credit-card-stripe-0 {
+  0% {
+    stroke-dashoffset: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes ui-icon-anim-credit-card-stripe-1 {
+  0% {
+    opacity: 0.4;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+
+/* 部件 card（g） */
+.ui-icon-anim-credit-card__card {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+.ui-icon-anim-credit-card:hover .ui-icon-anim-credit-card__card,
+.ui-icon-anim-credit-card:hover.ui-icon-anim-credit-card__card,
+.ui-anim-scope:hover .ui-icon-anim-credit-card__card {
+  animation:
+    ui-icon-anim-credit-card-card-0 700ms ease-in-out both,
+    ui-icon-anim-credit-card-card-1 700ms ease-in-out both;
+}
+
+
+/* stripe：opacity 上游未写 ease，取 framer-motion 默认 easeInOut。 */
+/* 部件 stripe（line） */
+.ui-icon-anim-credit-card__stripe {
+  stroke-dasharray: 1;
+}
+.ui-icon-anim-credit-card:hover .ui-icon-anim-credit-card__stripe,
+.ui-icon-anim-credit-card:hover.ui-icon-anim-credit-card__stripe,
+.ui-anim-scope:hover .ui-icon-anim-credit-card__stripe {
+  animation:
+    ui-icon-anim-credit-card-stripe-0 500ms 100ms ease-out both,
+    ui-icon-anim-credit-card-stripe-1 250ms 100ms ease-in-out both;
+}
+
+/* flag（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/flag-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-flag-flag-0 {
+  0% {
+    transform: skewY(0deg);
+  }
+  25% {
+    transform: skewY(11deg);
+  }
+  50% {
+    transform: skewY(-7deg);
+  }
+  75% {
+    transform: skewY(3deg);
+  }
+  100% {
+    transform: skewY(0deg);
+  }
+}
+
+
+/* 部件 flag（path） */
+.ui-icon-anim-flag__flag {
+  transform-box: view-box;
+  transform-origin: 4px 12px;
+}
+.ui-icon-anim-flag:hover .ui-icon-anim-flag__flag,
+.ui-icon-anim-flag:hover.ui-icon-anim-flag__flag,
+.ui-anim-scope:hover .ui-icon-anim-flag__flag {
+  animation: ui-icon-anim-flag-flag-0 800ms ease-in-out both;
+}
+
+/* pencil（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/pencil-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-pencil-write-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-4.5deg);
+  }
+  50% {
+    transform: rotate(4deg);
+  }
+  75% {
+    transform: rotate(-2deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+
+/* 部件 write（g） */
+.ui-icon-anim-pencil__write {
+  transform-box: view-box;
+  transform-origin: 3px 21px;
+}
+.ui-icon-anim-pencil:hover .ui-icon-anim-pencil__write,
+.ui-icon-anim-pencil:hover.ui-icon-anim-pencil__write,
+.ui-anim-scope:hover .ui-icon-anim-pencil__write {
+  animation: ui-icon-anim-pencil-write-0 700ms ease-in-out both;
+}
+
+/* play（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/play-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-play-play-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  40% {
+    transform: translateX(3px);
+  }
+  75% {
+    transform: translateX(-0.6px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+@keyframes ui-icon-anim-play-play-1 {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.1);
+  }
+  75% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+
+/* 部件 play（path） */
+.ui-icon-anim-play__play {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+.ui-icon-anim-play:hover .ui-icon-anim-play__play,
+.ui-icon-anim-play:hover.ui-icon-anim-play__play,
+.ui-anim-scope:hover .ui-icon-anim-play__play {
+  animation:
+    ui-icon-anim-play-play-0 600ms ease-in-out both,
+    ui-icon-anim-play-play-1 600ms ease-in-out both;
+}
+
+/* power（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/power-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-power-stem-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  35% {
+    transform: translateY(2px);
+  }
+  70% {
+    transform: translateY(-0.4px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes ui-icon-anim-power-ring-0 {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.07);
+  }
+  70% {
+    transform: scale(0.97);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+
+/* 部件 stem（path） */
+.ui-icon-anim-power__stem {
+}
+.ui-icon-anim-power:hover .ui-icon-anim-power__stem,
+.ui-icon-anim-power:hover.ui-icon-anim-power__stem,
+.ui-anim-scope:hover .ui-icon-anim-power__stem {
+  animation: ui-icon-anim-power-stem-0 600ms ease-in-out both;
+}
+
+
+/* 部件 ring（path） */
+.ui-icon-anim-power__ring {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+.ui-icon-anim-power:hover .ui-icon-anim-power__ring,
+.ui-icon-anim-power:hover.ui-icon-anim-power__ring,
+.ui-anim-scope:hover .ui-icon-anim-power__ring {
+  animation: ui-icon-anim-power-ring-0 600ms 100ms ease-in-out both;
+}
+
+/* zoom-out（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/zoom-out-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-zoom-out-lens-0 {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(0.9);
+  }
+  75% {
+    transform: scale(1.03);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-zoom-out-minus-0 {
+  0% {
+    transform: scaleX(1);
+  }
+  50% {
+    transform: scaleX(0.3);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+
+/* 部件 lens（g） */
+.ui-icon-anim-zoom-out__lens {
+  transform-box: view-box;
+  transform-origin: 11px 11px;
+}
+.ui-icon-anim-zoom-out:hover .ui-icon-anim-zoom-out__lens,
+.ui-icon-anim-zoom-out:hover.ui-icon-anim-zoom-out__lens,
+.ui-anim-scope:hover .ui-icon-anim-zoom-out__lens {
+  animation: ui-icon-anim-zoom-out-lens-0 600ms ease-in-out both;
+}
+
+
+/* 部件 minus（line） */
+.ui-icon-anim-zoom-out__minus {
+  transform-box: view-box;
+  transform-origin: 11px 11px;
+}
+.ui-icon-anim-zoom-out:hover .ui-icon-anim-zoom-out__minus,
+.ui-icon-anim-zoom-out:hover.ui-icon-anim-zoom-out__minus,
+.ui-anim-scope:hover .ui-icon-anim-zoom-out__minus {
+  animation: ui-icon-anim-zoom-out-minus-0 500ms ease-in-out both;
+}
+
+/* wind（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/wind-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-wind-gust-variants-0-0 {
+  0% {
+    stroke-dashoffset: -21;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes ui-icon-anim-wind-gust-variants-0-1 {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes ui-icon-anim-wind-gust-variants-0-2 {
+  0% {
+    transform: translateX(-3px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+@keyframes ui-icon-anim-wind-gust-variants-1-0 {
+  0% {
+    stroke-dashoffset: -29;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes ui-icon-anim-wind-gust-variants-1-1 {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes ui-icon-anim-wind-gust-variants-1-2 {
+  0% {
+    transform: translateX(-3px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+@keyframes ui-icon-anim-wind-gust-variants-2-0 {
+  0% {
+    stroke-dashoffset: -18;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes ui-icon-anim-wind-gust-variants-2-1 {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes ui-icon-anim-wind-gust-variants-2-2 {
+  0% {
+    transform: translateX(-3px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+
+/* gust-variants-0：opacity 上游未写 ease，取 framer-motion 默认 easeInOut。 */
+/* 部件 gust-variants-0（path） */
+.ui-icon-anim-wind__gust-variants-0 {
+}
+.ui-icon-anim-wind:hover .ui-icon-anim-wind__gust-variants-0,
+.ui-icon-anim-wind:hover.ui-icon-anim-wind__gust-variants-0,
+.ui-anim-scope:hover .ui-icon-anim-wind__gust-variants-0 {
+  animation:
+    ui-icon-anim-wind-gust-variants-0-0 550ms 240ms ease-out both,
+    ui-icon-anim-wind-gust-variants-0-1 250ms 240ms ease-in-out both,
+    ui-icon-anim-wind-gust-variants-0-2 550ms 240ms ease-out both;
+}
+
+
+/* gust-variants-1：opacity 上游未写 ease，取 framer-motion 默认 easeInOut。 */
+/* 部件 gust-variants-1（path） */
+.ui-icon-anim-wind__gust-variants-1 {
+}
+.ui-icon-anim-wind:hover .ui-icon-anim-wind__gust-variants-1,
+.ui-icon-anim-wind:hover.ui-icon-anim-wind__gust-variants-1,
+.ui-anim-scope:hover .ui-icon-anim-wind__gust-variants-1 {
+  animation:
+    ui-icon-anim-wind-gust-variants-1-0 550ms 120ms ease-out both,
+    ui-icon-anim-wind-gust-variants-1-1 250ms 120ms ease-in-out both,
+    ui-icon-anim-wind-gust-variants-1-2 550ms 120ms ease-out both;
+}
+
+
+/* gust-variants-2：opacity 上游未写 ease，取 framer-motion 默认 easeInOut。 */
+/* 部件 gust-variants-2（path） */
+.ui-icon-anim-wind__gust-variants-2 {
+}
+.ui-icon-anim-wind:hover .ui-icon-anim-wind__gust-variants-2,
+.ui-icon-anim-wind:hover.ui-icon-anim-wind__gust-variants-2,
+.ui-anim-scope:hover .ui-icon-anim-wind__gust-variants-2 {
+  animation:
+    ui-icon-anim-wind-gust-variants-2-0 550ms ease-out both,
+    ui-icon-anim-wind-gust-variants-2-1 250ms ease-in-out both,
+    ui-icon-anim-wind-gust-variants-2-2 550ms ease-out both;
+}
+
+/* chart-pie（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/chart-pie-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-chart-pie-slice-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  35% {
+    transform: translateX(0.9px);
+  }
+  70% {
+    transform: translateX(-0.15px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+@keyframes ui-icon-anim-chart-pie-slice-1 {
+  0% {
+    transform: translateY(0px);
+  }
+  35% {
+    transform: translateY(-0.9px);
+  }
+  70% {
+    transform: translateY(0.15px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+
+/* 部件 slice（path） */
+.ui-icon-anim-chart-pie__slice {
+}
+.ui-icon-anim-chart-pie:hover .ui-icon-anim-chart-pie__slice,
+.ui-icon-anim-chart-pie:hover.ui-icon-anim-chart-pie__slice,
+.ui-anim-scope:hover .ui-icon-anim-chart-pie__slice {
+  animation:
+    ui-icon-anim-chart-pie-slice-0 600ms ease-in-out both,
+    ui-icon-anim-chart-pie-slice-1 600ms ease-in-out both;
+}
+
+/* ban（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/ban-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-ban-slash-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-16deg);
+  }
+  50% {
+    transform: rotate(12deg);
+  }
+  75% {
+    transform: rotate(-6deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+
+/* 部件 slash（path） */
+.ui-icon-anim-ban__slash {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+.ui-icon-anim-ban:hover .ui-icon-anim-ban__slash,
+.ui-icon-anim-ban:hover.ui-icon-anim-ban__slash,
+.ui-anim-scope:hover .ui-icon-anim-ban__slash {
+  animation: ui-icon-anim-ban-slash-0 700ms ease-in-out both;
+}
+
+/* contact（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/contact-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-contact-shoulders-0 {
+  0% {
+    transform: scaleY(1);
+  }
+  40% {
+    transform: scaleY(0.8);
+  }
+  75% {
+    transform: scaleY(1.05);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes ui-icon-anim-contact-head-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  35% {
+    transform: translateY(-1.2px);
+  }
+  70% {
+    transform: translateY(0.4px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+
+/* 部件 shoulders（path） */
+.ui-icon-anim-contact__shoulders {
+  transform-box: view-box;
+  transform-origin: 12px 21px;
+}
+.ui-icon-anim-contact:hover .ui-icon-anim-contact__shoulders,
+.ui-icon-anim-contact:hover.ui-icon-anim-contact__shoulders,
+.ui-anim-scope:hover .ui-icon-anim-contact__shoulders {
+  animation: ui-icon-anim-contact-shoulders-0 500ms 300ms ease-in-out both;
+}
+
+
+/* 部件 head（circle） */
+.ui-icon-anim-contact__head {
+}
+.ui-icon-anim-contact:hover .ui-icon-anim-contact__head,
+.ui-icon-anim-contact:hover.ui-icon-anim-contact__head,
+.ui-anim-scope:hover .ui-icon-anim-contact__head {
+  animation: ui-icon-anim-contact-head-0 600ms ease-in-out both;
+}
+
+/* skip-forward（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/skip-forward-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-skip-forward-bar-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  35% {
+    transform: translateX(0.8px);
+  }
+  70% {
+    transform: translateX(-0.2px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+@keyframes ui-icon-anim-skip-forward-play-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  35% {
+    transform: translateX(1.5px);
+  }
+  70% {
+    transform: translateX(-0.5px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+
+/* 部件 bar（path） */
+.ui-icon-anim-skip-forward__bar {
+}
+.ui-icon-anim-skip-forward:hover .ui-icon-anim-skip-forward__bar,
+.ui-icon-anim-skip-forward:hover.ui-icon-anim-skip-forward__bar,
+.ui-anim-scope:hover .ui-icon-anim-skip-forward__bar {
+  animation: ui-icon-anim-skip-forward-bar-0 600ms 100ms ease-in-out both;
+}
+
+
+/* 部件 play（path） */
+.ui-icon-anim-skip-forward__play {
+}
+.ui-icon-anim-skip-forward:hover .ui-icon-anim-skip-forward__play,
+.ui-icon-anim-skip-forward:hover.ui-icon-anim-skip-forward__play,
+.ui-anim-scope:hover .ui-icon-anim-skip-forward__play {
+  animation: ui-icon-anim-skip-forward-play-0 600ms ease-in-out both;
+}
+
+/* video（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/video-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-video-lens-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  35% {
+    transform: translateX(1px);
+  }
+  70% {
+    transform: translateX(-0.3px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+
+/* 部件 lens（path） */
+.ui-icon-anim-video__lens {
+}
+.ui-icon-anim-video:hover .ui-icon-anim-video__lens,
+.ui-icon-anim-video:hover.ui-icon-anim-video__lens,
+.ui-anim-scope:hover .ui-icon-anim-video__lens {
+  animation: ui-icon-anim-video-lens-0 600ms ease-in-out both;
+}
+
+/* lock（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/lock-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-lock-lock-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  25% {
+    transform: translateX(-3px);
+  }
+  50% {
+    transform: translateX(3px);
+  }
+  75% {
+    transform: translateX(-3px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+@keyframes ui-icon-anim-lock-lock-1 {
+  0% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-2deg);
+  }
+  50% {
+    transform: rotate(2deg);
+  }
+  75% {
+    transform: rotate(-2deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+
+/* lock：x、rotate 上游未写 ease，取 framer-motion 默认 easeInOut。 */
+/* 部件 lock（svg） */
+.ui-icon-anim-lock__lock {
+}
+.ui-icon-anim-lock:hover .ui-icon-anim-lock__lock,
+.ui-icon-anim-lock:hover.ui-icon-anim-lock__lock,
+.ui-anim-scope:hover .ui-icon-anim-lock__lock {
+  animation:
+    ui-icon-anim-lock-lock-0 550ms ease-in-out both,
+    ui-icon-anim-lock-lock-1 550ms ease-in-out both;
+}
+
+/* coffee（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/coffee-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-coffee-steam-0 {
+  0% {
+    opacity: 1;
+  }
+  25% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+  75% {
+    opacity: 0.4;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes ui-icon-anim-coffee-steam-1 {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes ui-icon-anim-coffee-cup-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+
+/* 部件 steam（path） */
+.ui-icon-anim-coffee__steam {
+}
+.ui-icon-anim-coffee:hover .ui-icon-anim-coffee__steam,
+.ui-icon-anim-coffee:hover.ui-icon-anim-coffee__steam,
+.ui-anim-scope:hover .ui-icon-anim-coffee__steam {
+  animation:
+    ui-icon-anim-coffee-steam-0 800ms ease-in-out both,
+    ui-icon-anim-coffee-steam-1 800ms ease-in-out both;
+}
+
+
+/* 部件 steam（path） */
+.ui-icon-anim-coffee__steam {
+}
+.ui-icon-anim-coffee:hover .ui-icon-anim-coffee__steam,
+.ui-icon-anim-coffee:hover.ui-icon-anim-coffee__steam,
+.ui-anim-scope:hover .ui-icon-anim-coffee__steam {
+  animation:
+    ui-icon-anim-coffee-steam-0 800ms ease-in-out both,
+    ui-icon-anim-coffee-steam-1 800ms ease-in-out both;
+}
+
+
+/* 部件 steam（path） */
+.ui-icon-anim-coffee__steam {
+}
+.ui-icon-anim-coffee:hover .ui-icon-anim-coffee__steam,
+.ui-icon-anim-coffee:hover.ui-icon-anim-coffee__steam,
+.ui-anim-scope:hover .ui-icon-anim-coffee__steam {
+  animation:
+    ui-icon-anim-coffee-steam-0 800ms ease-in-out both,
+    ui-icon-anim-coffee-steam-1 800ms ease-in-out both;
+}
+
+
+/* 部件 cup（path） */
+.ui-icon-anim-coffee__cup {
+}
+.ui-icon-anim-coffee:hover .ui-icon-anim-coffee__cup,
+.ui-icon-anim-coffee:hover.ui-icon-anim-coffee__cup,
+.ui-anim-scope:hover .ui-icon-anim-coffee__cup {
+  animation: ui-icon-anim-coffee-cup-0 600ms ease-in-out both;
+}
+
+/* wrench（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/wrench-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-wrench-wrench-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-12deg);
+  }
+  50% {
+    transform: rotate(10deg);
+  }
+  75% {
+    transform: rotate(-6deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+
+/* 部件 wrench（path） */
+.ui-icon-anim-wrench__wrench {
+  transform-box: view-box;
+  transform-origin: 15px 9px;
+}
+.ui-icon-anim-wrench:hover .ui-icon-anim-wrench__wrench,
+.ui-icon-anim-wrench:hover.ui-icon-anim-wrench__wrench,
+.ui-anim-scope:hover .ui-icon-anim-wrench__wrench {
+  animation: ui-icon-anim-wrench-wrench-0 800ms ease-in-out both;
+}
+
+/* activity（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/activity-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-activity-activity-0 {
+  0% {
+    stroke-dasharray: none;
+  }
+  100% {
+    stroke-dasharray: 60 120;
+  }
+}
+
+@keyframes ui-icon-anim-activity-activity-1 {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -180;
+  }
+}
+
+
+/* 部件 activity（path） */
+.ui-icon-anim-activity__activity {
+}
+.ui-icon-anim-activity:hover .ui-icon-anim-activity__activity,
+.ui-icon-anim-activity:hover.ui-icon-anim-activity__activity,
+.ui-anim-scope:hover .ui-icon-anim-activity__activity {
+  animation:
+    ui-icon-anim-activity-activity-0 1400ms linear both,
+    ui-icon-anim-activity-activity-1 1400ms linear both;
+}
+
+/* headset（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/headset-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-headset-frame-0 {
+  0% {
+    stroke-dashoffset: 240;
+  }
+  50% {
+    stroke-dashoffset: 40;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes ui-icon-anim-headset-frame-1 {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(0.96);
+  }
+  75% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-headset-frame-2 {
+  0% {
+    transform: rotate(0deg);
+  }
+  35% {
+    transform: rotate(-2deg);
+  }
+  75% {
+    transform: rotate(1deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes ui-icon-anim-headset-tail-0 {
+  0% {
+    stroke-dashoffset: 100;
+  }
+  50% {
+    stroke-dashoffset: 20;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes ui-icon-anim-headset-tail-1 {
+  0% {
+    transform: translateX(10px);
+  }
+  50% {
+    transform: translateX(-4px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+@keyframes ui-icon-anim-headset-tail-2 {
+  0% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+
+/* 部件 frame（path） */
+.ui-icon-anim-headset__frame {
+}
+.ui-icon-anim-headset:hover .ui-icon-anim-headset__frame,
+.ui-icon-anim-headset:hover.ui-icon-anim-headset__frame,
+.ui-anim-scope:hover .ui-icon-anim-headset__frame {
+  animation:
+    ui-icon-anim-headset-frame-0 950ms cubic-bezier(0.2, 0.85, 0.25, 1.0) both,
+    ui-icon-anim-headset-frame-1 950ms cubic-bezier(0.2, 0.85, 0.25, 1.0) both,
+    ui-icon-anim-headset-frame-2 950ms cubic-bezier(0.2, 0.85, 0.25, 1.0) both;
+}
+
+
+/* 部件 tail（path） */
+.ui-icon-anim-headset__tail {
+}
+.ui-icon-anim-headset:hover .ui-icon-anim-headset__tail,
+.ui-icon-anim-headset:hover.ui-icon-anim-headset__tail,
+.ui-anim-scope:hover .ui-icon-anim-headset__tail {
+  animation:
+    ui-icon-anim-headset-tail-0 700ms 180ms cubic-bezier(0.22, 0.9, 0.28, 1.0) both,
+    ui-icon-anim-headset-tail-1 700ms 180ms cubic-bezier(0.22, 0.9, 0.28, 1.0) both,
+    ui-icon-anim-headset-tail-2 700ms 180ms cubic-bezier(0.22, 0.9, 0.28, 1.0) both;
+}
+
+/* command（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/command-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-command-cross-0 {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(0.88);
+  }
+  75% {
+    transform: scale(1.03);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-command-loop-variants-0-0 {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.2);
+  }
+  75% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-command-loop-variants-1-0 {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.2);
+  }
+  75% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-command-loop-variants-2-0 {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.2);
+  }
+  75% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-command-loop-variants-3-0 {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.2);
+  }
+  75% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+
+/* 部件 cross（g） */
+.ui-icon-anim-command__cross {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+.ui-icon-anim-command:hover .ui-icon-anim-command__cross,
+.ui-icon-anim-command:hover.ui-icon-anim-command__cross,
+.ui-anim-scope:hover .ui-icon-anim-command__cross {
+  animation: ui-icon-anim-command-cross-0 500ms ease-in-out both;
+}
+
+
+/* 部件 loop-variants-0（path） */
+.ui-icon-anim-command__loop-variants-0 {
+  transform-box: view-box;
+  transform-origin: 6px 6px;
+}
+.ui-icon-anim-command:hover .ui-icon-anim-command__loop-variants-0,
+.ui-icon-anim-command:hover.ui-icon-anim-command__loop-variants-0,
+.ui-anim-scope:hover .ui-icon-anim-command__loop-variants-0 {
+  animation: ui-icon-anim-command-loop-variants-0-0 500ms ease-in-out both;
+}
+
+
+/* 部件 loop-variants-1（path） */
+.ui-icon-anim-command__loop-variants-1 {
+  transform-box: view-box;
+  transform-origin: 18px 6px;
+}
+.ui-icon-anim-command:hover .ui-icon-anim-command__loop-variants-1,
+.ui-icon-anim-command:hover.ui-icon-anim-command__loop-variants-1,
+.ui-anim-scope:hover .ui-icon-anim-command__loop-variants-1 {
+  animation: ui-icon-anim-command-loop-variants-1-0 500ms 80ms ease-in-out both;
+}
+
+
+/* 部件 loop-variants-2（path） */
+.ui-icon-anim-command__loop-variants-2 {
+  transform-box: view-box;
+  transform-origin: 18px 18px;
+}
+.ui-icon-anim-command:hover .ui-icon-anim-command__loop-variants-2,
+.ui-icon-anim-command:hover.ui-icon-anim-command__loop-variants-2,
+.ui-anim-scope:hover .ui-icon-anim-command__loop-variants-2 {
+  animation: ui-icon-anim-command-loop-variants-2-0 500ms 160ms ease-in-out both;
+}
+
+
+/* 部件 loop-variants-3（path） */
+.ui-icon-anim-command__loop-variants-3 {
+  transform-box: view-box;
+  transform-origin: 6px 18px;
+}
+.ui-icon-anim-command:hover .ui-icon-anim-command__loop-variants-3,
+.ui-icon-anim-command:hover.ui-icon-anim-command__loop-variants-3,
+.ui-anim-scope:hover .ui-icon-anim-command__loop-variants-3 {
+  animation: ui-icon-anim-command-loop-variants-3-0 500ms 240ms ease-in-out both;
+}
+
+/* map（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/map-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-map-map-0 {
+  0% {
+    transform: skewX(0deg);
+  }
+  25% {
+    transform: skewX(-8deg);
+  }
+  50% {
+    transform: skewX(6deg);
+  }
+  75% {
+    transform: skewX(-3deg);
+  }
+  100% {
+    transform: skewX(0deg);
+  }
+}
+
+
+/* 部件 map（g） */
+.ui-icon-anim-map__map {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+.ui-icon-anim-map:hover .ui-icon-anim-map__map,
+.ui-icon-anim-map:hover.ui-icon-anim-map__map,
+.ui-anim-scope:hover .ui-icon-anim-map__map {
+  animation: ui-icon-anim-map-map-0 800ms ease-in-out both;
+}
+
+/* package（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/package-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-package-box-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  35% {
+    transform: translateY(-1px);
+  }
+  70% {
+    transform: translateY(0.3px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes ui-icon-anim-package-box-1 {
+  0% {
+    transform: rotate(0deg);
+  }
+  35% {
+    transform: rotate(-6deg);
+  }
+  70% {
+    transform: rotate(4deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+
+/* 部件 box（g） */
+.ui-icon-anim-package__box {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+.ui-icon-anim-package:hover .ui-icon-anim-package__box,
+.ui-icon-anim-package:hover.ui-icon-anim-package__box,
+.ui-anim-scope:hover .ui-icon-anim-package__box {
+  animation:
+    ui-icon-anim-package-box-0 700ms ease-in-out both,
+    ui-icon-anim-package-box-1 700ms ease-in-out both;
+}
+
+/* wallet（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/wallet-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-wallet-lid-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  35% {
+    transform: rotate(-4deg);
+  }
+  70% {
+    transform: rotate(1.5deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+
+/* 部件 lid（path） */
+.ui-icon-anim-wallet__lid {
+  transform-box: view-box;
+  transform-origin: 3px 5px;
+}
+.ui-icon-anim-wallet:hover .ui-icon-anim-wallet__lid,
+.ui-icon-anim-wallet:hover.ui-icon-anim-wallet__lid,
+.ui-anim-scope:hover .ui-icon-anim-wallet__lid {
+  animation: ui-icon-anim-wallet-lid-0 600ms ease-in-out both;
+}
+
+/* watch（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/watch-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-watch-hand-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+
+/* 部件 hand（path） */
+.ui-icon-anim-watch__hand {
+  transform-box: view-box;
+  transform-origin: 12px 12.2px;
+}
+.ui-icon-anim-watch:hover .ui-icon-anim-watch__hand,
+.ui-icon-anim-watch:hover.ui-icon-anim-watch__hand,
+.ui-anim-scope:hover .ui-icon-anim-watch__hand {
+  animation: ui-icon-anim-watch-hand-0 900ms ease-in-out both;
+}
+
+/* file（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/file-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-file-fold-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  35% {
+    transform: translateX(1.4px);
+  }
+  70% {
+    transform: translateX(-0.3px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+@keyframes ui-icon-anim-file-fold-1 {
+  0% {
+    transform: translateY(0px);
+  }
+  35% {
+    transform: translateY(-1px);
+  }
+  70% {
+    transform: translateY(0.3px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+
+/* 部件 fold（path） */
+.ui-icon-anim-file__fold {
+}
+.ui-icon-anim-file:hover .ui-icon-anim-file__fold,
+.ui-icon-anim-file:hover.ui-icon-anim-file__fold,
+.ui-anim-scope:hover .ui-icon-anim-file__fold {
+  animation:
+    ui-icon-anim-file-fold-0 700ms ease-in-out both,
+    ui-icon-anim-file-fold-1 700ms ease-in-out both;
+}
+
+/* calculator（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/calculator-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-calculator-display-0 {
+  0% {
+    stroke-dashoffset: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes ui-icon-anim-calculator-display-1 {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes ui-icon-anim-calculator-key-variants-0-0 {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.8);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-calculator-key-variants-1-0 {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.8);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-calculator-key-variants-2-0 {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.8);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-calculator-key-variants-3-0 {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.8);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-calculator-key-variants-4-0 {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.8);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-calculator-key-variants-5-0 {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.8);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-calculator-key-variants-6-0 {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.8);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+
+/* 部件 display（line） */
+.ui-icon-anim-calculator__display {
+  stroke-dasharray: 1;
+}
+.ui-icon-anim-calculator:hover .ui-icon-anim-calculator__display,
+.ui-icon-anim-calculator:hover.ui-icon-anim-calculator__display,
+.ui-anim-scope:hover .ui-icon-anim-calculator__display {
+  animation:
+    ui-icon-anim-calculator-display-0 400ms ease-out both,
+    ui-icon-anim-calculator-display-1 250ms ease-out both;
+}
+
+
+/* 部件 key-variants-0（path） */
+.ui-icon-anim-calculator__key-variants-0 {
+  transform-box: view-box;
+  transform-origin: 16px 10px;
+}
+.ui-icon-anim-calculator:hover .ui-icon-anim-calculator__key-variants-0,
+.ui-icon-anim-calculator:hover.ui-icon-anim-calculator__key-variants-0,
+.ui-anim-scope:hover .ui-icon-anim-calculator__key-variants-0 {
+  animation: ui-icon-anim-calculator-key-variants-0-0 350ms 150ms ease-in-out both;
+}
+
+
+/* 部件 key-variants-1（path） */
+.ui-icon-anim-calculator__key-variants-1 {
+  transform-box: view-box;
+  transform-origin: 12px 10px;
+}
+.ui-icon-anim-calculator:hover .ui-icon-anim-calculator__key-variants-1,
+.ui-icon-anim-calculator:hover.ui-icon-anim-calculator__key-variants-1,
+.ui-anim-scope:hover .ui-icon-anim-calculator__key-variants-1 {
+  animation: ui-icon-anim-calculator-key-variants-1-0 350ms 210ms ease-in-out both;
+}
+
+
+/* 部件 key-variants-2（path） */
+.ui-icon-anim-calculator__key-variants-2 {
+  transform-box: view-box;
+  transform-origin: 8px 10px;
+}
+.ui-icon-anim-calculator:hover .ui-icon-anim-calculator__key-variants-2,
+.ui-icon-anim-calculator:hover.ui-icon-anim-calculator__key-variants-2,
+.ui-anim-scope:hover .ui-icon-anim-calculator__key-variants-2 {
+  animation: ui-icon-anim-calculator-key-variants-2-0 350ms 270ms ease-in-out both;
+}
+
+
+/* 部件 key-variants-3（path） */
+.ui-icon-anim-calculator__key-variants-3 {
+  transform-box: view-box;
+  transform-origin: 12px 14px;
+}
+.ui-icon-anim-calculator:hover .ui-icon-anim-calculator__key-variants-3,
+.ui-icon-anim-calculator:hover.ui-icon-anim-calculator__key-variants-3,
+.ui-anim-scope:hover .ui-icon-anim-calculator__key-variants-3 {
+  animation: ui-icon-anim-calculator-key-variants-3-0 350ms 330ms ease-in-out both;
+}
+
+
+/* 部件 key-variants-4（path） */
+.ui-icon-anim-calculator__key-variants-4 {
+  transform-box: view-box;
+  transform-origin: 8px 14px;
+}
+.ui-icon-anim-calculator:hover .ui-icon-anim-calculator__key-variants-4,
+.ui-icon-anim-calculator:hover.ui-icon-anim-calculator__key-variants-4,
+.ui-anim-scope:hover .ui-icon-anim-calculator__key-variants-4 {
+  animation: ui-icon-anim-calculator-key-variants-4-0 350ms 390ms ease-in-out both;
+}
+
+
+/* 部件 key-variants-5（path） */
+.ui-icon-anim-calculator__key-variants-5 {
+  transform-box: view-box;
+  transform-origin: 12px 18px;
+}
+.ui-icon-anim-calculator:hover .ui-icon-anim-calculator__key-variants-5,
+.ui-icon-anim-calculator:hover.ui-icon-anim-calculator__key-variants-5,
+.ui-anim-scope:hover .ui-icon-anim-calculator__key-variants-5 {
+  animation: ui-icon-anim-calculator-key-variants-5-0 350ms 450ms ease-in-out both;
+}
+
+
+/* 部件 key-variants-6（path） */
+.ui-icon-anim-calculator__key-variants-6 {
+  transform-box: view-box;
+  transform-origin: 8px 18px;
+}
+.ui-icon-anim-calculator:hover .ui-icon-anim-calculator__key-variants-6,
+.ui-icon-anim-calculator:hover.ui-icon-anim-calculator__key-variants-6,
+.ui-anim-scope:hover .ui-icon-anim-calculator__key-variants-6 {
+  animation: ui-icon-anim-calculator-key-variants-6-0 350ms 510ms ease-in-out both;
+}
+
+/* chart-bar（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/chart-bar-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-chart-bar-bar-variants-0-0 {
+  0% {
+    transform: scaleX(1);
+  }
+  35% {
+    transform: scaleX(0.4);
+  }
+  75% {
+    transform: scaleX(1.04);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes ui-icon-anim-chart-bar-bar-variants-1-0 {
+  0% {
+    transform: scaleX(1);
+  }
+  35% {
+    transform: scaleX(0.4);
+  }
+  75% {
+    transform: scaleX(1.04);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes ui-icon-anim-chart-bar-bar-variants-2-0 {
+  0% {
+    transform: scaleX(1);
+  }
+  35% {
+    transform: scaleX(0.4);
+  }
+  75% {
+    transform: scaleX(1.04);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+
+/* 部件 bar-variants-0（path） */
+.ui-icon-anim-chart-bar__bar-variants-0 {
+  transform-box: view-box;
+  transform-origin: 7px 12px;
+}
+.ui-icon-anim-chart-bar:hover .ui-icon-anim-chart-bar__bar-variants-0,
+.ui-icon-anim-chart-bar:hover.ui-icon-anim-chart-bar__bar-variants-0,
+.ui-anim-scope:hover .ui-icon-anim-chart-bar__bar-variants-0 {
+  animation: ui-icon-anim-chart-bar-bar-variants-0-0 600ms ease-in-out both;
+}
+
+
+/* 部件 bar-variants-1（path） */
+.ui-icon-anim-chart-bar__bar-variants-1 {
+  transform-box: view-box;
+  transform-origin: 7px 12px;
+}
+.ui-icon-anim-chart-bar:hover .ui-icon-anim-chart-bar__bar-variants-1,
+.ui-icon-anim-chart-bar:hover.ui-icon-anim-chart-bar__bar-variants-1,
+.ui-anim-scope:hover .ui-icon-anim-chart-bar__bar-variants-1 {
+  animation: ui-icon-anim-chart-bar-bar-variants-1-0 600ms 100ms ease-in-out both;
+}
+
+
+/* 部件 bar-variants-2（path） */
+.ui-icon-anim-chart-bar__bar-variants-2 {
+  transform-box: view-box;
+  transform-origin: 7px 12px;
+}
+.ui-icon-anim-chart-bar:hover .ui-icon-anim-chart-bar__bar-variants-2,
+.ui-icon-anim-chart-bar:hover.ui-icon-anim-chart-bar__bar-variants-2,
+.ui-anim-scope:hover .ui-icon-anim-chart-bar__bar-variants-2 {
+  animation: ui-icon-anim-chart-bar-bar-variants-2-0 600ms 200ms ease-in-out both;
+}
+
+/* undo（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/undo-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-undo-undo-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  35% {
+    transform: rotate(-12deg);
+  }
+  70% {
+    transform: rotate(3deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+
+/* 部件 undo（g） */
+.ui-icon-anim-undo__undo {
+  transform-box: view-box;
+  transform-origin: 12px 17px;
+}
+.ui-icon-anim-undo:hover .ui-icon-anim-undo__undo,
+.ui-icon-anim-undo:hover.ui-icon-anim-undo__undo,
+.ui-anim-scope:hover .ui-icon-anim-undo__undo {
+  animation: ui-icon-anim-undo-undo-0 700ms ease-in-out both;
+}
+
+/* gamepad（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/gamepad-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-gamepad-body-0 {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-gamepad-button-0 {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.85);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-gamepad-button-1 {
+  0% {
+    transform: rotate(0deg);
+  }
+  33.3333% {
+    transform: rotate(20deg);
+  }
+  66.6667% {
+    transform: rotate(-20deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+
+/* 部件 body（path） */
+.ui-icon-anim-gamepad__body {
+}
+.ui-icon-anim-gamepad:hover .ui-icon-anim-gamepad__body,
+.ui-icon-anim-gamepad:hover.ui-icon-anim-gamepad__body,
+.ui-anim-scope:hover .ui-icon-anim-gamepad__body {
+  animation: ui-icon-anim-gamepad-body-0 500ms ease-in-out both;
+}
+
+
+/* 部件 button（line） */
+.ui-icon-anim-gamepad__button {
+}
+.ui-icon-anim-gamepad:hover .ui-icon-anim-gamepad__button,
+.ui-icon-anim-gamepad:hover.ui-icon-anim-gamepad__button,
+.ui-anim-scope:hover .ui-icon-anim-gamepad__button {
+  animation:
+    ui-icon-anim-gamepad-button-0 400ms ease-in-out both,
+    ui-icon-anim-gamepad-button-1 400ms ease-in-out both;
+}
+
+
+/* 部件 button（line） */
+.ui-icon-anim-gamepad__button {
+}
+.ui-icon-anim-gamepad:hover .ui-icon-anim-gamepad__button,
+.ui-icon-anim-gamepad:hover.ui-icon-anim-gamepad__button,
+.ui-anim-scope:hover .ui-icon-anim-gamepad__button {
+  animation:
+    ui-icon-anim-gamepad-button-0 400ms ease-in-out both,
+    ui-icon-anim-gamepad-button-1 400ms ease-in-out both;
+}
+
+
+/* 部件 button（line） */
+.ui-icon-anim-gamepad__button {
+}
+.ui-icon-anim-gamepad:hover .ui-icon-anim-gamepad__button,
+.ui-icon-anim-gamepad:hover.ui-icon-anim-gamepad__button,
+.ui-anim-scope:hover .ui-icon-anim-gamepad__button {
+  animation:
+    ui-icon-anim-gamepad-button-0 400ms ease-in-out both,
+    ui-icon-anim-gamepad-button-1 400ms ease-in-out both;
+}
+
+
+/* 部件 button（line） */
+.ui-icon-anim-gamepad__button {
+}
+.ui-icon-anim-gamepad:hover .ui-icon-anim-gamepad__button,
+.ui-icon-anim-gamepad:hover.ui-icon-anim-gamepad__button,
+.ui-anim-scope:hover .ui-icon-anim-gamepad__button {
+  animation:
+    ui-icon-anim-gamepad-button-0 400ms ease-in-out both,
+    ui-icon-anim-gamepad-button-1 400ms ease-in-out both;
+}
+
+/* book-open（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/book-open-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-book-open-book-0 {
+  0% {
+    transform: scaleX(1);
+  }
+  30% {
+    transform: scaleX(0.8);
+  }
+  72% {
+    transform: scaleX(1.05);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+
+/* 部件 book（path） */
+.ui-icon-anim-book-open__book {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+.ui-icon-anim-book-open:hover .ui-icon-anim-book-open__book,
+.ui-icon-anim-book-open:hover.ui-icon-anim-book-open__book,
+.ui-anim-scope:hover .ui-icon-anim-book-open__book {
+  animation: ui-icon-anim-book-open-book-0 800ms ease-in-out both;
+}
+
+/* building-2（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/building-2-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-building-2-door-0 {
+  0% {
+    transform: scaleX(1);
+  }
+  50% {
+    transform: scaleX(0.45);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+
+/* 部件 door（path） */
+.ui-icon-anim-building-2__door {
+  transform-box: view-box;
+  transform-origin: 10px 21px;
+}
+.ui-icon-anim-building-2:hover .ui-icon-anim-building-2__door,
+.ui-icon-anim-building-2:hover.ui-icon-anim-building-2__door,
+.ui-anim-scope:hover .ui-icon-anim-building-2__door {
+  animation: ui-icon-anim-building-2-door-0 500ms ease-in-out both;
+}
+
+/* message-circle（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/message-circle-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-message-circle-svg-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  33.3333% {
+    transform: rotate(-3deg);
+  }
+  66.6667% {
+    transform: rotate(2deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes ui-icon-anim-message-circle-pop-0 {
+  0% {
+    transform: scale(0.5);
+  }
+  55% {
+    transform: scale(1.12);
+  }
+  78% {
+    transform: scale(0.96);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-message-circle-path-0 {
+  0% {
+    stroke-dashoffset: 0.75;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes ui-icon-anim-message-circle-path-1 {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+
+/* 部件 svg（svg） */
+.ui-icon-anim-message-circle__svg {
+}
+.ui-icon-anim-message-circle:hover .ui-icon-anim-message-circle__svg,
+.ui-icon-anim-message-circle:hover.ui-icon-anim-message-circle__svg,
+.ui-anim-scope:hover .ui-icon-anim-message-circle__svg {
+  animation: ui-icon-anim-message-circle-svg-0 600ms ease-in-out both;
+}
+
+
+/* 部件 pop（g） */
+.ui-icon-anim-message-circle__pop {
+  transform-box: view-box;
+  transform-origin: 4px 19px;
+}
+.ui-icon-anim-message-circle:hover .ui-icon-anim-message-circle__pop,
+.ui-icon-anim-message-circle:hover.ui-icon-anim-message-circle__pop,
+.ui-anim-scope:hover .ui-icon-anim-message-circle__pop {
+  animation: ui-icon-anim-message-circle-pop-0 550ms ease-out both;
+}
+
+
+/* 部件 path（path） */
+.ui-icon-anim-message-circle__path {
+  stroke-dasharray: 1;
+}
+.ui-icon-anim-message-circle:hover .ui-icon-anim-message-circle__path,
+.ui-icon-anim-message-circle:hover.ui-icon-anim-message-circle__path,
+.ui-anim-scope:hover .ui-icon-anim-message-circle__path {
+  animation:
+    ui-icon-anim-message-circle-path-0 500ms ease-out both,
+    ui-icon-anim-message-circle-path-1 500ms ease-out both;
+}
+
+/* message-square（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/message-square-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-message-square-bubble-0 {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(0.7);
+  }
+  75% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+
+/* 部件 bubble（path） */
+.ui-icon-anim-message-square__bubble {
+  transform-box: view-box;
+  transform-origin: 4px 20px;
+}
+.ui-icon-anim-message-square:hover .ui-icon-anim-message-square__bubble,
+.ui-icon-anim-message-square:hover.ui-icon-anim-message-square__bubble,
+.ui-anim-scope:hover .ui-icon-anim-message-square__bubble {
+  animation: ui-icon-anim-message-square-bubble-0 650ms ease-in-out both;
+}
+
+/* flask-conical（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/flask-conical-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-flask-conical-flask-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-10deg);
+  }
+  50% {
+    transform: rotate(8deg);
+  }
+  75% {
+    transform: rotate(-5deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes ui-icon-anim-flask-conical-liquid-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(9deg);
+  }
+  50% {
+    transform: rotate(-7deg);
+  }
+  75% {
+    transform: rotate(4deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+
+/* 部件 flask（g） */
+.ui-icon-anim-flask-conical__flask {
+  transform-box: view-box;
+  transform-origin: 12px 22px;
+}
+.ui-icon-anim-flask-conical:hover .ui-icon-anim-flask-conical__flask,
+.ui-icon-anim-flask-conical:hover.ui-icon-anim-flask-conical__flask,
+.ui-anim-scope:hover .ui-icon-anim-flask-conical__flask {
+  animation: ui-icon-anim-flask-conical-flask-0 900ms ease-in-out both;
+}
+
+
+/* 部件 liquid（path） */
+.ui-icon-anim-flask-conical__liquid {
+  transform-box: view-box;
+  transform-origin: 12px 15px;
+}
+.ui-icon-anim-flask-conical:hover .ui-icon-anim-flask-conical__liquid,
+.ui-icon-anim-flask-conical:hover.ui-icon-anim-flask-conical__liquid,
+.ui-anim-scope:hover .ui-icon-anim-flask-conical__liquid {
+  animation: ui-icon-anim-flask-conical-liquid-0 900ms 50ms ease-in-out both;
+}
+
+/* layout-grid（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/layout-grid-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-layout-grid-tile-variants-0-0 {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.22);
+  }
+  70% {
+    transform: scale(0.96);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-layout-grid-tile-variants-1-0 {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.22);
+  }
+  70% {
+    transform: scale(0.96);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-layout-grid-tile-variants-2-0 {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.22);
+  }
+  70% {
+    transform: scale(0.96);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-layout-grid-tile-variants-3-0 {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.22);
+  }
+  70% {
+    transform: scale(0.96);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+
+/* 部件 tile-variants-0（rect） */
+.ui-icon-anim-layout-grid__tile-variants-0 {
+  transform-box: view-box;
+  transform-origin: 6.5px 6.5px;
+}
+.ui-icon-anim-layout-grid:hover .ui-icon-anim-layout-grid__tile-variants-0,
+.ui-icon-anim-layout-grid:hover.ui-icon-anim-layout-grid__tile-variants-0,
+.ui-anim-scope:hover .ui-icon-anim-layout-grid__tile-variants-0 {
+  animation: ui-icon-anim-layout-grid-tile-variants-0-0 500ms ease-in-out both;
+}
+
+
+/* 部件 tile-variants-1（rect） */
+.ui-icon-anim-layout-grid__tile-variants-1 {
+  transform-box: view-box;
+  transform-origin: 17.5px 6.5px;
+}
+.ui-icon-anim-layout-grid:hover .ui-icon-anim-layout-grid__tile-variants-1,
+.ui-icon-anim-layout-grid:hover.ui-icon-anim-layout-grid__tile-variants-1,
+.ui-anim-scope:hover .ui-icon-anim-layout-grid__tile-variants-1 {
+  animation: ui-icon-anim-layout-grid-tile-variants-1-0 500ms 80ms ease-in-out both;
+}
+
+
+/* 部件 tile-variants-2（rect） */
+.ui-icon-anim-layout-grid__tile-variants-2 {
+  transform-box: view-box;
+  transform-origin: 17.5px 17.5px;
+}
+.ui-icon-anim-layout-grid:hover .ui-icon-anim-layout-grid__tile-variants-2,
+.ui-icon-anim-layout-grid:hover.ui-icon-anim-layout-grid__tile-variants-2,
+.ui-anim-scope:hover .ui-icon-anim-layout-grid__tile-variants-2 {
+  animation: ui-icon-anim-layout-grid-tile-variants-2-0 500ms 160ms ease-in-out both;
+}
+
+
+/* 部件 tile-variants-3（rect） */
+.ui-icon-anim-layout-grid__tile-variants-3 {
+  transform-box: view-box;
+  transform-origin: 6.5px 17.5px;
+}
+.ui-icon-anim-layout-grid:hover .ui-icon-anim-layout-grid__tile-variants-3,
+.ui-icon-anim-layout-grid:hover.ui-icon-anim-layout-grid__tile-variants-3,
+.ui-anim-scope:hover .ui-icon-anim-layout-grid__tile-variants-3 {
+  animation: ui-icon-anim-layout-grid-tile-variants-3-0 500ms 240ms ease-in-out both;
+}
+
+/* signpost（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/signpost-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-signpost-sign-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-8deg);
+  }
+  50% {
+    transform: rotate(6deg);
+  }
+  75% {
+    transform: rotate(-3deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+
+/* 部件 sign（path） */
+.ui-icon-anim-signpost__sign {
+  transform-box: view-box;
+  transform-origin: 12px 9px;
+}
+.ui-icon-anim-signpost:hover .ui-icon-anim-signpost__sign,
+.ui-icon-anim-signpost:hover.ui-icon-anim-signpost__sign,
+.ui-anim-scope:hover .ui-icon-anim-signpost__sign {
+  animation: ui-icon-anim-signpost-sign-0 800ms ease-in-out both;
+}
+
+/* circle-x（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/circle-x-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-circle-x-shape-0 {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.1);
+  }
+  70% {
+    transform: scale(0.96);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ui-icon-anim-circle-x-cross-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(90deg);
+  }
+}
+
+@keyframes ui-icon-anim-circle-x-cross-1 {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.3);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+
+/* 部件 shape（circle） */
+.ui-icon-anim-circle-x__shape {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+.ui-icon-anim-circle-x:hover .ui-icon-anim-circle-x__shape,
+.ui-icon-anim-circle-x:hover.ui-icon-anim-circle-x__shape,
+.ui-anim-scope:hover .ui-icon-anim-circle-x__shape {
+  animation: ui-icon-anim-circle-x-shape-0 600ms ease-in-out both;
+}
+
+
+/* 部件 cross（g） */
+.ui-icon-anim-circle-x__cross {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+.ui-icon-anim-circle-x:hover .ui-icon-anim-circle-x__cross,
+.ui-icon-anim-circle-x:hover.ui-icon-anim-circle-x__cross,
+.ui-anim-scope:hover .ui-icon-anim-circle-x__cross {
+  animation:
+    ui-icon-anim-circle-x-cross-0 500ms ease-in-out both,
+    ui-icon-anim-circle-x-cross-1 500ms ease-in-out both;
+}
+
+/* lock-open（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/lock-open-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-lock-open-body-0 {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(0.8px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes ui-icon-anim-lock-open-shackle-0 {
+  0% {
+    transform: rotate(0deg);
+  }
+  35% {
+    transform: rotate(-14deg);
+  }
+  65% {
+    transform: rotate(5deg);
+  }
+  85% {
+    transform: rotate(-2deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+
+/* 部件 body（rect） */
+.ui-icon-anim-lock-open__body {
+}
+.ui-icon-anim-lock-open:hover .ui-icon-anim-lock-open__body,
+.ui-icon-anim-lock-open:hover.ui-icon-anim-lock-open__body,
+.ui-anim-scope:hover .ui-icon-anim-lock-open__body {
+  animation: ui-icon-anim-lock-open-body-0 350ms ease-out both;
+}
+
+
+/* 部件 shackle（path） */
+.ui-icon-anim-lock-open__shackle {
+  transform-box: view-box;
+  transform-origin: 7px 11px;
+}
+.ui-icon-anim-lock-open:hover .ui-icon-anim-lock-open__shackle,
+.ui-icon-anim-lock-open:hover.ui-icon-anim-lock-open__shackle,
+.ui-anim-scope:hover .ui-icon-anim-lock-open__shackle {
+  animation: ui-icon-anim-lock-open-shackle-0 700ms ease-in-out both;
+}
+
+/* corner-up-right（lucide 风格）—— hover 触发。
+ * 源：animateicons icons/lucide/corner-up-right-icon.tsx（MIT © Avijit Dey）。 */
+
+@keyframes ui-icon-anim-corner-up-right-shaft-0 {
+  0% {
+    transform: scaleX(1);
+  }
+  40% {
+    transform: scaleX(1.156);
+  }
+  75% {
+    transform: scaleX(0.969);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes ui-icon-anim-corner-up-right-head-0 {
+  0% {
+    transform: translateX(0px);
+  }
+  40% {
+    transform: translateX(2.5px);
+  }
+  75% {
+    transform: translateX(-0.5px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+
+/* 部件 shaft（path） */
+.ui-icon-anim-corner-up-right__shaft {
+  transform-box: view-box;
+  transform-origin: 4px 12px;
+}
+.ui-icon-anim-corner-up-right:hover .ui-icon-anim-corner-up-right__shaft,
+.ui-icon-anim-corner-up-right:hover.ui-icon-anim-corner-up-right__shaft,
+.ui-anim-scope:hover .ui-icon-anim-corner-up-right__shaft {
+  animation: ui-icon-anim-corner-up-right-shaft-0 500ms ease-in-out both;
+}
+
+
+/* 部件 head（path） */
+.ui-icon-anim-corner-up-right__head {
+}
+.ui-icon-anim-corner-up-right:hover .ui-icon-anim-corner-up-right__head,
+.ui-icon-anim-corner-up-right:hover.ui-icon-anim-corner-up-right__head,
+.ui-anim-scope:hover .ui-icon-anim-corner-up-right__head {
+  animation: ui-icon-anim-corner-up-right-head-0 500ms ease-in-out both;
+}
+
+/* ============================================================
+ * 尊重系统「减少动态效果」：上游用 useReducedMotion 跳过动画，
+ * 此处等价置空——部件停在静止态，图标照常可用。
+ * ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .ui-icon-anim-arrow-right__nudge,
+  .ui-icon-anim-arrow-up__nudge,
+  .ui-icon-anim-check__tick,
+  .ui-icon-anim-chevron-down__trailing-arrow,
+  .ui-icon-anim-chevron-down__leading-arrow,
+  .ui-icon-anim-chevron-left__trail,
+  .ui-icon-anim-chevron-left__arrow,
+  .ui-icon-anim-chevron-right__trail,
+  .ui-icon-anim-chevron-right__arrow,
+  .ui-icon-anim-copy__front,
+  .ui-icon-anim-copy__back,
+  .ui-icon-anim-folder__folder,
+  .ui-icon-anim-log-out__arrow,
+  .ui-icon-anim-menu__bar-variants-0,
+  .ui-icon-anim-menu__bar-variants-1,
+  .ui-icon-anim-menu__bar-variants-2,
+  .ui-icon-anim-moon__moon,
+  .ui-icon-anim-panel-left__divider,
+  .ui-icon-anim-panel-right__divider,
+  .ui-icon-anim-paperclip__clip,
+  .ui-icon-anim-plus__pop,
+  .ui-icon-anim-save__label,
+  .ui-icon-anim-save__shutter,
+  .ui-icon-anim-search__lens,
+  .ui-icon-anim-send__plane,
+  .ui-icon-anim-settings__gear,
+  .ui-icon-anim-settings__hub,
+  .ui-icon-anim-square-check__box,
+  .ui-icon-anim-square-check__tick,
+  .ui-icon-anim-stop__stop,
+  .ui-icon-anim-sun__svg,
+  .ui-icon-anim-sun__center,
+  .ui-icon-anim-sun__ray,
+  .ui-icon-anim-terminal__cursor,
+  .ui-icon-anim-terminal__prompt,
+  .ui-icon-anim-trash__bin,
+  .ui-icon-anim-trash__lid,
+  .ui-icon-anim-user__body,
+  .ui-icon-anim-user__head,
+  .ui-icon-anim-x__cross,
+  .ui-icon-anim-mail__flap,
+  .ui-icon-anim-bookmark__bookmark,
+  .ui-icon-anim-phone__pulse,
+  .ui-icon-anim-phone__phone,
+  .ui-icon-anim-mic-off__body,
+  .ui-icon-anim-mic-off__slash,
+  .ui-icon-anim-image__sun,
+  .ui-icon-anim-image__hill,
+  .ui-icon-anim-compass__ring,
+  .ui-icon-anim-compass__needle,
+  .ui-icon-anim-chart-line__chart,
+  .ui-icon-anim-chart-line__path,
+  .ui-icon-anim-globe__meridian,
+  .ui-icon-anim-anchor__anchor,
+  .ui-icon-anim-gift__ribbon,
+  .ui-icon-anim-gift__lid,
+  .ui-icon-anim-gift__bow,
+  .ui-icon-anim-signal__dot,
+  .ui-icon-anim-cpu__pin-variants-0,
+  .ui-icon-anim-cpu__pin-variants-1,
+  .ui-icon-anim-cpu__pin-variants-2,
+  .ui-icon-anim-cpu__pin-variants-3,
+  .ui-icon-anim-cpu__pin-variants-4,
+  .ui-icon-anim-cpu__pin-variants-5,
+  .ui-icon-anim-cpu__pin-variants-6,
+  .ui-icon-anim-cpu__pin-variants-7,
+  .ui-icon-anim-cpu__pin-variants-8,
+  .ui-icon-anim-cpu__pin-variants-9,
+  .ui-icon-anim-cpu__pin-variants-10,
+  .ui-icon-anim-cpu__pin-variants-11,
+  .ui-icon-anim-cpu__core,
+  .ui-icon-anim-crown__crown,
+  .ui-icon-anim-crown__base,
+  .ui-icon-anim-calendar__ring,
+  .ui-icon-anim-calendar__body,
+  .ui-icon-anim-ruler__ruler,
+  .ui-icon-anim-ruler__tick-variants-0,
+  .ui-icon-anim-ruler__tick-variants-1,
+  .ui-icon-anim-ruler__tick-variants-2,
+  .ui-icon-anim-ruler__tick-variants-3,
+  .ui-icon-anim-megaphone__shout,
+  .ui-icon-anim-repeat__forward,
+  .ui-icon-anim-repeat__backward,
+  .ui-icon-anim-key__key,
+  .ui-icon-anim-shuffle__head-variants-0,
+  .ui-icon-anim-shuffle__head-variants-1,
+  .ui-icon-anim-heart__heart,
+  .ui-icon-anim-umbrella__canopy,
+  .ui-icon-anim-box__box,
+  .ui-icon-anim-folder-plus__folder,
+  .ui-icon-anim-folder-plus__plus,
+  .ui-icon-anim-star__star,
+  .ui-icon-anim-list__dot-variants-0,
+  .ui-icon-anim-list__dot-variants-1,
+  .ui-icon-anim-list__dot-variants-2,
+  .ui-icon-anim-list__row-variants-0,
+  .ui-icon-anim-list__row-variants-1,
+  .ui-icon-anim-list__row-variants-2,
+  .ui-icon-anim-layers__top,
+  .ui-icon-anim-layers__bottom,
+  .ui-icon-anim-heart-pulse__heart,
+  .ui-icon-anim-heart-pulse__pulse,
+  .ui-icon-anim-calendar-days__ring,
+  .ui-icon-anim-download__arrow,
+  .ui-icon-anim-download__tray,
+  .ui-icon-anim-user-plus__head,
+  .ui-icon-anim-user-plus__plus,
+  .ui-icon-anim-zoom-in__lens,
+  .ui-icon-anim-zoom-in__plus,
+  .ui-icon-anim-files__back,
+  .ui-icon-anim-files__front,
+  .ui-icon-anim-car__car,
+  .ui-icon-anim-pin__pin,
+  .ui-icon-anim-database__lid,
+  .ui-icon-anim-database__disk,
+  .ui-icon-anim-chart-area__area,
+  .ui-icon-anim-shield__shield,
+  .ui-icon-anim-truck__drive,
+  .ui-icon-anim-truck__body,
+  .ui-icon-anim-upload__arrow,
+  .ui-icon-anim-upload__tray,
+  .ui-icon-anim-flame__flame,
+  .ui-icon-anim-mouse__wheel,
+  .ui-icon-anim-briefcase__case,
+  .ui-icon-anim-users__side-head,
+  .ui-icon-anim-users__head,
+  .ui-icon-anim-gauge__needle,
+  .ui-icon-anim-at-sign__core,
+  .ui-icon-anim-at-sign__spin,
+  .ui-icon-anim-bell__bell,
+  .ui-icon-anim-bell__clapper,
+  .ui-icon-anim-calendar-check__ring,
+  .ui-icon-anim-calendar-check__tick,
+  .ui-icon-anim-shopping-cart__cart,
+  .ui-icon-anim-shopping-cart__wheel-variants-0,
+  .ui-icon-anim-shopping-cart__wheel-variants-1,
+  .ui-icon-anim-mic__capsule,
+  .ui-icon-anim-mic__stand,
+  .ui-icon-anim-trophy__trophy,
+  .ui-icon-anim-hourglass__flip,
+  .ui-icon-anim-file-plus__page,
+  .ui-icon-anim-file-plus__plus,
+  .ui-icon-anim-link__link-variants-right,
+  .ui-icon-anim-link__link-variants-left,
+  .ui-icon-anim-printer__sheet,
+  .ui-icon-anim-code__group,
+  .ui-icon-anim-code__left-bracket,
+  .ui-icon-anim-code__right-bracket,
+  .ui-icon-anim-puzzle__puzzle,
+  .ui-icon-anim-bug__body,
+  .ui-icon-anim-map-pin__pin,
+  .ui-icon-anim-bell-off__body,
+  .ui-icon-anim-bell-off__slash,
+  .ui-icon-anim-inbox__tray,
+  .ui-icon-anim-scan__corner-variants-0,
+  .ui-icon-anim-scan__corner-variants-1,
+  .ui-icon-anim-scan__corner-variants-2,
+  .ui-icon-anim-scan__corner-variants-3,
+  .ui-icon-anim-wifi__dot,
+  .ui-icon-anim-wifi__arc-variants-0,
+  .ui-icon-anim-wifi__arc-variants-1,
+  .ui-icon-anim-wifi__arc-variants-2,
+  .ui-icon-anim-network__node-variants-0,
+  .ui-icon-anim-network__node-variants-1,
+  .ui-icon-anim-network__branch,
+  .ui-icon-anim-network__stem,
+  .ui-icon-anim-git-branch__node-variants-0,
+  .ui-icon-anim-git-branch__node-variants-1,
+  .ui-icon-anim-clock__minute,
+  .ui-icon-anim-credit-card__card,
+  .ui-icon-anim-credit-card__stripe,
+  .ui-icon-anim-flag__flag,
+  .ui-icon-anim-pencil__write,
+  .ui-icon-anim-play__play,
+  .ui-icon-anim-power__stem,
+  .ui-icon-anim-power__ring,
+  .ui-icon-anim-zoom-out__lens,
+  .ui-icon-anim-zoom-out__minus,
+  .ui-icon-anim-wind__gust-variants-0,
+  .ui-icon-anim-wind__gust-variants-1,
+  .ui-icon-anim-wind__gust-variants-2,
+  .ui-icon-anim-chart-pie__slice,
+  .ui-icon-anim-ban__slash,
+  .ui-icon-anim-contact__shoulders,
+  .ui-icon-anim-contact__head,
+  .ui-icon-anim-skip-forward__bar,
+  .ui-icon-anim-skip-forward__play,
+  .ui-icon-anim-video__lens,
+  .ui-icon-anim-lock__lock,
+  .ui-icon-anim-coffee__steam,
+  .ui-icon-anim-coffee__cup,
+  .ui-icon-anim-wrench__wrench,
+  .ui-icon-anim-activity__activity,
+  .ui-icon-anim-headset__frame,
+  .ui-icon-anim-headset__tail,
+  .ui-icon-anim-command__cross,
+  .ui-icon-anim-command__loop-variants-0,
+  .ui-icon-anim-command__loop-variants-1,
+  .ui-icon-anim-command__loop-variants-2,
+  .ui-icon-anim-command__loop-variants-3,
+  .ui-icon-anim-map__map,
+  .ui-icon-anim-package__box,
+  .ui-icon-anim-wallet__lid,
+  .ui-icon-anim-watch__hand,
+  .ui-icon-anim-file__fold,
+  .ui-icon-anim-calculator__display,
+  .ui-icon-anim-calculator__key-variants-0,
+  .ui-icon-anim-calculator__key-variants-1,
+  .ui-icon-anim-calculator__key-variants-2,
+  .ui-icon-anim-calculator__key-variants-3,
+  .ui-icon-anim-calculator__key-variants-4,
+  .ui-icon-anim-calculator__key-variants-5,
+  .ui-icon-anim-calculator__key-variants-6,
+  .ui-icon-anim-chart-bar__bar-variants-0,
+  .ui-icon-anim-chart-bar__bar-variants-1,
+  .ui-icon-anim-chart-bar__bar-variants-2,
+  .ui-icon-anim-undo__undo,
+  .ui-icon-anim-gamepad__body,
+  .ui-icon-anim-gamepad__button,
+  .ui-icon-anim-book-open__book,
+  .ui-icon-anim-building-2__door,
+  .ui-icon-anim-message-circle__svg,
+  .ui-icon-anim-message-circle__pop,
+  .ui-icon-anim-message-circle__path,
+  .ui-icon-anim-message-square__bubble,
+  .ui-icon-anim-flask-conical__flask,
+  .ui-icon-anim-flask-conical__liquid,
+  .ui-icon-anim-layout-grid__tile-variants-0,
+  .ui-icon-anim-layout-grid__tile-variants-1,
+  .ui-icon-anim-layout-grid__tile-variants-2,
+  .ui-icon-anim-layout-grid__tile-variants-3,
+  .ui-icon-anim-signpost__sign,
+  .ui-icon-anim-circle-x__shape,
+  .ui-icon-anim-circle-x__cross,
+  .ui-icon-anim-lock-open__body,
+  .ui-icon-anim-lock-open__shackle,
+  .ui-icon-anim-corner-up-right__shaft,
+  .ui-icon-anim-corner-up-right__head {
+    animation: none;
+  }
+}

@@ -187,6 +187,9 @@ dependencies = [
  "dioxus",
  "flow",
  "gloo-net",
+ "gloo-timers",
+ "serde",
+ "serde_json",
  "ui-kit",
 ]
 
