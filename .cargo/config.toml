@@ -1,0 +1,13 @@
+# canon 仓级 cargo 配置：对所有会话（根目录 + .wt/* worktree）统一生效，
+# 因为 cargo 从当前目录向上搜索 .cargo/config.toml，.wt/* 是本仓子目录。
+
+[build]
+# 多会话并发上限：每个 cargo 进程最多 4 个并行编译单元。
+# 2-3 个会话同时构建时峰值 ≤ 8-12 个 rustc，4 物理核不致颤；单会话略慢是代价。
+jobs = 4
+
+# sccache 跨 worktree 编译缓存：.wt/* 各自 target 目录互不共享，
+# 缓存让后到的会话/分支切换免掉冷构建。
+# 注意：必须用 build.rustc-wrapper 而非 [env] RUSTC_WRAPPER——
+# 后者只传给 cargo 的子进程，cargo 自身在启动时读这个变量，[env] 够不着。
+rustc-wrapper = "sccache"
