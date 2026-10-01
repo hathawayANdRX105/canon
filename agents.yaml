@@ -116,10 +116,10 @@ projects:
     - build-verify
     - sensitive-ops
     - git-workflow
-  omenic:
-    root: omenic
+  kymido:
+    root: kymido
     titles:
-      local/: omenic 约定
+      local/: kymido 约定
     include:
     - local/
     - _discipline

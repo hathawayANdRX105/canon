@@ -84,7 +84,7 @@ agent-sync pull                # canon 仓自更新
 
 ## gate — 规范执行引擎（canon 仓根的 Rust crate）
 
-canon 管规范的**存储、分发与执行**，是 gate 的**唯一源码正本**（omenic 的 `gate/` 与 `spec` 的 gate 部分已删除，omenic 只留 `spec::template` 模板库供其 CLI 使用）。
+canon 管规范的**存储、分发与执行**，是 gate 的**唯一源码正本**（kymido（原 omenic）的 `gate/` 与 `spec` 的 gate 部分已删除，kymido 只留 `spec::template` 模板库供其 CLI 使用）。
 
 ### 拦截配置化（原则：要不要拦，spec 说了算）
 
@@ -104,13 +104,13 @@ canon 管规范的**存储、分发与执行**，是 gate 的**唯一源码正�
 - `src/rules/` + `tools/` — gh 工作流策略层（issue/PR/review 合规、merge 编排、gh 命令拦截），检测逻辑由 `github_*.yaml` 驱动
 - `specs/` — 默认规则包正本（43 份：quality checklist ×17 + code/cleanup/workspace/github 系 + harness 4 件套 + docs 4 份 + dispatch/severity_overrides）
 
-与 omenic 内嵌版的差异（去硬编码）：
+与 kymido（原 omenic）内嵌版的差异（去硬编码）：
 
-| omenic 内嵌版 | canon gate |
+| kymido 内嵌版 | canon gate |
 |---|---|
 | 规则缺失静默跳过（换仓库静默扫 0 文件假绿） | checklist 缺失直接 FAIL 报错 |
 | merge base 写死 `origin/main...HEAD` | `GATE_BASE` 环境变量可覆盖 |
-| 引擎与策略、模板混在同一 crate | engine（零检测）/ rules+tools（策略）/ template（留 omenic）三者分离 |
+| 引擎与策略、模板混在同一 crate | engine（零检测）/ rules+tools（策略）/ template（留 kymido）三者分离 |
 
 **残留硬编码**（已收敛到最小）：pre_commit/merge 的 topic 路由 `match`（topic 名 → 内建 runner 的映射；topic 列表本身已由 dispatch.yaml 外部化）；`github_pull_requests.yaml` 的 `fixes_epic_severity` 为声明未接线键（对应 API 层检查尚不存在）。检查规范（开关/参数/严重度）已全部 yaml 化，缺失即 `gate.setup` FAIL。
 

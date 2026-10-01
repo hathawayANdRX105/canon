@@ -6,15 +6,15 @@ license: MIT
 
 # 路径约定
 
-本文档中所有绝对路径以 `<repo根>` 为占位符，表示**使用该 skill 的仓库根目录**（ferrite 或 omenic，按使用方决定）。
+本文档中所有绝对路径以 `<repo根>` 为占位符，表示**使用该 skill 的仓库根目录**（ferrite 或 kymido，按使用方决定）。
 
 示例对照（仅供参考，实际执行时替换为 `<repo根>`）：
 
-| 占位符 | ferrite 实例 | omenic 实例 |
+| 占位符 | ferrite 实例 | kymido 实例 |
 |---|---|---|
-| `<repo根>` | `/home/hathaway/projects/ferrite` | `/home/hathaway/projects/omenic` |
-| `<repo根>/.wt/<name>` | `/home/hathaway/projects/ferrite/.wt/<name>` | `/home/hathaway/projects/omenic/.wt/<name>` |
-| `<repo根>/crates/harness/<module>/src` | `/home/hathaway/projects/ferrite/crates/harness/<module>/src` | `/home/hathaway/projects/omenic/crates/harness/<module>/src` |
+| `<repo根>` | `/home/hathaway/projects/ferrite` | `/home/hathaway/projects/kymido` |
+| `<repo根>/.wt/<name>` | `/home/hathaway/projects/ferrite/.wt/<name>` | `/home/hathaway/projects/kymido/.wt/<name>` |
+| `<repo根>/crates/harness/<module>/src` | `/home/hathaway/projects/ferrite/crates/harness/<module>/src` | `/home/hathaway/projects/kymido/crates/harness/<module>/src` |
 
 ---
 

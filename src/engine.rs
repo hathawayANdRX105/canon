@@ -180,7 +180,7 @@ fn load_spec(path: &std::path::Path) -> Result<ChecklistSpec, String> {
         name,
         enabled: raw.enabled.unwrap_or(true),
         // No default hooks: an explicit `hooks:` list is the single routing
-        // source (omenic's dispatch.yaml topic router is gone by design).
+        // source (kymido's dispatch.yaml topic router is gone by design).
         hooks: raw.hooks,
         include: raw.r#match.paths_include,
         exclude: raw.r#match.paths_exclude,

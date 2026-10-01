@@ -42,11 +42,11 @@ cpulimit -l 65 -i -- cargo build --bin oi-web
 
 ## Demo 验证沙盒
 
-验证 issue/PR 流程、gh-gate 拦截、规则改动时，**不要在本仓库(omenic)直接创建 demo issue/PR**，使用专用沙盒：
+验证 issue/PR 流程、gh-gate 拦截、规则改动时，**不要在本仓库(kymido)直接创建 demo issue/PR**，使用专用沙盒：
 
 - 仓库：https://github.com/hathawayANdRX105/demo-githooks(本地 `~/projects/demo-githooks`)
-- 用途：验证 epic/sub/PR 链路、checkbox 强制、双向关联(GT-04b)、审查强制等，避免污染 omenic
-- .githooks 与 omenic 同步；规则改动后先在此仓库验证，再同步到其他项目(deskctl / new-api)
+- 用途：验证 epic/sub/PR 链路、checkbox 强制、双向关联(GT-04b)、审查强制等，避免污染 kymido
+- .githooks 与 kymido 同步；规则改动后先在此仓库验证，再同步到其他项目(deskctl / new-api)
 
 ## TUI（已删除）
 
@@ -91,7 +91,7 @@ web UI（dsh 设计语言复刻，C5.1 已验收）的视觉/结构锁在 `.gith
 
 **契约测试**：`bin/web/tests/ui_contract.rs`，**由 CI 跑，本地不跑**（见上文「构建与验证」）。本地只做静态核对：改了组件 class 就同步改 `.githooks/spec/` 下对应 UI 契约 yaml 的 `find` 锚点，用 grep 确认锚点字符串在实现文件里真实存在。
 
-**yaml 字段约定**：`name`（契约名）/ `target`（omenic 实现文件，相对仓库根）/ `description` / `anchors`（锚点列表，每项 `key` + `find`（源码中稳定 class 片段或静态字面量）+ `expect`（预期形态）+ `source`（omenic 实现位置 + dsh 出处）+ 可选 `file`（锚点级实现文件覆盖，默认用 target））/ `notes`。测试两类断言：① 每个 yaml 可被 serde_yaml 解析且字段齐全；② 每个 `find` 关键字在对应实现文件中出现。新增 spec 必须同步登记 `tests/ui_contract.rs` 的 `SPEC_FILES`。
+**yaml 字段约定**：`name`（契约名）/ `target`（kymido 实现文件，相对仓库根）/ `description` / `anchors`（锚点列表，每项 `key` + `find`（源码中稳定 class 片段或静态字面量）+ `expect`（预期形态）+ `source`（kymido 实现位置 + dsh 出处）+ 可选 `file`（锚点级实现文件覆盖，默认用 target））/ `notes`。测试两类断言：① 每个 yaml 可被 serde_yaml 解析且字段齐全；② 每个 `find` 关键字在对应实现文件中出现。新增 spec 必须同步登记 `tests/ui_contract.rs` 的 `SPEC_FILES`。
 
 **起服**：按上文「正确启动序列」起 oi-web（记得 npm install + touch css + 重建重启，浏览器硬刷新）。
 
@@ -105,4 +105,4 @@ web UI（dsh 设计语言复刻，C5.1 已验收）的视觉/结构锁在 `.gith
 - `quick-switcher.yaml`——⌘K/Ctrl+K 弹出 560px 顶部对齐面板；输入 h44、会话行 h40；ESC 退出。
 - `taskpanel.yaml`——composer 上方 dock 卡宽随消息列（≤780）；进度条 1px 品牌蓝；filter chip h26 r7；任务卡 r10。
 
-**已知偏差（记录不改）**：dsh 消息列 748px，omenic 消息列与 composer 统一 `max-w-[780px]`（chat.yaml notes）。
+**已知偏差（记录不改）**：dsh 消息列 748px，kymido 消息列与 composer 统一 `max-w-[780px]`（chat.yaml notes）。

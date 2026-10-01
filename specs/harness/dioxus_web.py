@@ -248,7 +248,7 @@ def scan_spec(path: str, src: str) -> list[Finding]:
 def scan_layering(path: str, src: str) -> list[Finding]:
     """层级约束的可判定信号是 **import 方向**，不是「组件放在哪个目录」。
 
-    实测（omenic）：`views/config.rs` 里放 6 个 `#[component]` 是他们刻意的做法
+    实测（kymido）：`views/config.rs` 里放 6 个 `#[component]` 是他们刻意的做法
     ——「一文件一 pub 组件 + 私有子组件同文件」。按目录一刀切会误报 6 处。
     反过来 `components/` 不得 `use crate::views::` 在现状是 0 违例，是干净硬约束。
     """

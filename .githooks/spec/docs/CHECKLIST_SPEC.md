@@ -149,7 +149,7 @@ gate 根据 `mode` 给 harness 三种输入之一：
    **`.gitignore` 就是排除配置**：目录被 gitignore 即自动出扫描集；按规则细化排除在文件列表上
    `grep -zvE '(^|/)xx/'`（或 pathspec `:(exclude)...`）。
 
-2. **不写死目录层级**（`crates/*/src` 等 omenic 专属布局）：`git ls-files` 输出仓库根相对路径，
+2. **不写死目录层级**（`crates/*/src` 等 kymido 专属布局）：`git ls-files` 输出仓库根相对路径，
    硬编码布局在别的仓库静默扫 0 文件、假绿（比报错更危险）。
 
 3. **跨语言测试文件命名一并排除**（`tests/` 目录挡不住同目录 `*_test.go` / `test_*.py` /

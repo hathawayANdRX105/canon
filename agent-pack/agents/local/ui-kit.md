@@ -1,7 +1,7 @@
 # AGENTS.md — ui-kit
 
 ferrite 家族共享的 Dioxus 组件库：lib 名 `ui_kit`，crate `ui-kit`（dioxus 0.7.10、
-edition 2024），消费方是 ferrite（经 `ui-components` 再导出）与 omenic。
+edition 2024），消费方是 ferrite（经 `ui-components` 再导出）与 kymido。
 分类判据、样式分层设计取舍、版本口径正本写在 `README.md`，本篇只写「改本仓时容易踩的」。
 
 ## 收录门槛（硬约束）
