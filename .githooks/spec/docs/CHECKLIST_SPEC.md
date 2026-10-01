@@ -6,7 +6,7 @@
 
 - **零硬编码检查项**：每条检查 = 一份 yaml，gate 不懂检查含义。
 - **harness 任意**：claude / 9router / vLLM / 本地 sh 都行，gate 只调 `argv/stdin → stdout`。
-- **复用 finding 协议**：跟 `code.rs` / `ocr` / `code-review-graph` 同一种 `Finding { id, severity, path, line, message }` 结构，统一走 gate 的 FAIL/WARN/INFO 出口。
+- **复用 finding 协议**：跟 `code.rs` 同一种 `Finding { id, severity, path, line, message }` 结构，统一走 gate 的 FAIL/WARN/INFO 出口。
 - **可拓展**：加检查 = 加 yaml，gate 不需要重新发版。
 
 ## 文件位置与发现

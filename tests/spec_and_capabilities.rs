@@ -41,21 +41,21 @@ fn find(rule: &str) -> Finding {
 
 #[test]
 fn checks_allowlist_keeps_only_listed_capabilities() {
-    let mut findings = vec![find("CL-01"), find("CL-02"), find("RV-05")];
-    let cfg = serde_yaml::from_str("checks: [CL, RV-05]").unwrap();
+    let mut findings = vec![find("CL-01"), find("CL-02"), find("RV-06")];
+    let cfg = serde_yaml::from_str("checks: [CL, RV-06]").unwrap();
     apply_check_allowlist(&mut findings, Some(&cfg));
-    // "CL" prefix keeps CL-01/CL-02; RV-05 kept by exact match; nothing else
+    // "CL" prefix keeps CL-01/CL-02; RV-06 kept by exact match; nothing else
     assert_eq!(findings.len(), 3);
-    let cfg = serde_yaml::from_str("checks: [CL-01, RV-05]").unwrap();
-    let mut findings = vec![find("CL-01"), find("CL-02"), find("RV-05")];
+    let cfg = serde_yaml::from_str("checks: [CL-01, RV-06]").unwrap();
+    let mut findings = vec![find("CL-01"), find("CL-02"), find("RV-06")];
     apply_check_allowlist(&mut findings, Some(&cfg));
     let ids: Vec<_> = findings.iter().map(|f| f.rule_id.as_str()).collect();
-    assert_eq!(ids, vec!["CL-01", "RV-05"]);
+    assert_eq!(ids, vec!["CL-01", "RV-06"]);
 }
 
 #[test]
 fn checks_key_absent_keeps_everything() {
-    let mut findings = vec![find("CL-01"), find("RV-05")];
+    let mut findings = vec![find("CL-01"), find("RV-06")];
     apply_check_allowlist(&mut findings, None);
     apply_check_allowlist(&mut findings, Some(&serde_yaml::Value::Null));
     assert_eq!(findings.len(), 2);
