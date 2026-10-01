@@ -42,6 +42,11 @@ scripts/agents status      # 全项目漂移检查
 
 `push` 检测到生成物被手工改过会拒绝覆盖（要 `--force`）。真要改内容，回 canon 改源。
 
+`agents.yaml` 的 `root:` 写**相对目录名**（如 `root: canon`），不写死 home 路径。
+解析顺序：绝对路径原样用；`~/x` 展开 home；其余相对路径落到
+`CANON_PROJECTS_BASE`（缺省 `~/projects`）下。换机器或换 checkout 根目录只需改
+环境变量，不用动 `agents.yaml`。
+
 ## 其他文档的分发
 
 `agent-pack/tasks/`、`agent-pack/rules/`、`agent-pack/skills/` 里的文档走 `agent-sync`：

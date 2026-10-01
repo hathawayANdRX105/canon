@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
 """agents — 从 canon 的章节库组装各项目 AGENTS.md。
 
-模型：canon 持有章节片段（specs/agents/fragments/），每个项目在
+模型：canon 持有章节片段（agent-pack/agents/fragments/），每个项目在
 agents.yaml 里声明「包含哪些章节、什么顺序、什么参数」。改一个片段，
 所有引用它的项目重新生成后同时受益。
 
 用法:
-    bin/agents list                        # 列出全部章节片段
-    bin/agents show <project>              # 打印该项目的组合计划
-    bin/agents build <project>             # 组装，输出到 stdout
-    bin/agents push <project>              # 组装并写入项目 AGENTS.md
-    bin/agents status                      # 全项目漂移检查
+    scripts/agents list                      # 列出全部章节片段
+    scripts/agents show <project>            # 打印该项目的组合计划
+    scripts/agents build <project>           # 组装，输出到 stdout
+    scripts/agents push <project> [--force]  # 组装并写入项目 AGENTS.md
+    scripts/agents status                    # 全项目漂移检查
+
+agents.yaml 的 `root:` 写相对目录名（如 `root: canon`），解析到
+CANON_PROJECTS_BASE（缺省 ~/projects）之下 —— 计划文件不带任何机器的 home 路径。
 
 片段正文可含 {{param}} 占位，由项目 agents.yaml 的 params 替换。
 未提供的占位保持原样并报 warning —— 宁可显式缺失，不静默填空。
@@ -107,7 +110,7 @@ def compose(project, cfg, verbose=False):
     spec = (cfg.get("projects") or {}).get(project)
     if not spec:
         die(f"agents.yaml 未配置项目 {project}")
-    root = spec.get("root")
+    root = resolve_root(spec, project)
     params = dict(spec.get("params") or {})
     params.setdefault("project", project)
     if root:
@@ -133,9 +136,30 @@ def compose(project, cfg, verbose=False):
     return out
 
 
-def dst_path(spec):
-    return os.path.join(spec["root"], "AGENTS.md")
+def dst_path(root):
+    return os.path.join(root, "AGENTS.md")
 
+
+
+def projects_base():
+    """Relative `root:` entries in agents.yaml resolve against this.
+
+    Override with CANON_PROJECTS_BASE (e.g. a second checkout root or a
+    container path) so the plan file never carries one machine's home dir."""
+    return os.environ.get("CANON_PROJECTS_BASE") or os.path.join(
+        os.path.expanduser("~"), "projects"
+    )
+
+
+def resolve_root(spec, project):
+    """Absolute `root:` wins as-is; `~/x` and `x` both land under projects_base."""
+    root = spec.get("root")
+    if not root:
+        die(f"agents.yaml 的 {project} 未配置 root")
+    root = os.path.expanduser(root)
+    if not os.path.isabs(root):
+        root = os.path.join(projects_base(), root)
+    return root
 
 def cmd_list(_args):
     names = sorted(f[:-3] for f in os.listdir(FRAG_DIR) if f.endswith(".md"))
@@ -156,8 +180,8 @@ def cmd_show(args, cfg):
     s = (cfg.get("projects") or {}).get(args.project)
     if not s:
         die(f"未配置 {args.project}")
-    print(f"■ {args.project}  →  {dst_path(s)}")
-    print(f"  root: {s['root']}\n  组合顺序:")
+    print(f"■ {args.project}  →  {dst_path(resolve_root(s, args.project))}")
+    print(f"  root: {resolve_root(s, args.project)}\n  组合顺序:")
     for i, item in enumerate(s.get("include") or [], 1):
         n = item if isinstance(item, str) else item.get("fragment")
         t = ((item.get("title") if isinstance(item, dict) else None)
@@ -189,7 +213,7 @@ def cmd_push(args, cfg):
     if not s:
         die(f"未配置 {args.project}")
     body = compose(args.project, cfg, verbose=True)
-    out = dst_path(s)
+    out = dst_path(resolve_root(s, args.project))
     old = None
     if os.path.exists(out):
         with open(out) as f:
@@ -212,11 +236,12 @@ def cmd_push(args, cfg):
 def cmd_status(_args, cfg):
     total = 0
     for name, s in sorted((cfg.get("projects") or {}).items()):
-        if not os.path.exists(s["root"]):
-            print(f"■ {name:14} — 根目录不存在 {s['root']}")
+        root = resolve_root(s, name)
+        if not os.path.exists(root):
+            print(f"■ {name:14} — 根目录不存在 {root}")
             total += 1
             continue
-        out = dst_path(s)
+        out = dst_path(root)
         if not os.path.exists(out):
             state = "missing"
         else:

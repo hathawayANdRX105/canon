@@ -12,7 +12,7 @@ defaults:
     investigation: 调查与审查
 projects:
   oh-my-pi:
-    root: /home/hathaway/projects/oh-my-pi
+    root: oh-my-pi
     titles:
       local/: oh-my-pi 开发约定
     include:
@@ -24,7 +24,7 @@ projects:
     - git-workflow
     - tools
   herdr:
-    root: /home/hathaway/projects/herdr
+    root: herdr
     titles:
       local/: herdr 约定
     include:
@@ -35,7 +35,7 @@ projects:
     - sensitive-ops
     - git-workflow
   dotfiles:
-    root: /home/hathaway/projects/dotfiles
+    root: dotfiles
     titles:
       local/: dotfiles 约定
     include:
@@ -46,7 +46,7 @@ projects:
     - git-workflow
     - tools
   new-api:
-    root: /home/hathaway/projects/new-api
+    root: new-api
     titles:
       local/: new-api 约定
     include:
@@ -57,7 +57,7 @@ projects:
     - sensitive-ops
     - git-workflow
   silverq:
-    root: /home/hathaway/projects/silverq
+    root: silverq
     titles:
       local/: silverq 约定
     include:
@@ -67,7 +67,7 @@ projects:
     - sensitive-ops
     - git-workflow
   kime:
-    root: /home/hathaway/projects/kime
+    root: kime
     titles:
       local/: kime 约定
     include:
@@ -78,7 +78,7 @@ projects:
     - sensitive-ops
     - git-workflow
   ferrite:
-    root: /home/hathaway/projects/ferrite
+    root: ferrite
     titles:
       local/: ferrite 约定
     include:
@@ -92,7 +92,7 @@ projects:
     - tools
     - subagents
   claude-code:
-    root: /home/hathaway/projects/claude-code
+    root: claude-code
     titles:
       local/: claude-code 约定
     include:
@@ -106,7 +106,7 @@ projects:
     - tools
     - subagents
   ainotation:
-    root: /home/hathaway/projects/ainotation
+    root: ainotation
     titles:
       local/: ainotation 约定
     include:
@@ -117,7 +117,7 @@ projects:
     - sensitive-ops
     - git-workflow
   omenic:
-    root: /home/hathaway/projects/omenic
+    root: omenic
     titles:
       local/: omenic 约定
     include:
@@ -130,7 +130,7 @@ projects:
     - git-workflow
     - subagents
   gugu:
-    root: /home/hathaway/projects/gugu
+    root: gugu
     titles:
       local/: gugu 约定
     include:
@@ -142,7 +142,7 @@ projects:
     - investigation
     - git-workflow
   deskctl:
-    root: /home/hathaway/projects/deskctl
+    root: deskctl
     titles:
       local/: deskctl 约定
     include:
@@ -154,7 +154,7 @@ projects:
     - investigation
     - git-workflow
   algorchemy:
-    root: /home/hathaway/projects/algorchemy
+    root: algorchemy
     titles:
       local/: algorchemy 约定
     include:
@@ -164,7 +164,7 @@ projects:
     - sensitive-ops
     - git-workflow
   sentinel:
-    root: /home/hathaway/projects/sentinel
+    root: sentinel
     titles:
       local/: sentinel 约定
     include:
@@ -174,7 +174,7 @@ projects:
     - sensitive-ops
     - git-workflow
   novel:
-    root: /home/hathaway/projects/novel
+    root: novel
     titles:
       local/: novel 约定
     include:
@@ -183,7 +183,7 @@ projects:
     - code-style
     - git-workflow
   ui-kit:
-    root: /home/hathaway/projects/ui-kit
+    root: ui-kit
     titles:
       local/: ui-kit 约定
     include:
@@ -196,7 +196,7 @@ projects:
     - git-workflow
     - tools
   canon:
-    root: /home/hathaway/projects/canon
+    root: canon
     titles:
       local/: canon 约定
     include:
