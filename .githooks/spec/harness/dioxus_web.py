@@ -23,7 +23,7 @@ import os
 import re
 import subprocess
 import sys
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 
 # ── 语法识别 ──────────────────────────────────────────────────────
 RSX_START = re.compile(r'\brsx!\s*\{')
@@ -155,7 +155,7 @@ def scan_style(path: str, src: str, class_limit: int) -> list[Finding]:
     out: list[Finding] = []
     for lineno, line in enumerate(src.split('\n'), 1):
         stripped = line.lstrip()
-        if stripped.startswith('//') or stripped.startswith('*'):
+        if stripped.startswith(('//', '*')):
             continue                      # 注释/文档里的字符串不算
         for value in STRING_LIT.findall(line):
             if not _looks_like_class_list(value):
@@ -275,7 +275,7 @@ def tracked_rs_files(root: str) -> list[str]:
     """用 git ls-files 取扫描集：gitignore 感知，不会扫进 target/ 与 .wt/。"""
     out = subprocess.run(
         ['git', 'ls-files', '-z', '--', '*.rs'],
-        cwd=root, capture_output=True,
+        cwd=root, capture_output=True, check=False,
     )
     if not out.returncode:
         return [p for p in out.stdout.decode('utf-8', 'replace').split('\0') if p]
@@ -294,7 +294,7 @@ def changed_rs_files(root: str, base: str) -> list[str]:
     for spec in (f'{base}...HEAD', f'{base}..HEAD', base):
         out = subprocess.run(
             ['git', 'diff', '--name-only', '-z', spec, '--', '*.rs'],
-            cwd=root, capture_output=True,
+            cwd=root, capture_output=True, check=False,
         )
         if out.returncode == 0:
             return [p for p in out.stdout.decode('utf-8', 'replace').split('\0') if p]
@@ -319,7 +319,7 @@ def main() -> int:
 
     root = args.root or subprocess.run(
         ['git', 'rev-parse', '--show-toplevel'],
-        capture_output=True, text=True,
+        capture_output=True, text=True, check=False,
     ).stdout.strip() or '.'
 
     if args.scope == 'changed':
@@ -331,7 +331,8 @@ def main() -> int:
     findings: list[Finding] = []
     for rel in targets:
         try:
-            src = open(f'{root}/{rel}', encoding='utf-8', errors='replace').read()
+            with open(f'{root}/{rel}', encoding='utf-8', errors='replace') as fh:
+                src = fh.read()
         except OSError:
             continue
         # 判据是**内容**不是路径名：按目录名过滤会让 web crate 一改名就静默失效，
