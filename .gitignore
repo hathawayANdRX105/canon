@@ -7,3 +7,4 @@ __pycache__/
 
 # .wt/ 分支工作树（见 worktree-isolation 规范）
 .wt/
+.ruff_cache/
