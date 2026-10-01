@@ -1,0 +1,62 @@
+# CK-DIOXUS-PROPS-NAMING: 回调契约词命名（REFACTOR-RULES R9）
+#
+# 为什么: 组件 props 是消费方依赖的契约，handle_* 是实现词不是契约词；
+#   ui-component-principles §3.4 与 web_spec.json P3（api_contract 问句）都已
+#   决议 on_*。本条是 l1 快检：同文件内 #[component] 之后 24 行窗口里出现
+#   `handle_*:` 形式的参数行即 WARN（组件体内的局部闭包 `let handle_x = move`
+#   不含参数表形态，不命中——近似判据，漏判由 review 层消除）。
+#   窗口 24 行（2026-10-01 三仓实测 #[component]→pub fn 最大 gap=21，12 行会
+#   漏整段长 doc 签名）；模式要求 handle_ 下划线前缀（排除英文名词
+#   handler/handle/handled 误报——2026-10-01 审计：原模式 handle[A-Za-z0-9_]*
+#   会命中 `handler:`/`handle:` 属性名）。
+# 实现: 双 grep + awk 按「同文件行号」join（grep -A 的上下文行用 `-` 分隔，
+#   解析不稳——抽取验证 2026-10-01 实测全漏，改用原生 `path:line:content` 行）。
+# 口径: 内联 sh；scope 同 list_key（$0：changed = diff 基线 GATE_BASE/origin/main，
+#   repo = 全仓）；NUL 流直接管道进 xargs，**不落 shell 变量**（sh 变量吃 NUL
+#   会静默假绿）。
+# 升级条件（先 WARN 处置再谈升 FAIL，web_spec 既定哲学）：三仓 handle_* 存量债
+#   （2026-10-01 仅 ferrite tavern chat.rs:58 一处参数 + 516 调用点）清零后提案。
+enabled: true
+hooks: [pre-push, merge]
+sla: l1
+fail_severity: WARN
+match:
+  paths_include: ["**/*.rs"]
+  paths_exclude: ["target/", ".wt/", "node_modules/"]
+mode: grep
+harness:
+  command: "sh"
+  args:
+    - "-c"
+    - |
+      scope="${0:-changed}"
+      root="$(git rev-parse --show-toplevel 2>/dev/null)" || { printf '[]'; exit 0; }
+      cd "$root"
+      source_list() {
+        if [ "$scope" = "changed" ]; then
+          git diff "${GATE_BASE:-origin/main}" --name-only -z -- '*.rs'
+        else
+          git ls-files -z -- '*.rs' | tr '\0' '\n' | grep -vE '(^|/)(tests|benches)/' | tr '\n' '\0'
+        fi
+      }
+      source_list |
+        xargs -0r grep -HEn -e '#\[component\]' -e '^[[:space:]]*handle_[A-Za-z0-9_]*[[:space:]]*:' -- 2>/dev/null |
+        awk -F: '
+          {
+            path = $1; ln = $2 + 0
+            rest = substr($0, length(path) + length($2) + 3)
+            if (rest ~ /#\[component\]/) {
+              lastc[path] = ln
+            } else if (rest ~ /^[[:space:]]*handle_[A-Za-z0-9_]*[[:space:]]*:/ &&
+                       lastc[path] != "" && ln > lastc[path] && ln <= lastc[path] + 24) {
+              print path ":" ln
+            }
+          }
+        ' |
+        jq -Rs 'split("\n") | map(select(length > 0) | capture("^(?<path>.+):(?<line>[0-9]+)$")) |
+                map({id: "DIOXUS-HANDLE-PROP", severity: "WARN",
+                     path, line: (.line | tonumber),
+                     message: "#[component] 签名窗口内出现 handle_* 回调参数：契约词是 on_change/on_open_change/on_select（REFACTOR-RULES R9）；局部闭包变量不受此限，按发现处置纪律修或驳回"})'
+    - changed
+optional: false
+timeout: 60

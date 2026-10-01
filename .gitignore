@@ -1,0 +1,10 @@
+todo/
+target/
+__pycache__/
+
+# /wf-scope 的 living scope：会话内工作文档，不进版本库
+.workflow/
+
+# .wt/ 分支工作树（见 worktree-isolation 规范）
+.wt/
+.ruff_cache/

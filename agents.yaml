@@ -1,0 +1,208 @@
+defaults:
+  titles:
+    _discipline: 发现处置纪律
+    project-structure: 本仓结构
+    architecture: 目录与架构
+    code-style: 代码风格
+    build-verify: 构建与验证
+    git-workflow: 提交与 PR
+    tools: 工具与命令
+    subagents: 子代理与并行
+    sensitive-ops: 破坏性操作与敏感信息
+    investigation: 调查与审查
+projects:
+  oh-my-pi:
+    root: /home/hathaway/projects/oh-my-pi
+    titles:
+      local/: oh-my-pi 开发约定
+    include:
+    - local/
+    - _discipline
+    - code-style
+    - build-verify
+    - sensitive-ops
+    - git-workflow
+    - tools
+  herdr:
+    root: /home/hathaway/projects/herdr
+    titles:
+      local/: herdr 约定
+    include:
+    - local/
+    - _discipline
+    - code-style
+    - build-verify
+    - sensitive-ops
+    - git-workflow
+  dotfiles:
+    root: /home/hathaway/projects/dotfiles
+    titles:
+      local/: dotfiles 约定
+    include:
+    - local/
+    - _discipline
+    - code-style
+    - sensitive-ops
+    - git-workflow
+    - tools
+  new-api:
+    root: /home/hathaway/projects/new-api
+    titles:
+      local/: new-api 约定
+    include:
+    - local/
+    - _discipline
+    - code-style
+    - build-verify
+    - sensitive-ops
+    - git-workflow
+  silverq:
+    root: /home/hathaway/projects/silverq
+    titles:
+      local/: silverq 约定
+    include:
+    - local/
+    - _discipline
+    - code-style
+    - sensitive-ops
+    - git-workflow
+  kime:
+    root: /home/hathaway/projects/kime
+    titles:
+      local/: kime 约定
+    include:
+    - local/
+    - _discipline
+    - code-style
+    - build-verify
+    - sensitive-ops
+    - git-workflow
+  ferrite:
+    root: /home/hathaway/projects/ferrite
+    titles:
+      local/: ferrite 约定
+    include:
+    - local/
+    - _discipline
+    - code-style
+    - build-verify
+    - sensitive-ops
+    - investigation
+    - git-workflow
+    - tools
+    - subagents
+  claude-code:
+    root: /home/hathaway/projects/claude-code
+    titles:
+      local/: claude-code 约定
+    include:
+    - local/
+    - _discipline
+    - code-style
+    - build-verify
+    - sensitive-ops
+    - investigation
+    - git-workflow
+    - tools
+    - subagents
+  ainotation:
+    root: /home/hathaway/projects/ainotation
+    titles:
+      local/: ainotation 约定
+    include:
+    - local/
+    - _discipline
+    - code-style
+    - build-verify
+    - sensitive-ops
+    - git-workflow
+  omenic:
+    root: /home/hathaway/projects/omenic
+    titles:
+      local/: omenic 约定
+    include:
+    - local/
+    - _discipline
+    - code-style
+    - build-verify
+    - sensitive-ops
+    - investigation
+    - git-workflow
+    - subagents
+  gugu:
+    root: /home/hathaway/projects/gugu
+    titles:
+      local/: gugu 约定
+    include:
+    - local/
+    - _discipline
+    - code-style
+    - build-verify
+    - sensitive-ops
+    - investigation
+    - git-workflow
+  deskctl:
+    root: /home/hathaway/projects/deskctl
+    titles:
+      local/: deskctl 约定
+    include:
+    - local/
+    - _discipline
+    - code-style
+    - build-verify
+    - sensitive-ops
+    - investigation
+    - git-workflow
+  algorchemy:
+    root: /home/hathaway/projects/algorchemy
+    titles:
+      local/: algorchemy 约定
+    include:
+    - local/
+    - _discipline
+    - code-style
+    - sensitive-ops
+    - git-workflow
+  sentinel:
+    root: /home/hathaway/projects/sentinel
+    titles:
+      local/: sentinel 约定
+    include:
+    - local/
+    - _discipline
+    - code-style
+    - sensitive-ops
+    - git-workflow
+  novel:
+    root: /home/hathaway/projects/novel
+    titles:
+      local/: novel 约定
+    include:
+    - local/
+    - _discipline
+    - code-style
+    - git-workflow
+  ui-kit:
+    root: /home/hathaway/projects/ui-kit
+    titles:
+      local/: ui-kit 约定
+    include:
+    - local/
+    - _discipline
+    - code-style
+    - build-verify
+    - sensitive-ops
+    - investigation
+    - git-workflow
+    - tools
+  canon:
+    root: /home/hathaway/projects/canon
+    titles:
+      local/: canon 约定
+    include:
+    - local/
+    - _discipline
+    - code-style
+    - build-verify
+    - git-workflow
+    - tools

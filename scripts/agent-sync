@@ -1,0 +1,318 @@
+#!/usr/bin/env python3
+"""agent-sync: 把 canon 仓的共享文档按 agent-sync.yaml 单一配置同步到各项目。
+
+配置：canon 根目录 agent-sync.yaml（项目 = root 安装根 + files 安装清单
+[src 源路径 / to 安装路径 / 可选 pin]；文件名映射约定见配置头部注释）。
+
+用法:
+  agent-sync status [project]                     漂移报告（只读）
+  agent-sync push   [project] [--commit] [--force]  canon -> 项目
+  agent-sync backport <project> <src> [--commit]    项目本地修正回流 canon
+  agent-sync pull                                   canon 仓自更新
+
+安全底线：本地有改动的文件绝不自动覆盖（local-mod / diverged / unknown 拒绝 push）。
+"""
+import os
+import re
+import shutil
+import sys
+import subprocess
+import datetime
+
+STAMP_RE = re.compile(r'^(?:<!-- canon: |# canon: ).*?@ ([0-9a-f]{7,40})')
+
+SYMBOL = {
+    'in-sync': '✓', 'behind': '↓', 'unstamped': '↓', 'missing': '+',
+    'local-mod': '⚠', 'diverged': '✗', 'unknown': '✗', 'stale-sha': '✗',
+}
+PUSHABLE = ('missing', 'behind', 'unstamped')
+
+
+def sh(*args, **kw):
+    check = kw.pop('check', True)
+    r = subprocess.run(args, capture_output=True, text=True, **kw)
+    if check and r.returncode != 0:
+        die(f"命令失败: {' '.join(args)}\n{r.stderr.strip()}")
+    return r.stdout
+
+
+def die(msg):
+    print(f"✗ {msg}", file=sys.stderr)
+    sys.exit(1)
+
+
+def canon_root():
+    d = os.path.dirname(os.path.realpath(__file__))
+    r = sh('git', 'rev-parse', '--show-toplevel', cwd=d, check=False).strip()
+    if not r:
+        die("agent-sync 必须放在 canon 仓内（找不到 git 仓）")
+    return r
+
+
+def canon_head(root):
+    return sh('git', '-C', root, 'rev-parse', 'HEAD').strip()
+
+
+def canon_remote(root):
+    url = sh('git', '-C', root, 'remote', 'get-url', 'origin', check=False).strip()
+    m = re.search(r'github\.com[:/]([^/]+/[^/]+?)(\.git)?$', url)
+    return m.group(1) if m else 'canon'
+
+
+def canon_show(root, sha, src):
+    r = subprocess.run(['git', '-C', root, 'show', f'{sha}:{src}'],
+                       capture_output=True, text=True)
+    return r.stdout if r.returncode == 0 else None
+
+
+def load_config(root):
+    """读单一配置文件 agent-sync.yaml（PyYAML）。"""
+    import yaml
+    path = os.path.join(root, 'agent-sync.yaml')
+    if not os.path.exists(path):
+        die("无配置: agent-sync.yaml（旧 projects/ 目录已废弃，单一配置为准）")
+    with open(path) as f:
+        try:
+            data = yaml.safe_load(f) or {}
+        except yaml.YAMLError as e:
+            die(f"agent-sync.yaml 解析失败: {e}")
+    return data
+
+
+def load_manifest(root, project):
+    """返回传统形状 {'root','dest','files':[(src,dst,pin)]}。
+
+    新配置里 dst 是完整安装相对路径（to），dest 恒为 ''；join 时自动忽略。
+    """
+    data = load_config(root)
+    projects = data.get('projects') or {}
+    p = projects.get(project)
+    if p is None:
+        die(f"agent-sync.yaml 无该项目: {project}（有: {', '.join(sorted(projects)) or '空'}）")
+    m = {'root': p.get('root'), 'dest': '', 'files': []}
+    if not m['root']:
+        die(f"{project} 缺 root:（安装根路径）")
+    for entry in (p.get('files') or []):
+        src, dst = entry.get('src'), entry.get('to')
+        if not src or not dst:
+            die(f"{project} 安装条目不完整（需 src + to）: {entry}")
+        m['files'].append((src, dst, entry.get('pin')))
+    return m
+
+
+def strip_stamp(text):
+    return '\n'.join(l for l in text.split('\n') if not STAMP_RE.match(l))
+
+
+def read_stamp(text):
+    for l in text.split('\n'):
+        m = STAMP_RE.match(l)
+        if m:
+            return m.group(1)
+    return None
+
+
+CODE_EXTS = {".py", ".sh", ".bash", ".zsh", ".fish", ".yaml", ".yml", ".toml", ".lua", ".rb", ".pl"}
+
+
+def is_code_file(dst_abs, content):
+    """代码文件用 # 行注释打戳(.py/.sh 等的 <!-- --> 是语法毒药);
+    其余(markdown/html)保持原 HTML 注释。带 shebang 的文件必是代码。"""
+    if content.startswith('#!'):
+        return True
+    return os.path.splitext(dst_abs)[1].lower() in CODE_EXTS
+
+
+def stamp_line(remote, sha, code=False):
+    head = f"canon: {remote} @ {sha[:7]} (synced {datetime.date.today().isoformat()})"
+    return f"# {head}" if code else f"<!-- {head} -->"
+
+
+def classify(canon, sha_head, remote, src, dst_abs, pin):
+    """返回 (state, note)。state 见 SYMBOL。"""
+    if not os.path.exists(dst_abs):
+        return ('missing', None)
+    with open(dst_abs) as f:
+        local = f.read()
+    s = read_stamp(local)
+    want = (pin or s or sha_head)
+    head12 = sha_head
+    pristine = canon_show(canon, want, src)
+    if pristine is None:
+        # 两种可能: (a) 戳的 sha 真不在本地历史 -> stale-sha, 提示 pull;
+        # (b) canon 侧源路径改过名(docs/->manaual/ 等), 该 sha 下没有这个路径
+        #     -> 不是漂移: 回退与「当前 HEAD 正本」比内容, unstamped/unknown 由内容裁决
+        sha_exists = sh('git', '-C', canon, 'cat-file', '-e', want, check=False).strip() == ''
+        if s and not sha_exists:
+            return ('stale-sha', f'戳 @{s} 在 canon 本地不存在，先 agent-sync pull')
+        pristine = canon_show(canon, sha_head, src) or ''
+    local_clean = strip_stamp(local)
+    if s is None:
+        if local_clean == pristine:
+            return ('unstamped', None)
+        return ('unknown', '无戳且内容与 canon 不同：先 backport 或 --force')
+    # 有戳：以戳版本为「本地应有的正本」判定是否被手改过
+    # 戳是短 sha、head 是完整 40 位：用前缀比较，截断无法补全
+    def at_head(v):
+        return sha_head.startswith(v) or v.startswith(sha_head)
+    if local_clean == pristine:
+        if at_head(want):
+            return ('in-sync', None)
+        return ('behind', f'canon 已更新到 @{sha_head[:7]}')
+    if at_head(want):
+        return ('local-mod', '本地改了 canon 没动，建议 backport')
+    return ('diverged', f'本地改了，canon 也更新到 @{sha_head[:7]}：人工合并')
+
+def write_synced(dst_abs, remote, sha, content):
+    os.makedirs(os.path.dirname(dst_abs), exist_ok=True)
+    code = is_code_file(dst_abs, content)
+    stamp = stamp_line(remote, sha, code=code)
+    if code and content.startswith('#!'):
+        # shebang 必须留在第 1 行(否则内核 exec 失效),戳插到它后面。
+        first_nl = content.index('\n') + 1
+        content = content[:first_nl] + stamp + '\n' + content[first_nl:]
+    else:
+        content = stamp + '\n' + content
+    with open(dst_abs, 'w') as f:
+        f.write(content)
+
+
+def iter_projects(canon, only=None):
+    names = sorted((load_config(canon).get('projects') or {}).keys())
+    if only:
+        wanted = only if isinstance(only, (list, tuple)) else [only]
+        missing = [w for w in wanted if w not in names]
+        if missing:
+            die(f"agent-sync.yaml 无该项目: {', '.join(missing)}（有: {', '.join(names) or '空'}）")
+        return [w for w in wanted if w in names]
+    return names
+
+
+def cmd_status(canon, only=None):
+    head = canon_head(canon)
+    remote = canon_remote(canon)
+    bad = 0
+    print(f"canon @{head[:7]}  ({remote})\n")
+    for proj in iter_projects(canon, only):
+        m = load_manifest(canon, proj)
+        print(f"■ {proj}")
+        for src, dst, pin in m['files']:
+            dst_abs = os.path.join(m['root'], m['dest'], dst)
+            state, note = classify(canon, head, remote, src, dst_abs, pin)
+            line = f"  {SYMBOL[state]} {state:<11} {dst}"
+            if pin:
+                line += f"  (pin @{pin[:7]})"
+            if note:
+                line += f"  — {note}"
+            print(line)
+            if state in ('diverged', 'unknown', 'stale-sha'):
+                bad += 1
+        print()
+    if bad:
+        print(f"{bad} 个文件需人工处理（diverged / unknown / stale-sha）")
+        sys.exit(1)
+    print("无冲突，可安全 push")
+
+
+def cmd_push(canon, only=None, commit=False, force=False):
+    head = canon_head(canon)
+    remote = canon_remote(canon)
+    for proj in iter_projects(canon, only):
+        m = load_manifest(canon, proj)
+        acted = []
+        print(f"■ {proj}")
+        for src, dst, pin in m['files']:
+            dst_abs = os.path.join(m['root'], m['dest'], dst)
+            state, note = classify(canon, head, remote, src, dst_abs, pin)
+            if state == 'in-sync':
+                print(f"  ✓ in-sync    {dst}")
+                continue
+            if state in PUSHABLE or (state in ('unknown', 'diverged') and force):
+                content = canon_show(canon, head, src)
+                write_synced(dst_abs, remote, head, content)
+                src_abs = os.path.join(canon, src)
+                if os.path.exists(src_abs):
+                    shutil.copymode(src_abs, dst_abs)  # 保留 +x 等权限位
+                verb = {'missing': '创建', 'behind': '更新', 'unstamped': '补戳',
+                        'unknown': '强制覆盖', 'diverged': '强制覆盖'}[state]
+                print(f"  ↓ {verb}     {dst}  (canon @{head[:7]})")
+                acted.append(dst_abs)
+            else:
+                print(f"  {SYMBOL[state]} 拒绝 {state:<9} {dst}  — {note or '本地有改动'}")
+        if acted and commit:
+            proj_root = m['root']
+            tracked, ignored = [], []
+            for p in acted:
+                (ignored if sh('git', '-C', proj_root, 'check-ignore', p,
+                               check=False).strip() else tracked).append(p)
+            if tracked:
+                sh('git', '-C', proj_root, 'add', '--', *tracked)
+                sh('git', '-C', proj_root, 'commit', '-m',
+                   f"docs(sync): from canon @{head[:7]}")
+                print(f"  已提交 {len(tracked)} 个文件到 {proj}")
+            if ignored:
+                names = ', '.join(os.path.relpath(p, proj_root) for p in ignored)
+                print(f"  ⚠ {len(ignored)} 个文件被 .gitignore 忽略，已写入未提交：{names}")
+        elif acted:
+            print(f"  已写入 {len(acted)} 个文件（未提交，记得 commit）\n")
+        else:
+            print()
+
+
+def cmd_backport(canon, proj, src, commit=False):
+    head = canon_head(canon)
+    remote = canon_remote(canon)
+    m = load_manifest(canon, proj)
+    hit = [(s, d) for s, d, _ in m['files'] if s == src]
+    if not hit:
+        die(f"agent-sync.yaml {proj} 里没有 {src}")
+    _, dst = hit[0]
+    dst_abs = os.path.join(m['root'], m['dest'], dst)
+    if not os.path.exists(dst_abs):
+        die(f"项目里没有该文件: {dst_abs}")
+    with open(dst_abs) as f:
+        local = strip_stamp(f.read())
+    canon_dst = os.path.join(canon, src)
+    os.makedirs(os.path.dirname(canon_dst), exist_ok=True)
+    with open(canon_dst, 'w') as f:
+        f.write(local)
+    print(f"已回流 {proj}:{dst} -> canon/{src}")
+    if commit:
+        sh('git', '-C', canon, 'add', '--', src)
+        sh('git', '-C', canon, 'commit', '-m', f"docs(backport): from {proj} {dst}")
+        print("已在 canon 提交")
+    else:
+        print("未提交——到 canon 仓检查后提交")
+
+
+def cmd_pull(canon):
+    print(sh('git', '-C', canon, 'pull', '--ff-only').strip())
+
+
+def main():
+    args = sys.argv[1:]
+    if not args:
+        cmd_status(canon_root())
+        return
+    cmd = args[0]
+    rest = args[1:]
+    canon = canon_root()
+    if cmd == 'status':
+        cmd_status(canon, rest[0] if rest else None)
+    elif cmd == 'push':
+        only = [a for a in rest if not a.startswith('--')] or None
+        commit = '--commit' in rest
+        force = '--force' in rest
+        cmd_push(canon, only, commit, force)
+    elif cmd == 'backport':
+        if len(rest) < 2:
+            die("用法: agent-sync backport <project> <src> [--commit]")
+        cmd_backport(canon, rest[0], rest[1], '--commit' in rest)
+    elif cmd == 'pull':
+        cmd_pull(canon)
+    else:
+        die(f"未知命令: {cmd}\n{__doc__}")
+
+
+if __name__ == '__main__':
+    main()

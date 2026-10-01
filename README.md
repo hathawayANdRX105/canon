@@ -11,37 +11,43 @@
 ## 目录
 
 ```
-canon/
-├── bin/agent-sync      # 同步工具（status / push / backport / pull）
-├── tasks/              # 共享任务书（通用骨架）
-├── rules/              # 共享规范
-├── skills/             # 共享 skill
-└── projects/<name>.yaml  # 分发 manifest
+canon/                  ← 仓根本身就是 Rust crate（gate）
+├── src/                # gate 源码（engine / rules / tools）
+├── tests/              # gate crate 集成测试
+├── Cargo.toml          # 产物 target/release/gate，分发到各仓 .githooks/canon
+├── agent-pack/         # agent 文档正本（agents 片段 / rules / skills / templates / tasks）
+├── specs/              # gate 规则包正本（canon init 的 seed 源）（quality/code/cleanup/github/workspace/harness/docs）
+├── scripts/            # 同步与组装工具（agent-sync / agents / canon-sync）
+├── Justfile            # 高频 CLI 封装
+└── agent-sync.yaml     # agent 文档分发配置
 ```
 
 ## 内容拆分原则（重要）
 
 一个主题要么**纯通用**（放 canon，可同步），要么**纯项目特有**（留项目，不同步）。混合内容按自然接缝拆成两份：
 
-- 通用骨架 → `canon/tasks/version-stats.md`（三门口径、判定规则、执行流程）
+- 版本口径唯一正本 → `version-stats` skill（dotfiles 分发，通用篇 + silverq 项目篇合并，勿再建项目副本）
 - 项目特有（路径 / 清单 / tag 格式 / 产物）→ 各项目的 `.agent/tasks/versioning.md`
 
 两份冲突时**以项目文件为准**——它绑死了真实路径。
 
-## manifest 格式
+## 分发配置格式（agent-sync.yaml，单一文件）
 
-`projects/<项目名>.yaml`：
+一个项目 = 一条 `root`（安装根路径）+ 一份 `files` 安装清单（源路径 → 安装路径）：
 
 ```yaml
-root: /abs/path/to/project   # 项目本地绝对路径
-dest: .agent/tasks           # 文件落地的目录（可省，默认 .）
-
-# <canon 源路径> -> <项目内相对 dest 的路径>
-tasks/version-stats.md -> version-stats.md
-
-# 可选 pin：项目暂时挂旧版本
-# rules/foo.md -> foo.md @ abc1234
+projects:
+  kime:
+    root: /abs/path/to/kime        # 项目本地绝对路径（安装根）
+    files:
+      - src: agent-pack/rules/gates.md  # canon 源路径
+        to: .agent/rules/gates.md       # 安装路径（相对 root）
+        # pin: abc1234               # 可选：固定同步自某次 canon 提交
 ```
+
+**文件名映射约定**：默认 `to = <安装前缀>/<src 的 basename>`（保留源文件名，按前缀归位）；
+需要改名就显式写 `to`。这份清单是「哪份文档装到哪里」的唯一留存记录，
+`agent-sync status/push/backport` 全部以它为准，新增分发文档 = 加一行。
 
 ## 用法
 
@@ -49,7 +55,7 @@ tasks/version-stats.md -> version-stats.md
 agent-sync status              # 所有项目的漂移报告（只读）
 agent-sync status kime         # 单个项目
 agent-sync push kime [--commit]  # 同步 canon -> kime（只推 behind/missing/unstamped）
-agent-sync backport kime tasks/version-stats.md   # kime 的本地修正回流到 canon
+agent-sync backport kime agent-pack/rules/gates.md   # kime 的本地修正回流到 canon
 agent-sync pull                # canon 仓自更新
 ```
 
@@ -76,15 +82,15 @@ agent-sync pull                # canon 仓自更新
 
 戳 = 「这份副本来自哪」。agent 在项目里看到它，就知道改文档去 canon，**别改本地副本**。
 
-## gate — 规范执行引擎（bin/gate）
+## gate — 规范执行引擎（canon 仓根的 Rust crate）
 
-canon 管规范的**存储、分发与执行**，是 gate 的**唯一源码正本**（omenic 的 `bin/gate` 与 `spec` 的 gate 部分已删除，omenic 只留 `spec::template` 模板库供其 CLI 使用）。
+canon 管规范的**存储、分发与执行**，是 gate 的**唯一源码正本**（omenic 的 `gate/` 与 `spec` 的 gate 部分已删除，omenic 只留 `spec::template` 模板库供其 CLI 使用）。
 
 ### 拦截配置化（原则：要不要拦，spec 说了算）
 
 | 检查族 | 配置文件 | 可配项 |
 |---|---|---|
-| checklist 引擎（16 条） | `checklist_*.yaml` | `fail_severity`（拦不拦）、`hooks`（何时跑）、`enabled`、`timeout`、`optional` |
+| checklist 引擎（20 条） | `checklist_*.yaml` | `fail_severity`（拦不拦）、`hooks`（何时跑）、`enabled`、`timeout`、`optional` |
 | issue 合规 | `github_issues.yaml` | `severity_overrides:` 按规则 ID 定严重度；`garbled_content_check` / `labels_section_forbidden` / `title_must_be_chinese` 等开关直接启停检查；`required_headings` / `forbidden_keywords` / `keyword_label_suggestions` 等参数 |
 | PR 合规 | `github_pull_requests.yaml` | 同上 + `ci_check_mode` / `done_when_check_mode`（FAIL / WARN 切换拦截级别） |
 | review 合规 | `github_reviews.yaml` | `severity_overrides:` + 检查参数 |
@@ -94,9 +100,9 @@ canon 管规范的**存储、分发与执行**，是 gate 的**唯一源码正�
 优先级：**家族 yaml `severity_overrides` → 全局 `severity_overrides.yaml`**；规则 yaml 缺失 → `gate.setup` FAIL 报错，绝不静默放行。
 
 **分层**：
-- `bin/gate/src/engine.rs` — checklist 引擎，**零检测逻辑**：按 scope 收集 payload（staged diff / 全量 diff / 变更文件）→ 喂给 yaml 声明的外部 harness 命令 → 解析 finding JSON 聚合放行或拦截。加规则/改规则/删规则全部是 yaml 操作，不动二进制
-- `bin/gate/src/rules/` + `tools/` — gh 工作流策略层（issue/PR/review 合规、merge 编排、gh 命令拦截），检测逻辑由 `github_*.yaml` 驱动
-- `rules/gate/` — 默认规则包正本（37 份：checklist ×16 + code/cleanup/workspace/github 系 + dispatch + 协议文档）
+- `src/engine.rs` — checklist 引擎，**零检测逻辑**：按 scope 收集 payload（staged diff / 全量 diff / 变更文件）→ 喂给 yaml 声明的外部 harness 命令 → 解析 finding JSON 聚合放行或拦截。加规则/改规则/删规则全部是 yaml 操作，不动二进制
+- `src/rules/` + `tools/` — gh 工作流策略层（issue/PR/review 合规、merge 编排、gh 命令拦截），检测逻辑由 `github_*.yaml` 驱动
+- `specs/` — 默认规则包正本（43 份：quality checklist ×17 + code/cleanup/workspace/github 系 + harness 4 件套 + docs 4 份 + dispatch/severity_overrides）
 
 与 omenic 内嵌版的差异（去硬编码）：
 
@@ -108,30 +114,52 @@ canon 管规范的**存储、分发与执行**，是 gate 的**唯一源码正�
 
 **残留硬编码**（已收敛到最小）：pre_commit/merge 的 topic 路由 `match`（topic 名 → 内建 runner 的映射；topic 列表本身已由 dispatch.yaml 外部化）；`github_pull_requests.yaml` 的 `fixes_epic_severity` 为声明未接线键（对应 API 层检查尚不存在）。检查规范（开关/参数/严重度）已全部 yaml 化，缺失即 `gate.setup` FAIL。
 
+### 构建与验证（CI 驱动）
+
+**测试与构建一律走 GitHub CI**（`.github/workflows/ci.yml`：fmt --check + `cargo build --locked --all-targets` + `cargo test --locked --all-targets`，绿才算验证过）。本地只允许 `cargo fmt --check` 和 `cargo check --offline` 这类秒级轻量检查。唯一例外：需要把新二进制装进 `~/.local/bin` 时本地 `cargo build --release`（CI 产物进不了本机钩子路径）。
+
 ### 构建与安装
 
 ```bash
-cd bin/gate && cargo build --release    # 产物 target/release/gate
-cd <目标仓库> && ~/projects/canon/bin/gate/target/release/gate init
+cargo build --release              # 产物 target/release/gate
+cd <目标仓库> && ~/projects/canon/target/release/canon init
 ```
 
-`gate init` 做四件事：装二进制到 `~/.local/bin/`（**gate + gh 两个名字**，gh 用于拦截 issue/PR 命令）→ 设 `core.hooksPath=.githooks/hooks` → 写三个 hook 脚本（pre-commit / pre-push / merge，带 PATH→仓内二进制的兜底查找）→ 从 `rules/gate/`（自动探测 canon 仓，或 `--rules-dir` 指定）播种规则到 `.githooks/spec/`，**已存在的文件绝不覆盖**。
+`canon init` 做四件事：装二进制到 `~/.local/bin/`（**gate + gh 两个名字**，gh 用于拦截 issue/PR 命令）→ 设 `core.hooksPath=.githooks/hooks` → 写三个 hook 脚本（pre-commit / pre-push / merge，带 PATH→仓内二进制的兜底查找）→ 从 `specs/`（自动探测 canon 仓，或 `--rules-dir` 指定）播种规则到 `.githooks/spec/`，**已存在的文件绝不覆盖**。
 
 ### 用法
 
 ```bash
-gate pre-commit          # staged diff 检查（钩子自动调）
-gate pre-push            # HEAD 全量 diff 检查（钩子自动调）
+canon pre-commit          # staged diff 检查（钩子自动调）
+canon pre-push            # HEAD 全量 diff 检查（钩子自动调）
 gate pre-merge           # merge-base 检查（merge 工具调；GATE_BASE=origin/develop gate pre-merge 换基线）
-gate check               # 列出全部规则
-gate check clippy --sla l2   # 手动跑指定规则（merge scope，忽略 hooks 过滤）
-gate check hardcoded_secret --json   # 机器可读输出（含 score/confidence 等 extra）
+canon check               # 列出全部规则
+canon check clippy --sla l2   # 手动跑指定规则（merge scope，忽略 hooks 过滤）
+canon check hardcoded_secret --json   # 机器可读输出（含 score/confidence 等 extra）
 ```
 
 退出码：存在 FAIL 级 finding → 1（拦截 git 操作）；否则 0。严重度可用 `.githooks/spec/severity_overrides.yaml` 按 rule_id 覆盖。
 
+### 模型审查层（review_chain / DWJ）的环境配置
+
+`review_chain`（pre-push/merge 的语义审查）与 `done_when_judge`（issue close 的 Done-when 逐条评审）共用三档降级：**jev → 小模型 → 无**，两者互斥只跑一个；都不配时模型层出 INFO，确定性工具检查（ccn/duplication/antislop/slop_comment）永远照跑。
+
+```bash
+# jev 档（TypeSafe System One，校准概率，首选）
+export TYPESAFE_API_KEY=...            # 官方 api.typesafe.ai 用 Bearer；自建网关可能只认 x-api-key，harness 双发
+export TYPESAFE_API_BASE=https://api.typesafe.ai
+export JEV_MODEL=jev-latest
+
+# 小模型档（jev 不可用时降级，OpenAI 兼容 /v1/chat/completions）
+export REVIEW_LLM_BASE_URL=http://localhost:3000
+export REVIEW_LLM_API_KEY=...
+export REVIEW_LLM_MODEL=qwen-plus
+```
+
+per-question 阈值、问题集分别在 `specs/harness/jev_questions_review.json` / `jev_questions_done_when.json`；close 路径总开关在 `github_issues.yaml` 的 `done_when_judge.enabled`。
+
 ### 新规则包怎么进 canon
 
-1. 规则 yaml 放 `canon/rules/gate/checklist_<名字>.yaml`（schema 见 `rules/gate/CHECKLIST_SPEC.md`）
-2. 各项目 manifest（`projects/<name>.yaml`）加一行把 `rules/gate/checklist_<名字>.yaml` 分发到该仓 `.githooks/spec/`
+1. 规则 yaml 放 `canon/specs/quality/checklist_<名字>.yaml`（schema 见 `specs/docs/CHECKLIST_SPEC.md`）
+2. 各项目 manifest（`agent-sync.yaml` / gate 规则包）加一行把 `rules/quality/checklist_<名字>.yaml` 分发到该仓 `.githooks/spec/`
 3. `agent-sync push <项目>` 下发

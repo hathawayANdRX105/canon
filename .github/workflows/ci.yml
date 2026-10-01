@@ -12,13 +12,13 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: bin/gate
+        working-directory: .
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: bin/gate
+          workspaces: .
       - name: Format check
         run: cargo fmt --all -- --check
       - name: Build

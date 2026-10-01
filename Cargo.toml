@@ -1,0 +1,26 @@
+[package]
+name = "canon"
+version = "0.5.17"
+edition = "2024"
+description = "Spec-driven quality gate + MCP spec server: yaml rules, external harnesses, zero built-in detection"
+publish = false
+
+[lib]
+name = "canon"
+path = "src/lib.rs"
+
+[[bin]]
+name = "canon"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+regex = "1"
+anyhow = "1"
+rusqlite = { version = "0.40.2", features = ["bundled"] }
+
+[dev-dependencies]
+tempfile = "3"

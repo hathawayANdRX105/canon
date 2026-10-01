@@ -1,0 +1,11 @@
+# 后端项目缺省管道 + 步骤（D7：模板只给缺省，项目级 states 可覆盖）
+states: [调查, 规划, 开发, 校验, 规范清洁, 审查, 完成]
+steps:
+  - { title: "调查：现状、约束、相关实现", kind: work, state: 调查 }
+  - { title: "决策：方案与取舍（写进 note）", kind: work, state: 规划 }
+  - { title: "准备：分支/worktree/基线确认", kind: work, state: 规划 }
+  - { title: "开发：实现改动", kind: work, state: 开发 }
+  - { title: "校验：跑真实命令/复现路径，失败回开发", kind: work, state: 校验 }
+  - { title: "规范清洁：canon preflight FAIL 清零", kind: spec, spec_ref: preflight, state: 规范清洁 }
+  - { title: "审查：CRG/ocr 审查 + 逐条处置", kind: spec, spec_ref: review_chain, state: 审查 }
+  - { title: "清理整理：分支/worktree/临时进程", kind: work, state: 完成 }

@@ -1,0 +1,1 @@
+../agent-pack/rules/agent-readme.md

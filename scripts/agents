@@ -1,0 +1,253 @@
+#!/usr/bin/env python3
+"""agents — 从 canon 的章节库组装各项目 AGENTS.md。
+
+模型：canon 持有章节片段（specs/agents/fragments/），每个项目在
+agents.yaml 里声明「包含哪些章节、什么顺序、什么参数」。改一个片段，
+所有引用它的项目重新生成后同时受益。
+
+用法:
+    bin/agents list                        # 列出全部章节片段
+    bin/agents show <project>              # 打印该项目的组合计划
+    bin/agents build <project>             # 组装，输出到 stdout
+    bin/agents push <project>              # 组装并写入项目 AGENTS.md
+    bin/agents status                      # 全项目漂移检查
+
+片段正文可含 {{param}} 占位，由项目 agents.yaml 的 params 替换。
+未提供的占位保持原样并报 warning —— 宁可显式缺失，不静默填空。
+"""
+import argparse
+import datetime
+import os
+import re
+import sys
+
+import yaml
+
+CANON = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+FRAG_DIR = os.path.join(CANON, "agent-pack", "agents", "fragments")
+LOCAL_DIR = os.path.join(CANON, "agent-pack", "agents", "local")
+PLAN = os.path.join(CANON, "agents.yaml")
+PARAM_RE = re.compile(r"\{\{(\w+)\}\}")
+STAMP = "<!-- managed by canon agents.yaml; edit canon/agent-pack/agents/fragments/, not this file -->"
+
+
+def die(msg):
+    print(f"✗ {msg}", file=sys.stderr)
+    sys.exit(1)
+
+
+def load_plan():
+    if not os.path.exists(PLAN):
+        die(f"{PLAN} 不存在")
+    with open(PLAN) as f:
+        return yaml.safe_load(f) or {}
+
+
+def frag_path(name, project=None):
+    """片段定位：共享片段在 fragments/；`local/<x>` 指向项目独有片段
+    （local/<项目> 缺省取当前项目名）。"""
+    if name.startswith("local/"):
+        tail = name[len("local/"):] or project
+        p = os.path.join(LOCAL_DIR, f"{tail}.md")
+        return p
+    return os.path.join(FRAG_DIR, name if name.endswith(".md") else f"{name}.md")
+
+def read_frag(name, project=None):
+    p = frag_path(name, project)
+    if not os.path.exists(p):
+        die(f"片段不存在: {p}")
+    with open(p) as f:
+        return f.read().strip("\n")
+
+
+def render(body, params, project, warns):
+    def sub(m):
+        key = m.group(1)
+        if key in params:
+            return str(params[key])
+        if key == "project":
+            return project
+        warns.append(f"{project}: 片段占位 {{{{{key}}}}} 无对应参数")
+        return m.group(0)
+    return PARAM_RE.sub(sub, body)
+
+
+def section(body, title):
+    """把片段正文包成 `## <title>` 小节。
+
+    片段自带的首个 H1/H2 标题视为「本片段标题」，丢弃并用配置标题替代。
+    剩余标题按**片段自身的最低标题层级**归一化，整体下移到 H3 之下 ——
+    片段里有 H1 就降两级，只有 H2 就降一级。保证内部任何标题都严格
+    嵌在 `## <title>` 之下，不会与它同级。
+    """
+    lines = body.splitlines()
+    # 去掉片段自身的首个标题
+    start = 0
+    if lines and re.match(r"^#{1,2} ", lines[0]):
+        start = 1
+        while start < len(lines) and not lines[start].strip():
+            start += 1
+    rest = lines[start:]
+    # 片段内最小标题层级（至少 2；没有标题则不处理）
+    lvls = [len(m.group(1)) for l in rest if (m := re.match(r"^(#{1,6}) ", l))]
+    base = min(lvls) if lvls else 2
+    shift = max(0, 3 - base)          # 最小层级 → H3
+    def demote(l):
+        m = re.match(r"^(#{1,6})( .*)$", l)
+        if not m:
+            return l
+        n = min(len(m.group(1)) + shift, 6)
+        return "#" * n + m.group(2)
+    out = [f"## {title}", ""]
+    out += [demote(l) for l in rest]
+    return "\n".join(out).rstrip()
+
+
+def compose(project, cfg, verbose=False):
+    spec = (cfg.get("projects") or {}).get(project)
+    if not spec:
+        die(f"agents.yaml 未配置项目 {project}")
+    root = spec.get("root")
+    params = dict(spec.get("params") or {})
+    params.setdefault("project", project)
+    if root:
+        params.setdefault("root", root)
+    warns = []
+    blocks = []
+    for item in spec.get("include") or []:
+        name = item if isinstance(item, str) else item.get("fragment")
+        if not name:
+            die(f"{project}: include 条目缺 fragment")
+        body = render(read_frag(name, project), params, project, warns)
+        title = ((item.get("title") if isinstance(item, dict) else None)
+                 or spec.get("titles", {}).get(name)
+                 or (cfg.get("defaults") or {}).get("titles", {}).get(name)
+                 or (project if name.startswith("local/") else name))
+        blocks.append(section(body, title))
+    if not blocks:
+        die(f"{project}: include 为空")
+    out = "\n\n".join(blocks).rstrip() + "\n"
+    if warns and verbose:
+        for w in warns:
+            print(f"  ⚠ {w}", file=sys.stderr)
+    return out
+
+
+def dst_path(spec):
+    return os.path.join(spec["root"], "AGENTS.md")
+
+
+def cmd_list(_args):
+    names = sorted(f[:-3] for f in os.listdir(FRAG_DIR) if f.endswith(".md"))
+    plan = load_plan()
+    users = {}
+    for p, s in (plan.get("projects") or {}).items():
+        for item in s.get("include") or []:
+            n = item if isinstance(item, str) else item.get("fragment")
+            users.setdefault(n, []).append(p)
+    print(f"章节库 {FRAG_DIR} — {len(names)} 个片段\n")
+    for n in names:
+        used = users.get(n, [])
+        who = f"{len(used)} 仓" + (f"  ({', '.join(used[:4])}{'…' if len(used) > 4 else ''})" if used else "  (未被引用)")
+        print(f"  {n:24} {who}")
+
+
+def cmd_show(args, cfg):
+    s = (cfg.get("projects") or {}).get(args.project)
+    if not s:
+        die(f"未配置 {args.project}")
+    print(f"■ {args.project}  →  {dst_path(s)}")
+    print(f"  root: {s['root']}\n  组合顺序:")
+    for i, item in enumerate(s.get("include") or [], 1):
+        n = item if isinstance(item, str) else item.get("fragment")
+        t = ((item.get("title") if isinstance(item, dict) else None)
+             or s.get("titles", {}).get(n)
+             or (cfg.get("defaults") or {}).get("titles", {}).get(n) or n)
+        print(f"   {i}. {n:24} → ## {t}")
+    if s.get("params"):
+        print("  params:", ", ".join(f"{k}={v}" for k, v in s["params"].items()))
+
+
+def cmd_build(args, cfg):
+    print(compose(args.project, cfg, verbose=True), end="")
+
+
+def canon_strip(text):
+    """去掉任何 canon 戳行（新格式 managed-by 与旧格式 canon: sha 都算），
+    只留正文，便于比较。"""
+    keep = []
+    for l in text.splitlines():
+        s = l.strip()
+        if s.startswith("<!--") and ("managed by canon" in s or s.startswith("<!-- canon:")):
+            continue
+        keep.append(l)
+    return "\n".join(keep).strip()
+
+
+def cmd_push(args, cfg):
+    s = (cfg.get("projects") or {}).get(args.project)
+    if not s:
+        die(f"未配置 {args.project}")
+    body = compose(args.project, cfg, verbose=True)
+    out = dst_path(s)
+    old = None
+    if os.path.exists(out):
+        with open(out) as f:
+            old = f.read()
+    stamp = f"<!-- managed by canon agents.yaml @ {datetime.date.today().isoformat()} -->"
+    content = f"{stamp}\n{body}"
+    if old is not None and canon_strip(old) == canon_strip(content):
+        print(f"  ✓ in-sync    {args.project}/AGENTS.md")
+        return
+    if old and not args.force and canon_strip(old) != canon_strip(content):
+        # 正文与上次生成结果不同 = 有人手工改了生成物；不静默覆盖
+        print(f"  ⚠ {args.project}/AGENTS.md 正文与组装结果不同（可能被手工编辑）。"
+              f"确认要覆盖再加 --force。", file=sys.stderr)
+        return
+    with open(out, "w") as f:
+        f.write(content)
+    print(f"  {'↓ 覆盖' if old else '↓ 创建'}    {args.project}/AGENTS.md")
+
+
+def cmd_status(_args, cfg):
+    total = 0
+    for name, s in sorted((cfg.get("projects") or {}).items()):
+        if not os.path.exists(s["root"]):
+            print(f"■ {name:14} — 根目录不存在 {s['root']}")
+            total += 1
+            continue
+        out = dst_path(s)
+        if not os.path.exists(out):
+            state = "missing"
+        else:
+            with open(out) as f:
+                old = f.read()
+            if canon_strip(old) == compose(name, cfg).strip():
+                state = "in-sync" if "managed by canon" in old.splitlines()[0] else "in-sync(旧戳)"
+            else:
+                state = "drift"
+        total += state != "in-sync"
+        print(f"■ {name:14} {state}")
+    print(f"\n{'全部同步' if total == 0 else f'{total} 个项目需生成'}")
+    return 1 if total else 0
+
+
+def main():
+    ap = argparse.ArgumentParser(description="从 canon 章节库组装项目 AGENTS.md")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    sub.add_parser("list")
+    p = sub.add_parser("show"); p.add_argument("project")
+    p = sub.add_parser("build"); p.add_argument("project")
+    p = sub.add_parser("push"); p.add_argument("project"); p.add_argument("--force", action="store_true")
+    sub.add_parser("status")
+    args = ap.parse_args()
+    cfg = load_plan()
+    if args.cmd == "list": cmd_list(args)
+    elif args.cmd == "show": cmd_show(args, cfg)
+    elif args.cmd == "build": cmd_build(args, cfg)
+    elif args.cmd == "push": cmd_push(args, cfg)
+    elif args.cmd == "status": sys.exit(cmd_status(args, cfg))
+
+
+if __name__ == "__main__":
+    main()

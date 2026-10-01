@@ -1,0 +1,206 @@
+#!/usr/bin/env python3
+"""canon-sync — distribute canon's binary + spec to member repos, collect their new stuff back.
+
+canon 是正本仓：.githooks/{canon,hooks,spec} 由 canon 分发；各项目的自有规则
+（custom spec、独有 checklist）受保护不被覆盖。.github 走 collect-only（各仓
+CI 不同，不盲推）。
+
+Commands:
+  canon-sync status <project>     漂移表：DIFF / ONLY-CANON / DUPLICATE-LAYER / PROJECT-ONLY
+  canon-sync push <project>       分发 canon-owned 文件（保护 PROJECT-ONLY 与 custom/）
+  canon-sync collect <project>    收集报告：项目有而 canon 没有的规则/模板（回port候选）
+
+Exit 0 = 无漂移（status）；push/collect 总是 0。
+"""
+
+import filecmp
+import os
+import shutil
+import subprocess
+import sys
+
+CANON = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+CANON_HOOKS = os.path.join(CANON, ".githooks")
+CANON_SPEC = os.path.join(CANON_HOOKS, "spec")
+
+# 文档映射：canon 正本 -> 成员仓 .githooks/ 部署名。
+# 原先映射 manual/{gate,github,pr-dev-workflow,worktree}.md 四本人查手册；
+# 这些内容已全部转成 dotfiles skill（gate-spec / pr-orchestration / worktree-isolation /
+# github-issue-pr），走 omp 的 skill 通道，不再作为仓内文档分发。
+# 成员仓里已存在的 .githooks/{GATE_HANDBOOK,GITHUB_ISSUE_PR,PR_DEV_WORKFLOW,WORKFLOW}.md
+# 是历史残留：不再更新，也不再纳入漂移判定，需要时由各仓自行清理。
+MAPPED_DOCS = []
+
+# canon-owned 相对路径（相对 .githooks/）。目录 = 整目录分发；文件 = 单文件。
+OWNED_DIRS = ["hooks", "spec/github", "spec/workspace", "spec/cleanup",
+              "spec/code", "spec/quality", "spec/harness", "spec/docs"]
+OWNED_FILES = ["canon", "spec/dispatch.yaml", "spec/severity_overrides.yaml"]
+# 受保护：push 永不触碰
+PROTECTED = ["spec/custom"]
+
+
+def project_root(project: str) -> str:
+    p = os.path.join("/home/hathaway/projects", project)
+    if not os.path.isdir(p):
+        sys.exit(f"project not found: {p}")
+    return p
+
+
+def walk_files(base: str):
+    for root, _dirs, files in os.walk(base):
+        if "__pycache__" in root:
+            continue
+        for f in files:
+            if f.endswith(".pyc"):
+                continue
+            yield os.path.relpath(os.path.join(root, f), base)
+
+
+def same(a: str, b: str) -> bool:
+    return os.path.isfile(a) and os.path.isfile(b) and filecmp.cmp(a, b, shallow=False)
+
+
+def mapped_deployments(p_hooks: str):
+    """[(source_abs, target_abs)] 按策略过滤。"""
+    out = []
+    for src_rel, tgt_rel, always in MAPPED_DOCS:
+        src = os.path.join(CANON, src_rel)
+        tgt = os.path.join(p_hooks, tgt_rel)
+        if os.path.isfile(src) and (always or os.path.exists(tgt)):
+            out.append((src, tgt))
+    return out
+
+
+def owned_rels():
+    rels = []
+    for d in OWNED_DIRS:
+        base = os.path.join(CANON_HOOKS, d)
+        if os.path.isdir(base):
+            rels.extend(os.path.join(d, f) for f in walk_files(base))
+    for f in OWNED_FILES:
+        if os.path.isfile(os.path.join(CANON_HOOKS, f)):
+            rels.append(f)
+    return sorted(rels)
+
+
+def checklist_yamls(spec_dir: str):
+    """所有 checklist_*.yaml（递归），rel path -> abs。"""
+    out = {}
+    q = os.path.join(spec_dir, "quality")
+    for root, _dirs, files in os.walk(spec_dir):
+        for f in files:
+            if f.startswith("checklist_") and f.endswith(".yaml"):
+                abs_p = os.path.join(root, f)
+                out[os.path.relpath(abs_p, spec_dir)] = abs_p
+    return out
+
+
+def status(project: str):
+    proot = project_root(project)
+    p_hooks = os.path.join(proot, ".githooks")
+    drift, only_canon, dup_layer, project_only = [], [], [], []
+
+    for rel in owned_rels():
+        tgt = os.path.join(p_hooks, rel)
+        if not os.path.exists(tgt):
+            only_canon.append(rel)
+        elif not same(os.path.join(CANON_HOOKS, rel), tgt):
+            drift.append(rel)
+
+    for src, tgt in mapped_deployments(p_hooks):
+        rel = os.path.basename(tgt)
+        if not os.path.exists(tgt):
+            only_canon.append(f".githooks/{rel} <- {os.path.relpath(src, CANON)}")
+        elif not same(src, tgt):
+            drift.append(f".githooks/{rel} <- {os.path.relpath(src, CANON)}")
+
+    # 旧布局重复层：非 quality/ 的 checklist 与 quality/ 同名
+    yamls = checklist_yamls(os.path.join(p_hooks, "spec"))
+    for rel, abs_p in sorted(yamls.items()):
+        if not rel.startswith("quality" + os.sep):
+            q_rel = os.path.join("quality", os.path.basename(rel))
+            q_abs = os.path.join(p_hooks, "spec", q_rel)
+            if os.path.isfile(q_abs):
+                (dup_layer if filecmp.cmp(abs_p, q_abs, shallow=False)
+                 else dup_layer).append(f"{rel} ({'identical' if filecmp.cmp(abs_p, q_abs, shallow=False) else 'DIFFERS'} to {q_rel})")
+            else:
+                project_only.append(rel)
+        else:
+            base = os.path.basename(rel)
+            canon_q = os.path.join(CANON_SPEC, "quality", base)
+            if os.path.isfile(canon_q) and not same(canon_q, abs_p):
+                drift.append(f"spec/{rel}")
+            elif not os.path.isfile(canon_q):
+                project_only.append(f"spec/{rel}")
+
+    drift = sorted(set(drift))
+    print(f"== {project}: canon status ==")
+    for name, items in [("DRIFT (canon newer)", drift), ("ONLY-CANON (missing)", only_canon),
+                        ("DUPLICATE-LAYER (root copy of quality/)", dup_layer),
+                        ("PROJECT-ONLY (protected)", project_only)]:
+        print(f"\n[{name}] {len(items)}")
+        for i in items:
+            print(f"  {i}")
+    return 1 if (drift or only_canon) else 0
+
+
+def push(project: str):
+    proot = project_root(project)
+    p_hooks = os.path.join(proot, ".githooks")
+    n = 0
+    for rel in owned_rels():
+        src = os.path.join(CANON_HOOKS, rel)
+        tgt = os.path.join(p_hooks, rel)
+        if same(src, tgt):
+            continue
+        os.makedirs(os.path.dirname(tgt), exist_ok=True)
+        shutil.copy2(src, tgt)
+        if rel == "canon":
+            os.chmod(tgt, 0o755)
+        n += 1
+    for src, tgt in mapped_deployments(p_hooks):
+        if same(src, tgt):
+            continue
+        shutil.copy2(src, tgt)
+        n += 1
+    print(f"pushed {n} file(s) -> {p_hooks}")
+    return 0
+
+
+def collect(project: str):
+    proot = project_root(project)
+    canon_names = {os.path.basename(r) for r in owned_rels()}
+    p_hooks = os.path.join(proot, ".githooks")
+    p_spec = os.path.join(p_hooks, "spec")
+    print(f"== {project}: collect candidates (项目有, canon 无) ==")
+
+    for rel, abs_p in sorted(checklist_yamls(p_spec).items()):
+        if os.path.basename(rel) not in canon_names:
+            print(f"  rule: spec/{rel}")
+
+    for extra in sorted(set(os.listdir(p_spec)) - {os.path.basename(d) for d in OWNED_DIRS}
+                        - {"dispatch.yaml", "severity_overrides.yaml", "docs", "quality",
+                           "github", "workspace", "cleanup", "code", "harness"}):
+        full = os.path.join(p_spec, extra)
+        if os.path.isfile(full):
+            print(f"  config: spec/{extra}")
+
+    c_github = os.path.join(CANON, ".github")
+    p_github = os.path.join(proot, ".github")
+    if os.path.isdir(p_github):
+        for f in walk_files(p_github):
+            if not os.path.isfile(os.path.join(c_github, f)):
+                print(f"  github: .github/{f}")
+    return 0
+
+
+def main():
+    if len(sys.argv) != 3 or sys.argv[1] not in ("status", "push", "collect"):
+        sys.exit(__doc__)
+    cmd, project = sys.argv[1], sys.argv[2]
+    rc = {"status": status, "push": push, "collect": collect}[cmd](project)
+    sys.exit(rc or 0)
+
+
+if __name__ == "__main__":
+    main()
