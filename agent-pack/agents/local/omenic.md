@@ -21,7 +21,7 @@ gate 自动做创建前校验(规则在 `.githooks/spec/`)+ 创建后现实校�
 
 ## 构建与验证（CI 驱动）
 
-**测试一律不在本地跑。** `cargo test` / `cargo clippy` / 全量 `cargo build` / `npm install` 全部交给 PR 的 CI（`.github/workflows/ci.yml`）。本地跑测试属违规操作，即使套了 `cpulimit` 也不允许。
+**测试一律不在本地跑。** `cargo test` / `cargo clippy` / 全量 `cargo build` / `npm install` 全部交给 PR 的 CI（`.github/workflows/ci.yml`）。本地跑测试属违规操作，即使套了配额也不允许。
 
 本地只允许这三类轻量验证：
 - `cargo fmt --check`（秒级，提交前必跑——commit checklist 会拦不合格的 rust）
@@ -30,10 +30,10 @@ gate 自动做创建前校验(规则在 `.githooks/spec/`)+ 创建后现实校�
 
 验证节奏：本地 `fmt --check` + 单 crate `cargo check` → push → **CI 出结果才算验证过**。CI 红了看日志改，不要在本地复现。
 
-**唯一例外**是 web UI 需要肉眼确认时的 `cargo build --bin oi-web`（见下文启动序列），必须套 `cpulimit -l 65 -i --`：
+**唯一例外**是 web UI 需要肉眼确认时的 `cargo build --bin oi-web`（见下文启动序列），必须套 `systemd-run --user --scope -p CPUQuota=65% --`：
 
 ```bash
-cpulimit -l 65 -i -- cargo build --bin oi-web
+systemd-run --user --scope -p CPUQuota=65% -- cargo build --bin oi-web
 ```
 
 ## 禁改区

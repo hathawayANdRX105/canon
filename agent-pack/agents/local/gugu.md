@@ -60,9 +60,9 @@
 - 会话凭据落盘放 `data/`（gitignored）；示例用占位符。
 - ricq 是逆向协议，**有封号风险**：开发与测试一律用小号，禁止主号登录。
 
-### cpulimit（硬约束）
+### CPU 配额（硬约束）
 
-- CPU-heavy 命令必须套 `cpulimit -l 70 -i --`：`cargo build` / `cargo test` /
+- CPU-heavy 命令必须套 `systemd-run --user --scope -p CPUQuota=70% --`：`cargo build` / `cargo test` /
   `cargo clippy` / `npm` 等；`git`、`grep`、文件读写等轻量命令不需要。
 
 ### 测试分层

@@ -190,7 +190,7 @@ just review          # canon check 全套自检
   测试；testless 异常/零命中自动降级全量，绝不静默跳过。全量务必
   `cargo test --workspace`（根包 workspace 下裸 `cargo test` 只跑根包）。
 - 不要在会话里自行 `export RUSTC_WRAPPER` 或改 jobs——统一走仓配置；
-  重命令照旧套 `cpulimit -l 70 -i`。
+  重命令照旧套 cgroup CPU 配额（`systemd-run --user --scope -p CPUQuota=70% --`）。
 - 增量编译已关（缓存优先）：同树连续小改动按 crate 级重编是预期行为，不是
   回归；若本仓热重载明显变慢，提 issue 议局部放开。
 - 新建 `.wt` worktree 直接用；旧布局 worktree 若报 workspace 收编错误，
@@ -217,7 +217,7 @@ just review          # canon check 全套自检
 - 全量测试、全量构建、全量 lint 放 CI 或收尾阶段，不在改动过程中反复跑。
 - 本地只跑轻量、快的针对性检查（单 crate `cargo check`、单包测试、`fmt --check`、
   类型检查）。
-- 需要本地跑重命令时，套资源限制（`cpulimit -l 65 -i --` 或本仓等价手段），
+- 需要本地跑重命令时，套资源限制（`systemd-run --user --scope -p CPUQuota=65% --` 或本仓等价手段），
   不抢占用户正在用的 CPU。
 - 装依赖、打包等命令同样受限。
 

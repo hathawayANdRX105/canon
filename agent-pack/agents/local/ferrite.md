@@ -26,6 +26,23 @@
   3. 闸门有 `checklist_no_nested_worktree` 检查项（提交 / 推送 / 合并时扫描），命中即 FAIL。
   4. 派子代理时，prompt 里必须写**全局绝对路径**（如 `/home/hathaway/projects/ferrite/.wt/<name>/`），
      禁止让子代理自己推导相对路径。
+---
+
+## CI 处理（公开壳仓 + 私有实现仓）
+
+**为什么**：私有仓的 GitHub CI 按「运行 workflow 的仓」计费——公开仓免费无上限，私有仓 Free 只有 2000 分钟/月。
+重活测试烧分钟，所以把 CI 放公开壳仓 `NewXapi/ferrite-ci` 跑：它用 PAT 检出私有 `ferrite`（+ 私有依赖 `ui-kit`），
+跑完把结果回写私有 commit。代码不出 GitHub，分钟几乎为 0。
+
+**怎么触发**：`gh workflow run "CI (private ferrite proxy)" -R NewXapi/ferrite-ci -f ref=<branch/sha>`。
+要自动挡合并：私有 ferrite 再放个 5 行 dispatch + branch protection 要求 context `ci`（壳仓回写的那个）。
+
+**不变量（别破坏）**：壳仓 `on:` 只有 workflow_dispatch + repository_dispatch，无 pull_request/push/issue（否则 fork
+PR 能拿 PAT 投毒）；cache 只存 `~/.cargo` 不存 `target/`；日志不 echo 私有源码。
+
+**坑**：`cargo fmt` 勿用 `--all`（会递归进 ui-kit）→ 壳仓 fmt 只查 ferrite 自身成员；ui-kit 在 runner 上落在 `$HOME/ui-kit`。
+
+> 完整 workflow 与逐行说明见 `NewXapi/ferrite-ci/.github/workflows/ci.yml`。
 
 ---
 
@@ -125,9 +142,9 @@ crates/web/<prefix-feature>/
 
 ---
 
-## CLI COMMAND 跟 CPU 节流（cpulimit）
+## CLI COMMAND 跟 CPU 节流（cgroup CPU 配额）
 
-- CPU 密集型命令必须套 `cpulimit -l 65 -i --`：编译、测试、装包类
+- CPU 密集型命令必须套 `systemd-run --user --scope -p CPUQuota=65% --`：编译、测试、装包类
   （`cargo build` / `cargo test` / `cargo clippy`、`npm` / `bun` 等），
   以及子代理产出的编译 / 测试 / 运行验证，一律不许裸跑。
   `git`、`grep`、文件读写等轻量命令不需要。
@@ -150,7 +167,7 @@ crates/web/<prefix-feature>/
   （症状：页面 500 "Connection refused"、dx 日志消失）。要用会话的持久后台任务机制启动，
   启动后用 `ss -ltn` 验证端口在监听再往下做。
 - **禁止宽匹配 `pkill -f cargo` / `pkill -f rustc` 清进程**：多会话并行时那是别人正在跑的构建
-  （cpulimit 节流下进程任意瞬间都处于 T 状态，**T 态 ≠ 死进程**）。
+  （限流器暂停的进程任意瞬间可能处于 T 状态，**T 态 ≠ 死进程**）。
   清理前必须 `readlink /proc/<pid>/cwd` 确认归属，只处理无主残留。
 - **dev 的启停 / 种子 / 体检一律走 `justfile` 配方**：
   `just dev-check`（环境体检）、`just dev-backend start|update|stop|status`（共享后端）、

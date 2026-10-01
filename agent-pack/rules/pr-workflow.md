@@ -84,7 +84,7 @@
 
 ### 阶段 4：测试
 
-- 全部子任务通过审查后，本地只跑极小范围的类型检查：`cargo check -p <包名>`，必须套 `cpulimit -l 65 -i --`。
+- 全部子任务通过审查后，本地只跑极小范围的类型检查：`cargo check -p <包名>`，必须套 `systemd-run --user --scope -p CPUQuota=65% --`。
 - 集成测试、多 crate 联调、重型测试（超过 2 分钟、需要容器或网络）全部推到 PR，交给 CI 按改动内容动态执行。
 - CI 报错时，拉取云端的失败日志，当作新任务修复。拉法：打开 PR 页面的 Checks 标签 →
   点进失败的 job → 复制报错段落；或用 `gh run view --log-failed`。

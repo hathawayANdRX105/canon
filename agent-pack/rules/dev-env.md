@@ -13,7 +13,7 @@
 |---|---|---|
 | 页面报 500，提示 `Connection refused` | 后端或前端进程已经死了。最常见的原因是用 `nohup ... &` 启动——工具调用一结束，整个进程组被回收，服务静默死亡 | 先跑 `just dev-check` 看 3211 和 8090 是否在监听；后端用 `just dev-backend start` 重启，前端用持久后台任务重启 |
 | 某个卡片报 404，但用 curl 或干净浏览器访问同一个地址是 200 | 浏览器缓存里存着之前代理配置错误时的响应，直接被重放——**请求根本没发出去** | 在 `dx` 的日志里搜这个路径，**搜不到请求就是实锤**。处理：清浏览器缓存或重启 webview |
-| 本地构建卡住不动（rustc 长时间没有任何进展 / cargo 等锁） | 另一个会话的构建进程被 cpulimit 暂停了，一直持有 cargo 全局锁 | 先 `ps -eo pid,stat,args \| awk '$2 ~ /^T/'` 找出被暂停的进程，再用 `readlink /proc/<pid>/cwd` 确认是哪个目录的。**属于活会话的用 `kill -CONT` 恢复，不要 kill**；只有确认无主的才杀 |
+| 本地构建卡住不动（rustc 长时间没有任何进展 / cargo 等锁） | 另一个会话的构建进程被限流器暂停了，一直持有 cargo 全局锁 | 先 `ps -eo pid,stat,args \| awk '$2 ~ /^T/'` 找出被暂停的进程，再用 `readlink /proc/<pid>/cwd` 确认是哪个目录的。**属于活会话的用 `kill -CONT` 恢复，不要 kill**；只有确认无主的才杀 |
 | `just dev-web` 报 `Failed to find binary package to build` | 已修复（2026-09-18）：配方里用了 `$(justfile_directory)`，但 just 没有这个变量，shell 展开成空字符串，导致 `cd /apps/admin-web` 失败 | 现在已改成 `justfile()` 内置函数，正常可用 |
 | 改了 `crates/web/ui-components` 之类的依赖 crate（或任何代码），页面没变化 | `dx` 不自动重建 wasm（`--watch false`），且只对结构变更重跑 bindgen | 跑 `just dev-web-rebuild <port>`（一键重编+重启；免登录档加 `debug`），浏览器再强刷一次 |
 | 第一次跑 `dx` 很久还没监听端口，以为启动失败 | 首次编译 wasm 很慢，实测要 336 秒 | 等。判断是否正常：看 dx 的日志输出有没有在编译 |
@@ -74,7 +74,7 @@
 ## 四、约束事项（简略）
 
 - 长驻服务用持久后台任务启动，**禁用 `nohup ... &`**（工具调用结束会回收进程组，服务静默死亡）。
-- **禁止用 `pkill -f cargo` 或 `pkill -f rustc` 清理进程**：那多半是其他会话正在跑的构建；而且被 cpulimit 节流的进程在任意时刻都处于 T（暂停）状态，**T 状态不等于死进程**。清理前必须用 `readlink /proc/<pid>/cwd` 确认归属。
+- **禁止用 `pkill -f cargo` 或 `pkill -f rustc` 清理进程**：那多半是其他会话正在跑的构建；而且被限流器暂停的进程在任意时刻都处于 T（暂停）状态，**T 状态不等于死进程**。清理前必须用 `readlink /proc/<pid>/cwd` 确认归属。
 - 共享后端（3211）的启停只通过 `scripts/dev-backend.sh`；遇到 404 / 502 先判断存活状态再动。
 - 用户报错但 curl 测试正常时，先怀疑浏览器缓存重放。服务端无法清除已经缓存的内容，只能让用户清缓存或重启 webview。后端 `/api` 和 `/tavern` 已经加了 `Cache-Control: no-store` 防止再发生。
 - 历史坑（已修）：`just dev-web` 曾经用不存在的 `$(justfile_directory)`，导致 `cd` 到错误目录。

@@ -34,7 +34,7 @@ edition 2024），消费方是 ferrite（经 `ui-components` 再导出）与 ome
 
 - CI（`.github/workflows/ci.yml`）跑 `cargo fmt --check` + `cargo clippy --all-targets`
   + `cargo test` + tag 校验。全量跑放 CI；本地只跑轻量的 `cargo fmt --check` /
-  `cargo check`，重命令套 `cpulimit -l 65 -i --`（`justfile` 里的 demo 已套）。
+  `cargo check`，重命令套 `systemd-run --user --scope -p CPUQuota=65% --`（`justfile` 里的 demo 已套）。
 - clippy **刻意不加 `-D warnings`**：CI 注释记着两条既有告警（`src/form/mod.rs` 歧义
   glob 再导出、`src/layout/avatar_menu.rs` 未使用变量），是主动留的，别顺手改成红的；
   真要清干净就把那两条一起清完再收紧。

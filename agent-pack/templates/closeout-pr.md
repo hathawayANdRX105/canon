@@ -15,7 +15,7 @@
   子代理 prompt 必须写明 `cwd=.wt/<branch>`，禁止在仓库根目录写入。
 - **任务量门禁**：单个子任务 ≤ 5 个文件、单一主题、单一修改范围；
   能按文件 / 范围 / 主题 / 调用链 / 测试拆就拆，不把半个模块丢给一个子代理。
-- CPU-heavy 命令（build / test / install / bundle）必须 `cpulimit -l 65 -i --`；
+- CPU-heavy 命令（build / test / install / bundle）必须 `systemd-run --user --scope -p CPUQuota=65% --`；
   本地只跑 <2 min 快速针对性检查，其余测试一律推到 PR CI。
 - 审查走 **CRG（结构层面）+ ocr（规范层面）双层**；ocr 必须按文件 / 模块分批调用，
   不许一次喂全 repo。

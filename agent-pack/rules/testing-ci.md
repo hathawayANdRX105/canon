@@ -42,7 +42,7 @@
 
 | 场景 | 命令 | 说明 |
 |---|---|---|
-| 验证代码能编译 | `cargo check -p <crate>` | 本地**唯一**常规验证方式，必须套 `cpulimit -l 65 -i --` |
+| 验证代码能编译 | `cargo check -p <crate>` | 本地**唯一**常规验证方式，必须套 `systemd-run --user --scope -p CPUQuota=65% --` |
 | 调试单个失败用例 | `cargo test -p <crate> -- <测试名>` | 仅用于调试，不能替代 CI 验收；测试要能在 3 秒内跑完 |
 | 预览 CI 会跑哪些包 | `bash scripts/ci-affected.sh --base newxapi/main --dry-run` | 提 PR 前可以看，不影响任何东西。`newxapi/main` 是上游主分支的名字（本仓的 remote 叫 `newxapi`，主分支叫 `main`），直接照抄即可 |
 | 跑全量测试 | **禁止** | `cargo test --all`、整个 workspace 编译会耗尽本机内存导致假死 |
@@ -116,7 +116,7 @@ CI 脚本在 `scripts/ci-affected.sh`。规则：
 
 ## 四、约束事项（简略）
 
-- 本地只跑两种命令：`cargo check -p <crate>` 和 3 秒内能跑完的单用例调试。都必须套 `cpulimit -l 65 -i --`。
+- 本地只跑两种命令：`cargo check -p <crate>` 和 3 秒内能跑完的单用例调试。都必须套 `systemd-run --user --scope -p CPUQuota=65% --`。
 - 禁止本地 `cargo test --all`、禁止整个 workspace 编译（内存不足会假死）。
 - CI 未全绿不许合并；CI 失败要拉云端日志，当新任务修复。
 - 工具链版本以本地为准：CI 报新 lint 时，把壳仓 `NewXapi/ferrite-ci` 的 `dtolnay/rust-toolchain@stable` 钉到本地版本（`rustc --version` 查）；禁止用 `rustup update stable` 升级本地。

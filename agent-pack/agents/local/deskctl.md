@@ -30,13 +30,13 @@
 - `cargo check -p deskctl`（类型检查，单 crate）
 - `grep` / `ls` / 文件读写等只读命令
 
-**如果实在要本地跑重命令**（`cargo test --workspace`、`cargo clippy`、`cargo build --release`、`install` 等），**必须套 `cpulimit -l 65 -i --` 限制 CPU 到 65%**：
+**如果实在要本地跑重命令**（`cargo test --workspace`、`cargo clippy`、`cargo build --release`、`install` 等），**必须套 `systemd-run --user --scope -p CPUQuota=65% --` 限制 CPU 到 65%**：
 
 ```bash
-cpulimit -l 65 -i -- cargo test --workspace --all-targets
-cpulimit -l 65 -i -- cargo clippy --workspace --all-targets --all-features -- -D warnings
-cpulimit -l 65 -i -- cargo build --release -p deskctl
-cpulimit -l 65 -i -- install -Dm755 target/release/deskctl ~/.local/bin/deskctl
+systemd-run --user --scope -p CPUQuota=65% -- cargo test --workspace --all-targets
+systemd-run --user --scope -p CPUQuota=65% -- cargo clippy --workspace --all-targets --all-features -- -D warnings
+systemd-run --user --scope -p CPUQuota=65% -- cargo build --release -p deskctl
+systemd-run --user --scope -p CPUQuota=65% -- install -Dm755 target/release/deskctl ~/.local/bin/deskctl
 ```
 
 `git`、`grep`、`ls` 等轻量命令不需要套。

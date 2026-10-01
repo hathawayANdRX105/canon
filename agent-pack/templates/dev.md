@@ -20,7 +20,7 @@
   改动点、调用方 / 被调方、相邻边界——摸清再写代码；
   纯配置 / 文档类子任务（无符号图）豁免：退化为对 suspect area 做定向 grep / 读。
 - **测试全部放 PR CI 跑**；本地只跑 <2 min 快速针对性检查；
-  确需本地执行的重命令（build / install / bundle）必须 `cpulimit -l 65 -i --`。
+  确需本地执行的重命令（build / install / bundle）必须 `systemd-run --user --scope -p CPUQuota=65% --`。
 - 审查走 **CRG（结构层面）+ ocr（规范层面）双层**；ocr 必须按文件 / 模块分批调用，不许一次喂全 repo。
 - 每轮「审查 + 修复」写 **一条** PR comment（先列问题、再写修复，附修复 commit SHA 与验证命令）；
   smoke 验证再单独 **一条** comment。两种留言可多次出现。

@@ -20,7 +20,7 @@ agent 通过 MCP 读取这些标注并完成 UI 修改。本技能让你能在�
 ## 启动顺序（硬约束：service 必须先于 agent 的 ainotation MCP 可用）
 
 main 的 `just dev-web` 不内建标注栈，按序起三件（长跑命令用运行时托管后台任务启动，
-**禁止 `nohup &`**，CPU 类套 `cpulimit -l 65 -i --`）：
+**禁止 `nohup &`**，CPU 类套 `systemd-run --user --scope -p CPUQuota=65% --`）：
 
 ```bash
 just aino-service        # 1. MCP service（幂等：已在跑就直接返回）

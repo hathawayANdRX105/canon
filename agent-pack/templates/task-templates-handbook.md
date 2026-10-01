@@ -80,7 +80,7 @@ dogfood(在隔离 root 跑一遍)
 | **`document`** | chore | 文档：design/feature/manual 同步 + reader-smoke | `-dep Implement-terminal` | 三类文档只更新「真的改了」的 |
 | **`tidy`** | chore | 清理：删 obsolete 导入/注释；如 document 存在，`-dep document` | caller 接线 | 「删旧不留新」是合规要求 |
 | **`publish`** | chore | 发布：在授权下建 GitLab Issue/MR，**仅人工授权** | approval | 严禁自动 commit/push/merge |
-| **`readiness`** | chore | 工具检查：cx/lsp/codegraph/crg/lean-ctx/cpulimit/skills | — | 每个工具三选一：used / not applicable / unavailable |
+| **`readiness`** | chore | 工具检查：cx/lsp/codegraph/crg/lean-ctx/skills | — | 每个工具三选一：used / not applicable / unavailable |
 | **`invariants`** | chore | 17 项编排硬性检查（parent-vs-dep/template-parent/task-ids/branch-role/docs-tests/issue-pr/approval-gate/uses-template/guide-run/loop-*5/multi-run-*4） | — | 复合 step；分 base/loop/multi-run 三组 |
 | **`loop-optimization`** | task | 一轮六部曲：partition/smoke/gaps/patch/re-smoke/stop | — | 多轮就**多次挂**这个 step，Cycle/Round 递增 |
 | **`multi-run`** | task | 三个隔离 candidate worktree 并行实现，score 后合 winner | — | 每个 worktree 一份独立 commit |

@@ -11,11 +11,11 @@
 - `cargo check`（类型检查）
 - `grep` / `ls` / 文件读写等只读命令
 
-**如果实在要本地跑重命令**（`cargo build`、`cargo test`、`cargo bench`、`cargo clippy` 等），**必须套 `cpulimit -l 65 -i --` 限制 CPU 到 65%**：
+**如果实在要本地跑重命令**（`cargo build`、`cargo test`、`cargo bench`、`cargo clippy` 等），**必须套 `systemd-run --user --scope -p CPUQuota=65% --` 限制 CPU 到 65%**：
 
 ```bash
-cpulimit -l 65 -i -- cargo test
-cpulimit -l 65 -i -- cargo bench
+systemd-run --user --scope -p CPUQuota=65% -- cargo test
+systemd-run --user --scope -p CPUQuota=65% -- cargo bench
 ```
 
 `git`、`grep`、`ls` 等轻量命令不需要套。

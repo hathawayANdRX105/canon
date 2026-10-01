@@ -105,7 +105,7 @@ license: MIT
 - [ ] T1: `crates/harness/core/src/run_status.rs` — 填 `RunStatus::from_str` 占位
       参考: deepseek-harness/packages/core/src/state.ts:88
       约束: 调用方 runtime/src/loop.rs:32 传 &str，返回 Result<RunStatus, ParseError>
-      验收: `cpulimit -l 70 -i -- cargo check -p harness-core`  # 必须带 -p，禁止无 -p 全仓 check
+      验收: `systemd-run --user --scope -p CPUQuota=70% -- cargo check -p harness-core`  # 必须带 -p，禁止无 -p 全仓 check
 - [ ] T2: `crates/harness/core/src/abort.rs` — 填 `AbortSignal::wait` 占位
       ...
 ```
@@ -148,9 +148,9 @@ EOF
 【参考根】/home/hathaway/projects/harness/deepseek-harness  # 参考项目绝对路径
 【参考】packages/core/src/state.ts:88 — fromStr  # 相对于参考根
 【验收命令】cd <repo根>/.wt/<branch>/ && \
-            cpulimit -l 70 -i -- cargo check -p harness-core  # 必须带 -p，禁止无 -p 全仓 check
+            systemd-run --user --scope -p CPUQuota=70% -- cargo check -p harness-core  # 必须带 -p，禁止无 -p 全仓 check
 【约束】
-  - 所有编译命令必须套 cpulimit -l 70 -i --
+  - 所有编译命令必须套 systemd-run --user --scope -p CPUQuota=70% --
   - 测试放 tests/ 目录，不用 #[cfg(test)]
   - 完成时 commit：feat(harness-core): implement RunStatus::from_str
   - 禁止 git push（commit 即止，push 由阶段 4 主控执行）
@@ -171,7 +171,7 @@ EOF
 1. **跑验收命令**（真跑，不只看子代理的输出）：
    ```bash
    cd <repo根>/.wt/<branch>
-   cpulimit -l 70 -i -- cargo check -p harness-core  # 必须带 -p，禁止无 -p 全仓 check
+   systemd-run --user --scope -p CPUQuota=70% -- cargo check -p harness-core  # 必须带 -p，禁止无 -p 全仓 check
    ```
 2. **diff 边界检查**：`git diff --name-only` 确认改动只落在 prompt 声明的文件
 3. **检查 root cause / 调用方 / 边界输入**：对照 scaffold 注释里的约束，确认实现语义对齐
@@ -185,14 +185,14 @@ EOF
 
 ### 子代理 prompt 补充（测试相关）
 
-子代理 prompt 里的【验收命令】字段，若涉及测试必须套 cpulimit：
+子代理 prompt 里的【验收命令】字段，若涉及测试必须套 cgroup CPU 配额：
 
 ```bash
 # 编译验收
-cpulimit -l 70 -i -- cargo check -p <crate>  # 必须带 -p，禁止无 -p 全仓 check
+systemd-run --user --scope -p CPUQuota=70% -- cargo check -p <crate>  # 必须带 -p，禁止无 -p 全仓 check
 
 # 单测验收（3 秒内跑完的简单单测才本地跑；否则只 check，测试推 CI）
-cpulimit -l 70 -i -- cargo test -p <crate> -- <test_name>
+systemd-run --user --scope -p CPUQuota=70% -- cargo test -p <crate> -- <test_name>
 ```
 
 > 说明：所有 cargo 命令（check/test/clippy）必须带 `-p` 目标 crate，禁止无 `-p` 全仓 check。

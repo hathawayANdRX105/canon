@@ -18,11 +18,11 @@ silverq 实例——用户曾因此严厉警告（2026-09-20）。
 |---|---|
 | `cargo check --features meow-tun --all-targets` | 增量检查，推送前确认能编译（秒级） |
 | `cargo fmt --all` | 随时 |
-| `cargo build --release --features meow-tun` | **仅部署需要产物时**，且必须 `cpulimit -l 65 -i --` 包裹 |
+| `cargo build --release --features meow-tun` | **仅部署需要产物时**，且必须 `systemd-run --user --scope -p CPUQuota=65% --` 包裹 |
 | `~/.local/bin/silverq-lab.sh` | 容器实验室 gauntlet，数据面/TUN 实验的唯一本地运行场所 |
 | `git` / `gh` / `grep` / 文件读写 | 轻量，不限 |
 
-CPU 密集型命令（编译/测试/装包）一律 `cpulimit -l 65 -i --` 前缀，禁止裸跑。
+CPU 密集型命令（编译/测试/装包）一律 `systemd-run --user --scope -p CPUQuota=65% --` 前缀，禁止裸跑。
 
 ## 宿主机生产实例保护（硬约束）
 
@@ -34,7 +34,7 @@ CPU 密集型命令（编译/测试/装包）一律 `cpulimit -l 65 -i --` 前�
   抢拉起一个**不持 17321 但顶掉 ctl.sock** 的救援实例（2026-09-20 部署时踩过：
   两个进程一个持端口一个持 socket）。停生产实例前想清楚，停后一次起干净。
 - **禁止在 hub 里 start silverq**：会和用户实例抢 17321。
-- **部署流程**：`cargo build`（cpulimit）→ 停旧 PID（按 PID，不宽匹配）→ 换二进制 →
+- **部署流程**：`cargo build`（限流）→ 停旧 PID（按 PID，不宽匹配）→ 换二进制 →
   nohup 起 → gauntlet（baidu/gstatic/github 走 `socks5h://127.0.0.1:17321`）+
   ctl status 验证。换二进制窗口期 poll 可能双杀，收尾时确认只有一个实例。
 - **回滚**：`~/.local/bin/silverq-rollback.sh`（恢复 `silverq.good` 并重启，不依赖网络）。

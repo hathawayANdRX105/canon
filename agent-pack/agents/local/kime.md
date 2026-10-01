@@ -11,7 +11,7 @@
 - `.wt/<name>/` 是开发工作目录：每个子任务用 `git worktree add .wt/<name> -b <branch>` 挂独立分支；主仓库根目录只读（除根 `Cargo.toml` 变更）。
 - **本地禁止任何 `cargo build` / `cargo test` / `cargo run`**（含单个测试、example、`--bin`）：编译与测试一律放 PR 的 CI（`.github/workflows/ci.yml`：fmt + clippy + test）。本地不验证正确性，靠 CI 绿灯为准；需要复现行为时写成**测试文件或 example 提交进仓库**，由 CI 跑，不在本地执行。
 - 本地允许的仅：读代码、grep/glob、`git` 操作、写文件；不产生任何 target/ 产物。
-- bench（`cargo bench`）不跑 CI，需要时本地跑且必须套 `cpulimit -l 65 -i --`。
+- bench（`cargo bench`）不跑 CI，需要时本地跑且必须套 `systemd-run --user --scope -p CPUQuota=65% --`。
 
 ## `.wt/` 工作目录保护（硬约束）
 
@@ -40,9 +40,9 @@ benches/              基准测试套件（cargo bench --bench kime_bench）
 - 一律使用 `gio trash <path>`（可恢复），禁止使用 `rm` / `rm -rf`。
 - VCS 跟踪的文件可以使用 `git rm`。
 
-### cpulimit（硬约束）
+### CPU 配额（硬约束）
 
-- 编译、测试、装包、基准测试一律加限制：`cpulimit -l 65 -i -- cargo <cmd>`。
+- 编译、测试、装包、基准测试一律加限制：`systemd-run --user --scope -p CPUQuota=65% -- cargo <cmd>`。
 - git、grep、文件读写等轻量命令不需要。
 
 ### 键盘/输入法真机会话约定
