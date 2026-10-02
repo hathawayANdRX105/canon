@@ -38,12 +38,18 @@ edition 2024），消费方是 ferrite（经 `ui-components` 再导出）与 ome
 - clippy **刻意不加 `-D warnings`**：CI 注释记着两条既有告警（`src/form/mod.rs` 歧义
   glob 再导出、`src/layout/avatar_menu.rs` 未使用变量），是主动留的，别顺手改成红的；
   真要清干净就把那两条一起清完再收紧。
-- **视觉改动必须过 demo 页面**，不能只读 diff 交付：仓库根 `just demo` →
-  `http://127.0.0.1:8095`（`just demo-stop` 停）。改了 `assets/*.css` 先重跑 `bun run css`，
+- **视觉改动必须过 demo 页面**，不能只读 diff 交付：仓库根 `just demo`——端口**不再写死**，
+  从 **10000-16000** 抽一个空闲端口并打印 URL，实际端口落盘 `demo/.demo-port`；
+  `just demo-stop` 按它停本 worktree 的实例。同一 worktree 重启会复用上次端口，
+  要钉死用 `UI_KIT_DEMO_PORT=<n> just demo`。改了 `assets/*.css` 先重跑 `bun run css`，
   否则页面加载的还是旧产物。
 - `tests/` 与被测模块同名对应（表契约 / 视觉契约 / props / 行为）。**纯函数契约优先**，
   组件渲染断言交给消费方的 e2e——本仓断言渲染等于把消费方的选择面提前钉死。
-- 跑 `dx serve` 前先清端口（`just demo` 已内建），别随手杀别人的 dev server。
+- **多会话不抢端口**：`10000-16000` 是所有 worktree 共享区间，`just demo` 启动时探测空闲位，
+  谁先起谁先得，**不要手工去占某个固定端口**。`demo` 与 `demo-stop` 都用
+  `readlink /proc/<pid>/cwd` 校验归属，**只停本 worktree 自己的 dx**；跨 worktree 拒停并告警。
+  禁止无条件 `kill` 占用端口的进程、禁止 `pkill -f dx`——那是别的会话正在用的页面。
+  查当前端口看启动时打印的 URL，或 `cat demo/.demo-port`。
 
 ## 发布：钉 tag，不发注册表
 
