@@ -177,7 +177,7 @@ When starting a dev server for manual testing, create a test account on the inst
 
 #### Build and verify (CI-driven)
 
-**All tests, builds, and lint run in PR CI (`.github/workflows/ci.yml`) — NEVER on this machine. Absolute rule, no exceptions by default.**
+**All tests, builds, and lint run in PR CI (`.github/workflows/ci.yml`) — NEVER on this machine. Absolute rule, no exceptions by default. 本条是本项目对共享「构建与验证 / 重命令放对位置」的严格覆盖：那里允许套 cgroup 配额跑重命令，本项目连配额跑也不允许——以本条为准。**
 
 - Do NOT run `go build` / `go test` (ANY scope — full module, single package, even `-run` filtered), `bun run build`, `bun install`, or any compile/test/package/install command locally. The operator's desktop is shared with other live work; even one single-package compile stalls it. a cgroup quota does NOT make it acceptable — the operator has been burned by this repeatedly and hates it.
 - This binds **subagents too**: every spawned agent must be told that local compile/test is forbidden; agents verify by reading code, and CI compiles the PR.
