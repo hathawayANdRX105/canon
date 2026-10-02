@@ -10,3 +10,5 @@ __pycache__/
 .wt/
 # crates/web（web 独立包）：npm 依赖不入库；kit css / tailwind.out.css / lock 随仓（ui-kit 既定先例）
 crates/web/node_modules/
+# ainotation 运行时连接信息（含 grant token），本地产物
+crates/web/assets/ainotation/connection.json

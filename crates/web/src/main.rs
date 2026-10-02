@@ -19,12 +19,23 @@ use crate::sidebar::ProjectSidebar;
 
 const TAILWIND_CSS: Asset = asset!("/assets/tailwind.out.css");
 
+// Ainotation 标注工具 bundle，由 `bun run aino` 生成（源：ainotation-entry.ts）。
+#[cfg(debug_assertions)]
+const AINOTATION_JS: Asset = asset!("/assets/ainotation/ainotation.iife.js");
+
 fn main() {
     launch(App);
 }
 
 #[component]
 fn App() -> Element {
+    // Ainotation 标注工具 bundle，由 `bun run aino` 生成（源：ainotation-entry.ts）。
+    // 仅开发环境加载；release 构建自动排除。用法见 ferrite apps/admin-web/AINOTATION.md。
+    #[cfg(debug_assertions)]
+    let ainotation_js: Option<Asset> = Some(AINOTATION_JS);
+    #[cfg(not(debug_assertions))]
+    let ainotation_js: Option<Asset> = None;
+
     // 选中态：None = 未选任务（显示项目概览）；Some(task_id) = 该任务页
     let mut sel_task = use_signal(|| None::<i64>);
     let reload = use_signal(|| 0u32);
@@ -42,6 +53,7 @@ fn App() -> Element {
 
     rsx! {
         document::Stylesheet { href: TAILWIND_CSS }
+        {ainotation_js.map(|src| rsx! { document::Script { src } })}
         SidebarProvider {
             default_open: true,
             collapsible: SidebarCollapsible::Icon,

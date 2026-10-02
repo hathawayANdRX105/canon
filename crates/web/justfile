@@ -23,3 +23,63 @@ serve: sync-kit
 # release 构建（dist/）
 build:
     dx build --release
+
+# ---------- Ainotation 视觉标注反馈栈（配方照搬 ferrite，端口对齐本仓 10090）----------
+#   重打 SDK bundle : just aino-bundle   (改了 ainotation-entry.ts / 升级 SDK 后; 改完需重启 dx)
+#   起 service      : just aino-service  (用运行时后台任务启动; 就绪判据 ~/.ainotation/service/connection.json)
+#   起同步桥        : just aino-bridge   (同上; 就绪判据日志 "project ready" + :44091 端点)
+#   体检            : just aino-check    (service 注册表 + 桥端点 + 前端连通)
+#   顺序硬约束: service 必须先于 agent 的 ainotation MCP 可用, 否则 MCP 工具调用会挂起
+#   端口不一致时: AINO_ORIGIN=http://127.0.0.1:<端口> just aino-bridge
+aino-bundle:
+    #!/usr/bin/env bash
+    cd "$(dirname "{{ justfile() }}" )"
+    bun install
+    bun run aino
+    echo "✓ bundle 已重打: assets/ainotation/ainotation.iife.js (内容变化会改指纹, 记得重启 dx)"
+
+aino-service:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ -f "$HOME/.ainotation/service/connection.json" ]; then
+      url=$(jq -r .url "$HOME/.ainotation/service/connection.json")
+      token=$(jq -r .token "$HOME/.ainotation/service/connection.json")
+      if curl -sf -m 3 "$url/control/health" -H "Authorization: Bearer $token" >/dev/null 2>&1; then
+        echo "service 已在运行: $url"; exit 0
+      fi
+    fi
+    # 固定端口: service 随机端口 + SDK 仅在页面加载时读一次连接 = service 一重启就全体断链;
+    # 固定后 bridge 靠自愈逻辑重连, 页面仅需强刷一次
+    CLI=$(ls "$HOME"/.npm/_npx/*/node_modules/@ainotation/mcp/dist/cli.mjs 2>/dev/null | head -1)
+    # service 崩溃会残留 stale service.lock 挡住启动; 先跑 repair 隔离旧锁/连接文件
+    # (offline repair 仅在 service 确已停止时生效, 存活时直接拒绝, 首次运行是 no-op)
+    if [ -n "$CLI" ]; then node "$CLI" repair || echo "  ⚠️ repair 未通过 (service 可能实际存活), 仍尝试启动"
+    else npx --yes @ainotation/mcp@beta repair || echo "  ⚠️ repair 未通过, 仍尝试启动"; fi
+    if [ -n "$CLI" ]; then exec node "$CLI" service --port 45029; else exec npx --yes @ainotation/mcp@beta service --port 45029; fi
+
+aino-bridge:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd "$(dirname "{{ justfile() }}" )"
+    exec node scripts/ainotation-bridge.mjs
+
+aino-check port="10090":
+    #!/usr/bin/env bash
+    echo "== service =="
+    if [ -f "$HOME/.ainotation/service/connection.json" ]; then
+      url=$(jq -r .url "$HOME/.ainotation/service/connection.json")
+      token=$(jq -r .token "$HOME/.ainotation/service/connection.json")
+      curl -sf -m 3 "$url/control/health" -H "Authorization: Bearer $token" >/dev/null 2>&1 \
+        && echo "  ✓ $url" || echo "  ✗ $url 不健康 (just aino-service 重启)"
+      curl -sf -m 3 "$url/control/projects" -H "Authorization: Bearer $token" 2>/dev/null \
+        | jq -r '.projects[] | "  project: \(.name) (\(.projectId[0:8]))"' 2>/dev/null || true
+    else
+      echo "  ✗ 未运行 (just aino-service)"
+    fi
+    echo "== 同步桥 (:44091) =="
+    curl -sf -m 3 http://127.0.0.1:44091/connection.json 2>/dev/null \
+      | jq -e -r '"  ✓ 桥活跃 service=" + .url + " token=" + (.token[0:8])' \
+      || echo "  ✗ 未运行 (just aino-bridge)"
+    echo "== 前端 (:{{port}}) =="
+    curl -s -o /dev/null -m 3 -w '  :{{port}} -> %{http_code}\n' http://127.0.0.1:{{port}}/ \
+      || echo "  :{{port}} 未监听 (just serve)"

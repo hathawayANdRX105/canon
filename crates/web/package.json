@@ -3,9 +3,11 @@
   "private": true,
   "scripts": {
     "css": "tailwindcss --input assets/tailwind.entry.css --output assets/tailwind.out.css",
-    "css:watch": "tailwindcss --input assets/tailwind.entry.css --output assets/tailwind.out.css --watch"
+    "css:watch": "tailwindcss --input assets/tailwind.entry.css --output assets/tailwind.out.css --watch",
+    "aino": "bun build ainotation-entry.ts --format=iife --minify --target=browser --outfile=assets/ainotation/ainotation.iife.js"
   },
   "devDependencies": {
+    "@ainotation/sdk": "1.0.0-beta.3",
     "@tailwindcss/cli": "4.3.2",
     "tailwindcss": "4.3.2"
   }
