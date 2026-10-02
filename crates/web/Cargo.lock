@@ -3099,6 +3099,7 @@ checksum = "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20"
 [[package]]
 name = "ui-kit"
 version = "0.12.15"
+source = "git+file:///home/hathaway/projects/ui-kit?rev=7ef4532#7ef4532ec5322441ba8192b0131451c3beada1a0"
 dependencies = [
  "dioxus",
  "gloo-net",

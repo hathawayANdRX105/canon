@@ -19,7 +19,11 @@ path = "src/main.rs"
 [dependencies]
 # 本地迭代用 path（ui-kit 仓 README 既定：勿提交 path 进远端 CI）；
 # 发版/CI 切回 git 钉 tag：ui-kit = { git = "https://github.com/hathawayANdRX105/ui-kit", tag = "v0.12.15" }
-ui-kit = { path = "../../../ui-kit" }
+#
+# 临时改法（2026-10-02）：ui-kit 工作树有坏编辑（avatar_menu.rs 括号不平衡，15:21 起），
+# path 依赖跟着编不过 → 钉本地仓已提交 HEAD（7ef4532；领先 origin/main 2 提交但仅动
+# AGENTS.md/justfile，src 与远端一致）。ui-kit 工作树修好后切回 path。
+ui-kit = { git = "file:///home/hathaway/projects/ui-kit", rev = "7ef4532" }
 dioxus = { version = "=0.7.10", features = ["web", "lib", "launch"] }
 # 纯模型 + 转移规则 + 模板（不含 rusqlite store，wasm 安全）
 flow = { path = "../flow", default-features = false }
