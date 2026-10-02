@@ -60,6 +60,36 @@ scripts/agent-sync backport <项目> <src>  # 项目本地修正 → 回流 cano
 两者职责不同 —— `agent-sync` 分发任务书与规则文档（整文件替换），`scripts/agents`
 组装 AGENTS（共享片段 + 项目独有两层结构）。混在一个工具里，这两层无处安放。
 
+## 分发到成员仓：`.wt` 工作树 + squash merge
+
+canon 的产物（AGENTS 生成物、`.githooks/`、任务书与规则文档）推进成员仓时：
+
+- **不在目标仓主工作树里直接改**。主树常挂着他人的在制改动，直接写会把它卷进这次提交；
+- **不留散乱提交**。落地一律 squash merge，项目历史只多一条干净提交。
+
+标准动线（以目标仓 `<项目>` 为例）：
+
+```bash
+cd ~/projects/<项目>
+git worktree add .wt/<编号>-<描述> -b <type>/<描述>-<编号> origin/main
+
+# 产物落进 worktree（AGENTS 生成物示例；戳行与 `agents push` 写出的格式一致）
+{ printf '<!-- managed by canon agents.yaml @ %s -->\n' "$(date +%F)"
+  python3 ~/projects/canon/scripts/agents build <项目>; } > .wt/<编号>-<描述>/AGENTS.md
+# agent-sync / canon-sync 的产物同理：先落进该 worktree，别碰主树
+
+git -C .wt/<编号>-<描述> add -A && git -C .wt/<编号>-<描述> commit -m "<type>(agents): …"
+
+# 落地：回主树 squash merge 到默认分支，然后清理
+git merge --squash <type>/<描述>-<编号> && git commit
+git worktree remove .wt/<编号>-<描述> && git branch -d <type>/<描述>-<编号>
+```
+
+目标仓自己的合并约定优先：若该仓明确禁止 squash（如 ferrite `web-dev → main` 走 merge commit），
+按目标仓规则走，不套本条。目标仓若没忽略 `.wt/`，先在它的 `.gitignore` 补一行 `.wt/`，
+否则 worktree 会以未跟踪目录形式出现在项目状态里。worktree 的建立/清理细节见
+dotfiles `worktree-isolation` skill。
+
 ## ratchet.tsv — 圈复杂度棘轮账本
 
 仓根 `ratchet.tsv` 是 `ccn` 门禁（`specs/quality/checklist_ccn.yaml`）的**棘轮存量账本**，
