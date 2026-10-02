@@ -144,7 +144,7 @@ crates/web/<prefix-feature>/
 
 ## CLI COMMAND 跟 CPU 节流（cgroup CPU 配额）
 
-- CPU 密集型命令必须套 `systemd-run --user --scope -p CPUQuota=65% --`：编译、测试、装包类
+- CPU 密集型命令必须套 `systemd-run --user --scope -p CPUQuota=70% --`：编译、测试、装包类
   （`cargo build` / `cargo test` / `cargo clippy`、`npm` / `bun` 等），
   以及子代理产出的编译 / 测试 / 运行验证，一律不许裸跑。
   `git`、`grep`、文件读写等轻量命令不需要。
