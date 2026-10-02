@@ -79,14 +79,6 @@ pub struct JournalEvent {
     pub actor: String,
 }
 
-/// P2 页合并数据：选中项目 panel + 全 task 时间线 + 各 task bundle。
-#[derive(Clone, PartialEq)]
-pub struct P2Data {
-    pub panel: ProjectPanel,
-    pub events: Vec<JournalEvent>,
-    pub bundles: Vec<TaskBundle>,
-}
-
 /// GET /api/projects 出参（flow 的 Project 投影）。
 #[derive(Deserialize, Clone, PartialEq)]
 pub struct Project {
@@ -113,10 +105,6 @@ async fn get<T: for<'de> Deserialize<'de>>(path: &str) -> Result<T, String> {
 
 pub async fn board() -> Result<BoardView, String> {
     get("/api/board").await
-}
-
-pub async fn projects() -> Result<Vec<Project>, String> {
-    get("/api/projects").await
 }
 
 pub async fn task_bundle(task: &str) -> Result<TaskBundle, String> {

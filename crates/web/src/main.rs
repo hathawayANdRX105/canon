@@ -1,19 +1,21 @@
 //! canon-flow-web — 本地看板（Dioxus wasm + ui-kit + canon API）。
 //!
-//! 两个主页面（canon/todo/flowboard-impl-plan.md E.2）：
-//! - P1 全部任务页：按项目划分面板 + task 卡 + hover 快捷操作
-//! - P2 项目页：state 管道 + task 纵列 + 纵向 state 分栏时间线 + 未完成 todo
+//! 布局：左侧常驻 sidebar（一级 = 项目，二级 = 任务）+ 右侧主区（任务页：
+//! phase 纵列，每列内嵌该 phase 的 step 列表 + 动作时间线）。
 //!
-//! 数据：`canon serve`（10081）REST；5s 轮询 bump `reload` 驱动各页 refetch
+//! 数据：`canon serve`（10081）REST；5s 轮询 bump `reload` 驱动 refetch
 //! （v1；SSE/WS 推送随后接）。构建链：ui-kit path 依赖 + flow 纯模型
 //! （wasm 侧无 store）+ gloo-net fetch。
 
 mod api;
 mod pages;
+mod sidebar;
 
 use dioxus::prelude::*;
 use gloo_timers::future::TimeoutFuture;
-use ui_kit::layout::TopNavBar;
+use ui_kit::layout::{Sidebar, SidebarCollapsible, SidebarInset, SidebarProvider, SidebarTrigger};
+
+use crate::sidebar::ProjectSidebar;
 
 const TAILWIND_CSS: Asset = asset!("/assets/tailwind.out.css");
 
@@ -23,7 +25,8 @@ fn main() {
 
 #[component]
 fn App() -> Element {
-    let mut active = use_signal(|| 0usize);
+    // 选中态：None = 未选任务（显示项目概览）；Some(task_id) = 该任务页
+    let mut sel_task = use_signal(|| None::<i64>);
     let reload = use_signal(|| 0u32);
 
     // 轮询刷新：每 5s bump reload（v1；替代 WS 推送，demo 同款 Timer 先例）
@@ -39,23 +42,23 @@ fn App() -> Element {
 
     rsx! {
         document::Stylesheet { href: TAILWIND_CSS }
-        div { class: "flex min-h-svh flex-col",
-            div { class: "flex items-center gap-2 px-3",
-                TopNavBar {
-                    tabs: vec![
-                        "全部任务".to_string(),
-                        "项目".to_string(),
-                    ],
-                    active: active(),
-                    on_select: move |i| active.set(i),
-                }
-                span { class: "ml-auto ui-type-label", "5s 轮询" }
+        SidebarProvider {
+            default_open: true,
+            collapsible: SidebarCollapsible::Icon,
+            Sidebar {
+                ProjectSidebar { sel_task, reload }
             }
-            div { class: "flex-1 overflow-auto px-4 py-3",
-                if active() == 0 {
-                    pages::AllTasks { reload }
-                } else {
-                    pages::ProjectPage { reload }
+            SidebarInset {
+                header { class: "flex items-center gap-2 px-3 py-2 border-b border-border",
+                    SidebarTrigger {}
+                    span { class: "ui-type-label ml-auto", "5s 轮询" }
+                }
+                main { class: "flex-1 overflow-auto p-4",
+                    if let Some(tid) = sel_task() {
+                        pages::TaskPage { task: tid, reload }
+                    } else {
+                        pages::ProjectPage { reload, on_open_task: move |id| sel_task.set(Some(id)) }
+                    }
                 }
             }
         }
