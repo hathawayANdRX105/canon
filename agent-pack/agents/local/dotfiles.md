@@ -286,7 +286,7 @@ omp (agent/omp/models.yml, config.yml)
 ## 额外约定
 
 - **dotpkg 工作流**：所有包构建只通过 `bin/dotpkg`，改 PKGBUILD 或 patch 后 `dotpkg -f <包名>` 刷新缓存。构建缓存 `~/.cache/pkg-build/<包名>` 可再生，绝不手动修改安装产物。
-- **CPU 配额（硬约束）**：CPU-heavy 命令（`dotpkg` 包构建、`makepkg`、`cargo build`、`npm`/`bun` 等）必须套 `systemd-run --user --scope -p CPUQuota=65% --`；`git`、`grep`、文件读写等轻量命令不需要。脚本/PKGBUILD 的语法门已放 CI（`.github/workflows/ci.yml`：shellcheck + bash -n + py_compile），重型构建本地跑时才套配额。
+- **CPU 配额（硬约束）**：CPU-heavy 命令（`dotpkg` 包构建、`makepkg`、`cargo build`、`npm`/`bun` 等）必须套 `systemd-run --user --scope -p CPUQuota=70% --`；`git`、`grep`、文件读写等轻量命令不需要。脚本/PKGBUILD 的语法门已放 CI（`.github/workflows/ci.yml`：shellcheck + bash -n + py_compile），重型构建本地跑时才套配额。
 - **LLM 模型配置**：`agent/omp/models.yml` 是唯一运行时模型入口（providers/models 列表），`agent/omp/config.yml` 只放 llmBaseUrl 等。改完后 `dotbot` 刷新 `/models`，无需重新编译 omp。
 - **代码审查**：改动后必须通过 `git-commit` skill 提交，标题格式 `skill( scope ): description`。
 - **安全底线**：敏感文件改动前必须 `ask` 用户确认；绝不擅自 `grep` 打印密钥或敏感内容。
