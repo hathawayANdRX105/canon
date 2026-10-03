@@ -41,8 +41,14 @@ enum Commands {
     /// Validate the commit message git is about to commit (CM-01/02/03);
     /// git passes the message file as $1
     CommitMsg { path: PathBuf },
-    /// Run pre-push hooks
-    PrePush,
+    /// Run pre-push hooks (git 调 pre-push 钩子时带 remote name 与 URL，
+    /// 包装脚本按 issue #21 统一转发 "$@"，两个位置参数 canon 只接收不消费)
+    PrePush {
+        #[arg(hide = true)]
+        remote_name: Option<String>,
+        #[arg(hide = true)]
+        remote_url: Option<String>,
+    },
     /// Run merge checks: `canon merge <owner/repo> <pr_number> [--dry-run]`
     Merge(MergeArgs),
     Check {
@@ -122,7 +128,7 @@ fn main() -> ExitCode {
         Commands::CommitMsg { path } => {
             ExitCode::from(tools::pre_commit::run_commit_msg(path.to_str().unwrap_or("")) as u8)
         }
-        Commands::PrePush => ExitCode::from(tools::pre_push::run() as u8),
+        Commands::PrePush { .. } => ExitCode::from(tools::pre_push::run() as u8),
         Commands::Merge(args) => {
             let mut arg_vec = vec![args.repo, args.pr.to_string()];
             if args.dry_run {
@@ -219,7 +225,9 @@ fn build_audit_args(args: &AuditArgs) -> Vec<String> {
 
 #[cfg(test)]
 mod tests {
+    use crate::{Cli, Commands};
     use canon::shared::load_yaml;
+    use clap::Parser;
     use std::path::Path;
 
     #[test]
@@ -241,5 +249,15 @@ mod tests {
         let names: Vec<&str> = headings.iter().filter_map(|h| h.as_str()).collect();
         assert!(names.contains(&"Goal"));
         assert!(names.contains(&"Out of scope"));
+    }
+
+    // issue #21：钩子包装统一转发 "$@" 后，git 给 pre-push 的 remote name/URL
+    // 必须能被 CLI 原样接收，而不是报 unexpected argument
+    #[test]
+    fn pre_push_tolerates_git_forwarded_args() {
+        let cli =
+            Cli::try_parse_from(["canon", "pre-push", "origin", "https://github.com/o/r.git"])
+                .expect("git 的 pre-push 两个位置参数应被 CLI 接受");
+        assert!(matches!(cli.command, Commands::PrePush { .. }));
     }
 }
