@@ -18,7 +18,7 @@
 - PR 必须过 `python .githooks/github/pull_requests.py <owner/repo> <pr>`（`ALL PASS`）。
 - issue 必须过 `validate_issues.sh <owner/repo> <parent> <sub...>`（`ALL PASS`）。
 - issue 标题中文、正文 heading 英文、正文中文；sub-issue 自包含（无 Parent/Related/PR 占位）。
-- PR 标题 conventional commit；draft 用 `Related #N`，合并授权前改 `Fixes #N`。
+- PR 标题 conventional commit；PR 不强制关联 issue，确要关闭某个 issue 时才写 `Fixes #N`。
 - 合并前跑 CRG：`code-review-graph update` + `detect-changes --base main`。
 
 ## 构建与验证（CI 驱动）

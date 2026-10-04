@@ -71,7 +71,7 @@
 - PR-02 Conventional Commit 格式 — WARN
 - PR-03 必填 body 段完整性 — FAIL
 - PR-04 heading 英文、What 段中文 — FAIL/WARN
-- PR-05 一个 PR 一个主 issue（Fixes 数量）— WARN
+- PR-05 issue 关联可选（缺省 INFO；`fixes_linkage_mode` 可升 WARN/FAIL；多个 Fixes 恒 WARN）
 - PR-06 label 存在性 + type label — FAIL
 - PR-07 Construction plan/Checklist 至少 2 个 checkbox — FAIL
 - PR-08 分支前缀合法 — FAIL

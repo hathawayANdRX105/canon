@@ -117,20 +117,8 @@ pub fn run(args: &[String]) -> i32 {
                 .and_then(|h| h.get("ref"))
                 .and_then(|r| r.as_str())
                 .unwrap_or("");
-            let draft = pr_data
-                .get("draft")
-                .and_then(|d| d.as_bool())
-                .unwrap_or(false);
             let cfg = crate::shared::load_spec_yaml("github_pull_requests.yaml");
-            crate::rules::pull_requests::check_content(
-                title,
-                body,
-                &labels,
-                head,
-                state,
-                draft,
-                cfg.as_ref(),
-            )
+            crate::rules::pull_requests::check_content(title, body, &labels, head, cfg.as_ref())
         } else {
             let cfg = crate::shared::load_spec_yaml("github_issues.yaml");
             crate::rules::issues::check_content(title, body, &labels, "sub", state, cfg.as_ref())
@@ -235,20 +223,8 @@ pub fn scan_recent(repo: &str, days: u32, limit: u32, workers: u32) -> i32 {
                 .and_then(|h| h.get("ref"))
                 .and_then(|r| r.as_str())
                 .unwrap_or("");
-            let draft = pr_data
-                .get("draft")
-                .and_then(|d| d.as_bool())
-                .unwrap_or(false);
             let cfg = crate::shared::load_spec_yaml("github_pull_requests.yaml");
-            crate::rules::pull_requests::check_content(
-                title,
-                body,
-                &labels,
-                head,
-                state,
-                draft,
-                cfg.as_ref(),
-            )
+            crate::rules::pull_requests::check_content(title, body, &labels, head, cfg.as_ref())
         } else {
             let cfg = crate::shared::load_spec_yaml("github_issues.yaml");
             crate::rules::issues::check_content(title, body, &labels, "sub", state, cfg.as_ref())

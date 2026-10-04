@@ -53,9 +53,10 @@ canon pre-push   # 推送前的完整检查
 创建 PR 或 issue 时如果被闸门拦截，它会输出 `FAIL` 和 `WARN` 两类行：
 
 - **FAIL**：直接拒绝创建。必须逐条修掉再重试。
-- **WARN**：不拒绝，但每条都说明缺什么（比如"缺 type label"、"建议也挂某个标签"、"缺 `Fixes #` 关联"）。
+- **WARN**：不拒绝，但每条都说明缺什么（比如"缺 type label"、"建议也挂某个标签"）。
   能补就补（用 `gh pr edit --label` 或 `gh issue edit --label`），补不了的要在 PR 正文里写明理由——
-  理由写在 PR 正文对应的段落里（如 `## Issue` 段末尾加一句"未关联 issue 的原因：…"）。
+  理由写在对应主题的段落里。PR 与 issue 不强制绑定：issue 只用于遗留事项与记录，
+  审查发现的问题在同一 PR 上继续提交修复即可。
 
 创建前可以先跑预检：
 
@@ -72,7 +73,6 @@ canon pr   # PR 预检
 创建 PR 时正文需要包含这些段落（标题用英文，内容用中文）：
 
 ```text
-## Issue          关联的 issue（没有就说明原因）
 ## What           改了什么
 ## Why            为什么改
 ## Construction plan   实现步骤（checklist）

@@ -8,6 +8,8 @@ __pycache__/
 
 # .wt/ 分支工作树（见 worktree-isolation 规范）
 .wt/
+# codegraph 本地索引（可重生成，不入库）
+.codegraph/
 # crates/web（web 独立包）：npm 依赖不入库；kit css / tailwind.out.css / lock 随仓（ui-kit 既定先例）
 crates/web/node_modules/
 # ainotation 运行时连接信息（含 grant token），本地产物

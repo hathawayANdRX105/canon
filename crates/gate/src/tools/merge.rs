@@ -126,8 +126,6 @@ fn run_pr_rules(repo: &str, pr_num: u32) -> Vec<Finding> {
                 .and_then(|h| h.get("ref"))
                 .and_then(|r| r.as_str())
                 .unwrap_or(""),
-            pr.get("state").and_then(|s| s.as_str()).unwrap_or("open"),
-            pr.get("draft").and_then(|d| d.as_bool()).unwrap_or(false),
             cfg.as_ref(),
         ),
         Err(e) => vec![Finding::new(

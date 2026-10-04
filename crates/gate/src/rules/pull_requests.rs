@@ -139,21 +139,18 @@ fn cfg_usize(cfg: Option<&YamlValue>, key: &str) -> usize {
 /// * `body`      — PR body (markdown)
 /// * `labels`    — label names on the PR
 /// * `head_ref`  — head ref name (may include fork "user:" prefix)
-/// * `state`     — "open" or "closed"/"merged"
 /// * `cfg`       — parsed `github_pull_requests.yaml`; missing/null ⇒ a single
 ///                 `canon.setup` FAIL and no checks run
 ///
-/// Returns a `Vec<Finding>` in the same order as the Python version.
+/// Returns a `Vec<Finding>`.
 pub fn check_content(
     title: &str,
     body: &str,
     labels: &[&str],
     head_ref: &str,
-    state: &str,
-    draft: bool,
     cfg: Option<&YamlValue>,
 ) -> Vec<Finding> {
-    let mut out = check_content_impl(title, body, labels, head_ref, state, draft, cfg);
+    let mut out = check_content_impl(title, body, labels, head_ref, cfg);
     crate::shared::apply_check_allowlist(&mut out, cfg);
     out
 }
@@ -163,8 +160,6 @@ fn check_content_impl(
     body: &str,
     labels: &[&str],
     head_ref: &str,
-    state: &str,
-    draft: bool,
     cfg: Option<&YamlValue>,
 ) -> Vec<Finding> {
     // No spec ⇒ loud canon.setup FAIL. Never fall back to values baked into
@@ -310,64 +305,39 @@ fn check_content_impl(
         }
     }
 
-    // PR-05 issue linkage — Fixes #N checks
+    // PR-05 issue linkage — a PR is a working unit, an issue a tracking
+    // unit. Under the default PR-first workflow linkage is OPTIONAL: zero
+    // `Fixes #` is legitimate and only INFO. Repos that require a linked
+    // issue raise `fixes_linkage_mode` (FAIL/WARN) in the spec; garbled or
+    // absent mode keeps INFO (never silently enforced, never silently
+    // skipped).
     let fixes = extract_linked(
         body,
         &crate::shared::cfg_str_list(Some(cfg), "fixes_keywords"),
     );
-    // dedupe + sort numerically (Python: sorted(set(fixes), key=int))
-    let mut fixes_unique: Vec<i32> = fixes
+    let fixes_count = fixes
         .iter()
         .filter_map(|s| s.parse::<i32>().ok())
         .collect::<HashSet<_>>()
-        .into_iter()
-        .collect();
-    fixes_unique.sort();
-    let fixes_count = fixes_unique.len();
-
-    if state == "open" && fixes_count > 0 {
+        .len();
+    let missing_sev = check_mode_severity(Some(cfg), "fixes_linkage_mode", Severity::Info);
+    if fixes_count == 0 {
         findings.push(Finding::new(
             "PR-05",
-            Severity::Warn,
-            "open PR already uses Fixes # (may close issue prematurely)",
+            missing_sev,
+            if missing_sev == Severity::Info {
+                "no Fixes # (issue linkage is optional in the PR-first workflow)"
+            } else {
+                "no Fixes # (repo spec requires one linked issue)"
+            },
         ));
-    } else {
-        findings.push(Finding::new(
-            "PR-05",
-            Severity::Info,
-            "no premature Fixes while open (or PR not open)",
-        ));
-    }
-    if fixes_count == 1 {
+    } else if fixes_count == 1 {
         findings.push(Finding::new("PR-05", Severity::Info, "exactly one Fixes #"));
-    } else if fixes_count == 0 {
-        if draft {
-            findings.push(Finding::new(
-                "PR-05",
-                Severity::Info,
-                "draft PR, Fixes may appear at merge authorization",
-            ));
-        } else {
-            findings.push(Finding::new(
-                "PR-05",
-                Severity::Warn,
-                "no Fixes # yet (needs one primary issue before merge)",
-            ));
-        }
     } else {
         findings.push(Finding::new(
             "PR-05",
             Severity::Warn,
             &format!("multiple Fixes # ({fixes_count}): one PR should close one issue"),
-        ));
-    }
-    if fixes_count <= 1 {
-        findings.push(Finding::new("PR-05", Severity::Info, "one primary issue"));
-    } else {
-        findings.push(Finding::new(
-            "PR-05",
-            Severity::Warn,
-            "one PR should close one primary issue",
         ));
     }
 
@@ -514,7 +484,6 @@ fn check_content_impl(
             ));
         }
     }
-    // Apply user-provided severity overrides (e.g. PR-05 demoted to WARN).
     crate::shared::apply_severity_overrides(&mut findings, Some(cfg));
 
     findings
@@ -535,15 +504,7 @@ mod tests {
     #[test]
     fn missing_spec_is_a_loud_gate_setup_fail() {
         // None: no spec on disk at all.
-        let findings = check_content(
-            "feat: add thing",
-            "## Issue\n",
-            &[],
-            "feat/a",
-            "open",
-            false,
-            None,
-        );
+        let findings = check_content("feat: add thing", "## Issue\n", &[], "feat/a", None);
         assert_eq!(findings.len(), 1, "no checks may run without the spec");
         assert_eq!(findings[0].rule_id, "canon.setup");
         assert_eq!(findings[0].severity, Severity::Fail);
@@ -554,8 +515,6 @@ mod tests {
             "## Issue\n",
             &[],
             "feat/a",
-            "open",
-            false,
             Some(&YamlValue::Null),
         );
         assert_eq!(findings.len(), 1, "no checks may run without the spec");
@@ -580,8 +539,6 @@ title_must_be_chinese: true
             "## Issue\n\n## Checklist\n\n- [ ] one\n",
             &["bug"],
             "feat/a",
-            "open",
-            false,
             Some(&cfg),
         );
         let ci = findings
@@ -605,8 +562,6 @@ title_must_be_chinese: true
             "## Checklist\n\n- [ ] one\n",
             &["bug"],
             "feat/a",
-            "open",
-            false,
             Some(&cfg),
         );
         let ci = findings
@@ -626,13 +581,47 @@ title_must_be_chinese: true
             "## Issue\n",
             &["bug"],
             "feat/a",
-            "open",
-            false,
             Some(&cfg),
         );
         assert!(findings.iter().any(|f| {
             f.rule_id == "PR-01" && f.severity == Severity::Fail && f.msg.contains("fullwidth")
         }));
+    }
+
+    #[test]
+    fn linkage_is_optional_unless_spec_asks_otherwise() {
+        // PR-first workflow: a PR with zero `Fixes #` is legitimate (INFO).
+        // `fixes_linkage_mode` promotes the missing-linkage finding for repos
+        // that still want one issue per PR; multiple Fixes stays WARN.
+        let spec = cfg("fixes_keywords: [\"Fixes\"]\n");
+        let findings = check_content("feat: x", "", &[], "feat/a", Some(&spec));
+        let pr05 = findings
+            .iter()
+            .find(|f| f.rule_id == "PR-05")
+            .expect("PR-05 finding");
+        assert_eq!(pr05.severity, Severity::Info, "no linkage is legal");
+
+        let spec = cfg("fixes_keywords: [\"Fixes\"]\nfixes_linkage_mode: \"FAIL\"\n");
+        let findings = check_content("feat: x", "", &[], "feat/a", Some(&spec));
+        let pr05 = findings
+            .iter()
+            .find(|f| f.rule_id == "PR-05")
+            .expect("PR-05 finding");
+        assert_eq!(pr05.severity, Severity::Fail, "spec can require linkage");
+
+        let spec = cfg("fixes_keywords: [\"Fixes\"]\n");
+        let findings = check_content(
+            "feat: x",
+            "Fixes #1\nFixes #2\n",
+            &[],
+            "feat/a",
+            Some(&spec),
+        );
+        let pr05 = findings
+            .iter()
+            .find(|f| f.rule_id == "PR-05")
+            .expect("PR-05 finding");
+        assert_eq!(pr05.severity, Severity::Warn, "one PR closes one issue");
     }
 }
 
@@ -649,8 +638,6 @@ mod spec_smoke {
     fn real_spec_clean_pr_is_not_fail() {
         let cfg = load("github_pull_requests.yaml");
         let body = "\
-## Issue
-Fixes #1
 ## What
 做这件事的原因是 X
 ## Why
@@ -666,15 +653,7 @@ cargo test
 - [ ] a
 - [ ] b
 ";
-        let f = check_content(
-            "feat: add thing",
-            body,
-            &["feature"],
-            "feat/x",
-            "open",
-            false,
-            Some(&cfg),
-        );
+        let f = check_content("feat: add thing", body, &["feature"], "feat/x", Some(&cfg));
         let fails: Vec<_> = f.iter().filter(|x| x.severity == Severity::Fail).collect();
         assert!(
             fails.is_empty(),

@@ -744,8 +744,7 @@ pub fn intercept_pr_create(args: &[String]) -> i32 {
     let cfg = crate::shared::load_spec_yaml("github_pull_requests.yaml")
         .unwrap_or(serde_yaml::Value::Null);
 
-    let mut findings =
-        pull_requests::check_content(&title, &body, &labels_str, &head, "open", false, Some(&cfg));
+    let mut findings = pull_requests::check_content(&title, &body, &labels_str, &head, Some(&cfg));
     // Apply global severity overrides from severity_overrides.yaml
     crate::shared::apply_global_overrides(&mut findings);
     let fails: Vec<&Finding> = findings
