@@ -9,7 +9,7 @@
 
 | 判定 | 数量 | 项目 |
 |---|---|---|
-| good（可执行度 4.0） | 15 | oh-my-pi, herdr, dotfiles, new-api, silverq, kime, ferrite, ainotation, omenic, gugu, deskctl, algorchemy, sentinel, novel, canon |
+| good（可执行度 4.0） | 15 | oh-my-pi, herdr, dotfiles, new-api, silverq, kime, ferrite, ainotation, kymido, gugu, deskctl, algorchemy, sentinel, novel, canon |
 | hollow（可执行度 1.0） | 1 | claude-code |
 
 ## 升级核对：claude-code 的 hollow 已驳回

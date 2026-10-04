@@ -180,7 +180,7 @@ fn load_spec(path: &std::path::Path) -> Result<ChecklistSpec, String> {
         name,
         enabled: raw.enabled.unwrap_or(true),
         // No default hooks: an explicit `hooks:` list is the single routing
-        // source (omenic's dispatch.yaml topic router is gone by design).
+        // source (kymido's dispatch.yaml topic router is gone by design).
         hooks: raw.hooks,
         include: raw.r#match.paths_include,
         exclude: raw.r#match.paths_exclude,
@@ -433,11 +433,25 @@ fn has_match(spec: &ChecklistSpec, target: &Target) -> bool {
 // ---------------------------------------------------------------------------
 
 fn run_harness(spec: &ChecklistSpec, stdin_payload: &[u8]) -> (i32, String) {
+    // Capture stdout/stderr into temp files, not pipes. A full-repo audit
+    // harness emits far more than a pipe buffer holds (measured: 87 KB vs the
+    // 64 KB default) and the engine only drains stdout after the child exits —
+    // with pipes that ordering deadlocks the child on write until its timeout
+    // kills it (the 15-minute merge runs). Files never block, and a timed-out
+    // harness still yields partial output for diagnostics.
+    let mut out_capture = match CaptureFile::create("stdout") {
+        Ok(c) => c,
+        Err(_) => return (127, String::new()),
+    };
+    let mut err_capture = match CaptureFile::create("stderr") {
+        Ok(c) => c,
+        Err(_) => return (127, String::new()),
+    };
     let mut cmd = Command::new(&spec.command);
     cmd.args(&spec.args)
         .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
+        .stdout(Stdio::from(out_capture.take_handle()))
+        .stderr(Stdio::from(err_capture.take_handle()));
     let mut child = match cmd.spawn() {
         Ok(c) => c,
         Err(_) => return (127, String::new()),
@@ -451,7 +465,48 @@ fn run_harness(spec: &ChecklistSpec, stdin_payload: &[u8]) -> (i32, String) {
             let _ = w.write_all(&payload);
         }
     });
-    wait_with_timeout(child, spec.timeout_secs)
+    let (rc, _piped) = wait_with_timeout(child, spec.timeout_secs);
+    let mut combined = out_capture.read();
+    combined.push_str(&err_capture.read());
+    (rc, combined)
+}
+
+/// One temp file a harness writes into; read back after the child exits and
+/// removed on drop. Unique per harness so parallel runs never share a path.
+struct CaptureFile {
+    path: PathBuf,
+    handle: Option<std::fs::File>,
+}
+
+impl CaptureFile {
+    fn create(tag: &str) -> std::io::Result<Self> {
+        static SEQ: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+        let seq = SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let path =
+            std::env::temp_dir().join(format!("canon-harness-{}-{seq}.{tag}", std::process::id()));
+        let file = std::fs::File::create(&path)?;
+        Ok(Self {
+            path,
+            handle: Some(file),
+        })
+    }
+
+    /// Hand the write handle to the child's stdio. Taken exactly once.
+    fn take_handle(&mut self) -> std::fs::File {
+        self.handle
+            .take()
+            .expect("CaptureFile handle taken exactly once")
+    }
+
+    fn read(&self) -> String {
+        std::fs::read_to_string(&self.path).unwrap_or_default()
+    }
+}
+
+impl Drop for CaptureFile {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(&self.path);
+    }
 }
 
 /// Poll until the child exits or the deadline passes; kill on timeout.
@@ -652,6 +707,102 @@ pub fn spec_dir() -> Option<PathBuf> {
     git::find_githooks_dir().map(|g| g.join("spec"))
 }
 
+// ---------------------------------------------------------------------------
+// Parallel execution
+// ---------------------------------------------------------------------------
+
+/// How many checklist harnesses may run at once. Harnesses are external
+/// processes (cargo, python, grep) that mostly *wait*, so a handful in
+/// parallel turns the serial wall-clock sum into roughly the slowest single
+/// rule. `CANON_CHECK_PARALLELISM` overrides; `1` restores the serial path.
+const DEFAULT_CHECK_PARALLELISM: usize = 4;
+const MAX_CHECK_PARALLELISM: usize = 16;
+
+fn check_parallelism(jobs: usize) -> usize {
+    let requested = std::env::var("CANON_CHECK_PARALLELISM")
+        .ok()
+        .and_then(|v| v.trim().parse::<usize>().ok())
+        .unwrap_or(DEFAULT_CHECK_PARALLELISM);
+    requested.clamp(1, MAX_CHECK_PARALLELISM).min(jobs.max(1))
+}
+
+/// Map `f` over `jobs` with at most [`check_parallelism`] workers, returning
+/// per-job output **in input order** — findings stay byte-identical to the
+/// serial run no matter which worker finishes first.
+fn parallel_map<T, F>(jobs: &[T], f: F) -> Vec<Vec<Finding>>
+where
+    T: Sync,
+    F: Fn(&T) -> Vec<Finding> + Sync,
+{
+    if jobs.is_empty() {
+        return Vec::new();
+    }
+    let workers = check_parallelism(jobs.len());
+    if workers <= 1 {
+        return jobs.iter().map(&f).collect();
+    }
+    let next = std::sync::atomic::AtomicUsize::new(0);
+    let slots: std::sync::Mutex<Vec<Option<Vec<Finding>>>> =
+        std::sync::Mutex::new((0..jobs.len()).map(|_| None).collect());
+    std::thread::scope(|scope| {
+        for _ in 0..workers {
+            scope.spawn(|| {
+                loop {
+                    let i = next.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                    let Some(job) = jobs.get(i) else { break };
+                    let out = f(job);
+                    if let Ok(mut guard) = slots.lock() {
+                        guard[i] = Some(out);
+                    }
+                }
+            });
+        }
+    });
+    slots
+        .into_inner()
+        .expect("parallel slots mutex")
+        .into_iter()
+        .map(|slot| slot.unwrap_or_default())
+        .collect()
+}
+
+/// One `checklist_*.yaml` file: its path plus the parsed spec (or the parse
+/// error, kept so the run can fail closed instead of dropping the rule).
+type SpecEntry = (PathBuf, Result<ChecklistSpec, String>);
+
+/// Run specs through [`parallel_map`], preserving file order. `keep` selects
+/// which entries execute (index-based so callers can pre-filter without
+/// cloning specs). A broken spec stays a fail-closed setup finding on its own
+/// slot, same as serial.
+fn run_specs(
+    specs: &[SpecEntry],
+    keep: &dyn Fn(usize) -> bool,
+    target: &Target,
+    ignore_hooks: bool,
+) -> Vec<Finding> {
+    let jobs: Vec<&SpecEntry> = specs
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| keep(*i))
+        .map(|(_, e)| e)
+        .collect();
+    let outs = parallel_map(&jobs, |(path, spec)| match spec {
+        Ok(s) => {
+            eprintln!("--- checklist: {} ---", s.name);
+            run_one(s, target, ignore_hooks)
+        }
+        Err(e) => vec![Finding::new(
+            "canon.setup",
+            Severity::Fail,
+            &format!(
+                "checklist {} broken, rule disabled: {e} — fix the yaml",
+                path.file_name().unwrap_or_default().to_string_lossy()
+            ),
+        )],
+    });
+    outs.into_iter().flatten().collect()
+}
+
 /// Run all `checklist_*.yaml` matching the scope. Findings are aggregated
 /// across every spec; caller applies overrides, prints, and maps to exit code.
 ///
@@ -676,28 +827,7 @@ pub fn run_all(scope: HookScope) -> Vec<Finding> {
             ),
         )];
     }
-    let mut findings = Vec::new();
-    for (path, spec) in &specs {
-        let spec = match spec {
-            Ok(s) => s,
-            Err(e) => {
-                // Fail-closed: a broken spec (typo / missing key) must block,
-                // not silently drop its rule.
-                findings.push(Finding::new(
-                    "canon.setup",
-                    Severity::Fail,
-                    &format!(
-                        "checklist {} broken, rule disabled: {e} — fix the yaml",
-                        path.file_name().unwrap_or_default().to_string_lossy()
-                    ),
-                ));
-                continue;
-            }
-        };
-        eprintln!("--- checklist: {} ---", spec.name);
-        findings.extend(run_one(spec, &Target::Hook(scope), false));
-    }
-    findings
+    run_specs(&specs, &|_| true, &Target::Hook(scope), false)
 }
 
 /// Run rules against an explicit [`Target`] — a rev range, a commit, or a set
@@ -723,31 +853,17 @@ pub fn run_targeted(target: Target, names: &[String], max_sla: SlaLevel) -> Vec<
             ),
         )];
     }
-    let mut findings = Vec::new();
-    for (path, spec) in &specs {
-        let spec = match spec {
-            Ok(s) => s,
-            Err(e) => {
-                findings.push(Finding::new(
-                    "canon.setup",
-                    Severity::Fail,
-                    &format!(
-                        "checklist {} broken, rule disabled: {e} — fix the yaml",
-                        path.file_name().unwrap_or_default().to_string_lossy()
-                    ),
-                ));
-                continue;
-            }
-        };
-        if !names.is_empty() && !names.iter().any(|n| *n == spec.name) {
-            continue;
-        }
-        if spec.sla > max_sla {
-            continue;
-        }
-        findings.extend(run_one(spec, &target, true));
-    }
-    findings
+    run_specs(
+        &specs,
+        &|i| match &specs[i].1 {
+            Ok(s) => (names.is_empty() || names.contains(&s.name)) && s.sla <= max_sla,
+            // Broken specs surface even when the filter excludes them:
+            // fail-closed beats quiet.
+            Err(_) => true,
+        },
+        &target,
+        true,
+    )
 }
 
 /// Display name of a checklist spec from its file stem
@@ -783,7 +899,7 @@ pub fn run_named_in(
     names: &[String],
     max_sla: SlaLevel,
 ) -> Vec<Finding> {
-    let mut findings = Vec::new();
+    let findings = Vec::new();
     let specs = find_specs(spec_dir);
     if specs.is_empty() {
         return vec![Finding::new(
@@ -808,50 +924,46 @@ pub fn run_named_in(
         }
         return findings;
     }
-    for name in names {
-        // A broken spec is a setup failure, not an unknown name: match the
-        // requested name against broken specs' file stems first.
-        if let Some((path, Err(e))) = specs
-            .iter()
-            .find(|(p, s)| s.is_err() && spec_stem_name(p).as_deref() == Some(name.as_str()))
-        {
-            findings.push(Finding::new(
-                "canon.setup",
-                Severity::Fail,
-                &format!(
-                    "checklist {} broken: {e} — fix the yaml",
-                    path.file_name().unwrap_or_default().to_string_lossy()
-                ),
-            ));
-            continue;
-        }
-        match specs
-            .iter()
-            .find(|(_, s)| s.as_ref().ok().is_some_and(|s| &s.name == name))
-        {
-            Some((_path, Ok(spec))) => {
-                eprintln!("--- checklist: {} ---", spec.name);
-                findings.extend(run_one(spec, &Target::Hook(HookScope::Merge), true));
-            }
-            Some((path, Err(e))) => findings.push(Finding::new(
-                "canon.setup",
-                Severity::Fail,
-                &format!(
-                    "checklist {} broken: {e} — fix the yaml",
-                    path.file_name().unwrap_or_default().to_string_lossy()
-                ),
-            )),
-            None => eprintln!(
-                "unknown checklist: {name} (available: {})",
+    let available = specs
+        .iter()
+        .filter_map(|(_, s)| s.as_ref().ok().map(|s| s.name.as_str()))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let jobs: Vec<(&String, Option<&SpecEntry>)> = names
+        .iter()
+        .map(|name| {
+            // A broken spec is a setup failure, not an unknown name: match the
+            // requested name against broken specs' file stems first.
+            let broken = specs
+                .iter()
+                .find(|(p, s)| s.is_err() && spec_stem_name(p).as_deref() == Some(name.as_str()));
+            let found = broken.or_else(|| {
                 specs
                     .iter()
-                    .filter_map(|(_, s)| s.as_ref().ok().map(|s| s.name.as_str()))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ),
+                    .find(|(_, s)| s.as_ref().ok().is_some_and(|s| &s.name == name))
+            });
+            (name, found)
+        })
+        .collect();
+    let outs = parallel_map(&jobs, |(name, entry)| match entry {
+        Some((_path, Ok(spec))) => {
+            eprintln!("--- checklist: {} ---", spec.name);
+            run_one(spec, &Target::Hook(HookScope::Merge), true)
         }
-    }
-    findings
+        Some((path, Err(e))) => vec![Finding::new(
+            "canon.setup",
+            Severity::Fail,
+            &format!(
+                "checklist {} broken: {e} — fix the yaml",
+                path.file_name().unwrap_or_default().to_string_lossy()
+            ),
+        )],
+        None => {
+            eprintln!("unknown checklist: {name} (available: {available})");
+            vec![]
+        }
+    });
+    outs.into_iter().flatten().collect()
 }
 
 // ===========================================================================
@@ -861,6 +973,75 @@ pub fn run_named_in(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parallel_map_preserves_input_order_under_completion_skew() {
+        // Reversed input + descending sleeps: a naive unordered collect would
+        // emit the fastest job first. Findings must stay in input order.
+        let jobs: Vec<usize> = (0..12).rev().collect();
+        let out = parallel_map(&jobs, |i| {
+            std::thread::sleep(Duration::from_millis((12 - i) as u64 * 4));
+            vec![Finding::new(&format!("job-{i}"), Severity::Info, "")]
+        });
+        let got: Vec<String> = out.into_iter().flatten().map(|f| f.rule_id).collect();
+        let want: Vec<String> = jobs.iter().map(|i| format!("job-{i}")).collect();
+        assert_eq!(
+            got, want,
+            "findings must stay in input order regardless of completion order"
+        );
+    }
+
+    #[test]
+    fn parallel_map_observes_more_than_one_worker() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        let live = AtomicUsize::new(0);
+        let peak = AtomicUsize::new(0);
+        let jobs: Vec<usize> = (0..8).collect();
+        parallel_map(&jobs, |_| {
+            let now_live = live.fetch_add(1, Ordering::SeqCst) + 1;
+            peak.fetch_max(now_live, Ordering::SeqCst);
+            std::thread::sleep(Duration::from_millis(80));
+            live.fetch_sub(1, Ordering::SeqCst);
+            vec![]
+        });
+        assert!(
+            peak.load(Ordering::SeqCst) > 1,
+            "checklist harnesses must overlap when parallelism > 1"
+        );
+    }
+
+    #[test]
+    fn check_parallelism_stays_bounded() {
+        assert_eq!(check_parallelism(0), 1);
+        assert_eq!(check_parallelism(1), 1);
+        // Env is not mutated in tests (edition 2024 set_var is unsafe), so
+        // this asserts the invariants rather than a specific default.
+        for jobs in [2usize, 3, 9, 64] {
+            let n = check_parallelism(jobs);
+            assert!(
+                (1..=jobs).contains(&n) && n <= MAX_CHECK_PARALLELISM,
+                "parallelism {n} out of bounds for {jobs} jobs"
+            );
+        }
+    }
+
+    #[test]
+    fn run_harness_captures_output_larger_than_pipe_buffer() {
+        // 70 KB > the 64 KiB pipe buffer. With piped stdout that the engine
+        // only drains after exit, this deadlocked until the harness timeout
+        // (the 15-minute merge runs); with file capture it must exit cleanly
+        // and keep every byte.
+        let s = spec(
+            "harness: {command: python3, args: [\"-c\", \"import sys; sys.stdout.write('a'*70000)\"]}\ntimeout: 20",
+        );
+        let (rc, out) = run_harness(&s, b"");
+        assert_eq!(rc, 0, "harness should exit cleanly, rc={rc}, out={out:?}");
+        assert!(
+            out.len() >= 70_000,
+            "harness output must not be truncated: {} bytes",
+            out.len()
+        );
+    }
 
     fn spec(yaml: &str) -> ChecklistSpec {
         let dir = tempfile::tempdir().unwrap();

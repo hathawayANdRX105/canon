@@ -13,10 +13,10 @@ const HOOK_PRE_COMMIT: &str = "\
 # 找二进制: 先 PATH 里的 canon (系统安装), 否则用仓库内 .githooks/canon
 REPO=$(git rev-parse --show-toplevel 2>/dev/null)
 if command -v canon >/dev/null 2>&1; then
-  exec canon pre-commit
+  exec canon pre-commit \"$@\"
 fi
 if [ -x \"$REPO/.githooks/canon\" ]; then
-  exec \"$REPO/.githooks/canon\" pre-commit
+  exec \"$REPO/.githooks/canon\" pre-commit \"$@\"
 fi
 echo \"canon binary not found (need: canon on PATH, or .githooks/canon)\" >&2
 exit 1
@@ -26,13 +26,11 @@ const HOOK_COMMIT_MSG: &str = "\
 #!/usr/bin/env bash
 # canon-managed hook — delegates to the canon binary
 # 找二进制: 先 PATH 里的 canon (系统安装), 否则用仓库内 .githooks/canon
-REPO=$(git rev-parse --show-toplevel 2>/dev/null)
-MSG=\"$1\"
 if command -v canon >/dev/null 2>&1; then
-  exec canon commit-msg \"$MSG\"
+  exec canon commit-msg \"$@\"
 fi
 if [ -x \"$REPO/.githooks/canon\" ]; then
-  exec \"$REPO/.githooks/canon\" commit-msg \"$MSG\"
+  exec \"$REPO/.githooks/canon\" commit-msg \"$@\"
 fi
 echo \"canon binary not found (need: canon on PATH, or .githooks/canon)\" >&2
 exit 1
@@ -44,10 +42,10 @@ const HOOK_PRE_PUSH: &str = "\
 # 找二进制: 先 PATH 里的 canon (系统安装), 否则用仓库内 .githooks/canon
 REPO=$(git rev-parse --show-toplevel 2>/dev/null)
 if command -v canon >/dev/null 2>&1; then
-  exec canon pre-push
+  exec canon pre-push \"$@\"
 fi
 if [ -x \"$REPO/.githooks/canon\" ]; then
-  exec \"$REPO/.githooks/canon\" pre-push
+  exec \"$REPO/.githooks/canon\" pre-push \"$@\"
 fi
 echo \"canon binary not found (need: canon on PATH, or .githooks/canon)\" >&2
 exit 1
@@ -59,10 +57,10 @@ const HOOK_MERGE: &str = "\
 # 找二进制: 先 PATH 里的 canon (系统安装), 否则用仓库内 .githooks/canon
 REPO=$(git rev-parse --show-toplevel 2>/dev/null)
 if command -v canon >/dev/null 2>&1; then
-  exec canon merge
+  exec canon merge \"$@\"
 fi
 if [ -x \"$REPO/.githooks/canon\" ]; then
-  exec \"$REPO/.githooks/canon\" merge
+  exec \"$REPO/.githooks/canon\" merge \"$@\"
 fi
 echo \"canon binary not found (need: canon on PATH, or .githooks/canon)\" >&2
 exit 1
@@ -294,3 +292,30 @@ fn chmod_755(path: &Path) {
 // ===========================================================================
 // Tests
 // ===========================================================================
+
+/// 每个包装脚本必须把调用方参数原样转给 canon 子命令
+/// （`canon merge <owner/repo> <pr> --dry-run` 走的就是包装层）。
+#[test]
+fn hook_templates_forward_caller_args() {
+    for (name, tmpl, subcmd) in [
+        ("pre-commit", HOOK_PRE_COMMIT, "pre-commit"),
+        ("commit-msg", HOOK_COMMIT_MSG, "commit-msg"),
+        ("pre-push", HOOK_PRE_PUSH, "pre-push"),
+        ("merge", HOOK_MERGE, "merge"),
+    ] {
+        // PATH 分支与 repo-local 分支都要转发
+        assert!(
+            tmpl.contains(&format!("exec canon {subcmd} \"$@\"\n")),
+            "{name}: PATH 分支未转发 \"$@\""
+        );
+        assert!(
+            tmpl.contains(&format!("exec \"$REPO/.githooks/canon\" {subcmd} \"$@\"\n")),
+            "{name}: repo-local 分支未转发 \"$@\""
+        );
+        // 不允许残留不带参数的裸 exec（历史 bug：调用方参数被整段丢弃）
+        assert!(
+            !tmpl.contains(&format!("exec canon {subcmd}\n")),
+            "{name}: 仍有丢弃参数的裸 exec canon {subcmd}"
+        );
+    }
+}

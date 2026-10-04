@@ -64,14 +64,14 @@ projects:
     files:
       - src: agent-pack/rules/workflow-state.md
         to: .agent/rules/workflow-state.md
-  omenic:
-    root: /home/hathaway/projects/omenic
+  kymido:
+    root: /home/hathaway/projects/kymido
     files:
       - src: agent-pack/rules/workflow-state.md
         to: .agent/rules/workflow-state.md
       - src: agent-pack/templates/task-templates-handbook.md
         to: .agent/task-templates-handbook.md
-      - src: agent-pack/skills/refactor-workflow.omenic.md
+      - src: agent-pack/skills/refactor-workflow.kymido.md
         to: .agent/skills/refactor-workflow/SKILL.md
       - src: agent-pack/rules/workflow-state.md
         to: .agent/rules/workflow-state.md

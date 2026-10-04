@@ -41,13 +41,16 @@ enum Commands {
     /// Validate the commit message git is about to commit (CM-01/02/03);
     /// git passes the message file as $1
     CommitMsg { path: PathBuf },
-    /// Run pre-push hooks
-    PrePush,
+    /// Run pre-push hooks (git 调 pre-push 钩子时带 remote name 与 URL，
+    /// 包装脚本按 issue #21 统一转发 "$@"，两个位置参数 canon 只接收不消费)
+    PrePush {
+        #[arg(hide = true)]
+        remote_name: Option<String>,
+        #[arg(hide = true)]
+        remote_url: Option<String>,
+    },
     /// Run merge checks: `canon merge <owner/repo> <pr_number> [--dry-run]`
     Merge(MergeArgs),
-    /// Run CRG + ocr code review
-    Review(ReviewArgs),
-    /// Run named quality checks: `canon check [names...]` (no args = list)
     Check {
         /// Checklist names (file name minus `checklist_` prefix and `.yaml`)
         names: Vec<String>,
@@ -75,19 +78,6 @@ enum Commands {
         #[arg(long, default_value_t = 10081)]
         port: u16,
     },
-}
-
-#[derive(clap::Args)]
-struct ReviewArgs {
-    /// Post results as a PR conversation comment
-    #[arg(long)]
-    post: bool,
-    /// Post inline review comments on the PR diff
-    #[arg(long = "post-inline")]
-    post_inline: bool,
-    /// PR number to post to (auto-detected if omitted)
-    #[arg(long)]
-    pr: Option<u64>,
 }
 
 #[derive(clap::Args)]
@@ -146,7 +136,7 @@ fn main() -> ExitCode {
         Commands::CommitMsg { path } => {
             ExitCode::from(tools::pre_commit::run_commit_msg(path.to_str().unwrap_or("")) as u8)
         }
-        Commands::PrePush => ExitCode::from(tools::pre_push::run() as u8),
+        Commands::PrePush { .. } => ExitCode::from(tools::pre_push::run() as u8),
         Commands::Merge(args) => {
             let mut arg_vec = vec![args.repo, args.pr.to_string()];
             if args.dry_run {
@@ -156,11 +146,6 @@ fn main() -> ExitCode {
         }
         Commands::Issue => ExitCode::from(tools::gh_wrap::intercept_issue_create(&[]) as u8),
         Commands::Pr => ExitCode::from(tools::gh_wrap::intercept_pr_create(&[]) as u8),
-        Commands::Review(args) => {
-            let args_vec: Vec<String> = build_review_args(&args);
-            let rc = tools::review::run(&args_vec);
-            ExitCode::from(rc as u8)
-        }
         Commands::Check { names, sla, json } => {
             let max_sla = engine::SlaLevel::parse(&sla);
             if !json {
@@ -169,8 +154,6 @@ fn main() -> ExitCode {
                 eprintln!(
                     "    WARN = 修复(默认) 或 书面驳回(证据写进 PR 审查记录); FAIL = 必须修复或拆 PR 才能继续"
                 );
-                eprintln!("    ocr 深度审查请自行调: ocr review --format json --audience agent");
-                eprintln!("✅  L1+L2 是硬门槛 (确定性检查): FAIL 必须修复才能 commit/push");
                 eprintln!("══════════════════════════════════════════════════════");
             }
             let mut findings = engine::run_named(&names, max_sla);
@@ -184,7 +167,9 @@ fn main() -> ExitCode {
                 eprintln!(
                     "ℹ️  L3 finding 不阻断, 但每条 WARN/FAIL 必须处置: 修复(默认) 或 书面驳回记入 PR 审查记录; 静默忽略 = 违规"
                 );
-                eprintln!("    L1+L2 FAIL = 硬门槛, 必须修复. 深度审查请自行调 ocr.");
+                eprintln!(
+                    "    L1+L2 FAIL = 硬门槛, 必须修复. 深度语义审查由 merge 钩子的 L2 checklist 承接."
+                );
                 eprintln!("══════════════════════════════════════════════════════");
             }
             ExitCode::from(shared::exit_code(&findings) as u8)
@@ -230,21 +215,6 @@ fn run_mcp_stdio() -> std::io::Result<()> {
     Ok(())
 }
 
-fn build_review_args(args: &ReviewArgs) -> Vec<String> {
-    let mut vec = Vec::new();
-    if args.post {
-        vec.push("--post".to_string());
-    }
-    if args.post_inline {
-        vec.push("--post-inline".to_string());
-    }
-    if let Some(pr) = args.pr {
-        vec.push("--pr".to_string());
-        vec.push(pr.to_string());
-    }
-    vec
-}
-
 fn build_audit_args(args: &AuditArgs) -> Vec<String> {
     let mut vec = Vec::new();
     let repo = args.repo.clone().unwrap_or_else(tools::audit::derive_repo);
@@ -270,6 +240,8 @@ fn build_audit_args(args: &AuditArgs) -> Vec<String> {
 
 #[cfg(test)]
 mod tests {
+    use crate::{Cli, Commands};
+    use clap::Parser;
     use gate::shared::load_yaml;
     use std::path::Path;
 
@@ -292,5 +264,15 @@ mod tests {
         let names: Vec<&str> = headings.iter().filter_map(|h| h.as_str()).collect();
         assert!(names.contains(&"Goal"));
         assert!(names.contains(&"Out of scope"));
+    }
+
+    // issue #21：钩子包装统一转发 "$@" 后，git 给 pre-push 的 remote name/URL
+    // 必须能被 CLI 原样接收，而不是报 unexpected argument
+    #[test]
+    fn pre_push_tolerates_git_forwarded_args() {
+        let cli =
+            Cli::try_parse_from(["canon", "pre-push", "origin", "https://github.com/o/r.git"])
+                .expect("git 的 pre-push 两个位置参数应被 CLI 接受");
+        assert!(matches!(cli.command, Commands::PrePush { .. }));
     }
 }

@@ -76,7 +76,7 @@ push project='':
 
 _push-all:
     #!/usr/bin/env bash
-    for p in algorchemy deskctl ferrite gugu kime new-api omenic silverq ui-kit; do
+    for p in algorchemy deskctl ferrite gugu kime new-api kymido silverq ui-kit; do
         python3 scripts/canon-sync push "$p" | tail -1
     done
 
@@ -86,7 +86,7 @@ status project='':
     if [ -n "{{project}}" ]; then
         python3 scripts/canon-sync status {{project}}
     else
-        for p in algorchemy deskctl ferrite gugu kime new-api omenic silverq ui-kit; do
+        for p in algorchemy deskctl ferrite gugu kime new-api kymido silverq ui-kit; do
             python3 scripts/canon-sync status "$p" | grep -E "^==|DRIFT|ONLY-CANON" | head -4
         done
     fi

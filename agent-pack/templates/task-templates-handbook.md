@@ -1,4 +1,4 @@
-# omenic 任务模板手册（phases / steps）
+# kymido 任务模板手册（phases / steps）
 
 > **什么时候读**：写 Issue 的 Done when 或 PR 的 Construction plan 需要选编排模板时
 > （按需查，不必每次会话通读）。**解决什么**：5 个 phase + 12 个 step 各是什么、什么时候挂、
@@ -6,7 +6,7 @@
 
 > 日期：2026-08-07
 > 来源：compass-ws `config/templates/{phases,steps}/*.yaml`（17 个模板）
-> 用途：临时——在你有 omenic 自己的原生任务机制之前，沿用 compass 的「编排例 / 工序模板」心智模型，**从手册里挑选适用的填进 Issue 的 Done when 或 PR 的 Construction plan**。
+> 用途：临时——在你有 kymido 自己的原生任务机制之前，沿用 compass 的「编排例 / 工序模板」心智模型，**从手册里挑选适用的填进 Issue 的 Done when 或 PR 的 Construction plan**。
 > 不放 AGENTS.md 的原因：模板细节很长（17 模板 × 几十到几百行），全收进 AGENTS.md 会让每次会话启动都读一遍，污染默认上下文。**按需查**才是正确用法。
 
 ## 0. 总则
@@ -181,9 +181,9 @@ gates:    —
 3. **检查组合**：对照 §3 看是否走的是典型组合；不是就单独说明原因
 4. **不抄完整 YAML**：手动摘录 phase/step 的标题和 acceptance 关键点即可（YAML 本身由你视情况落到 task 模板）
 
-## 6. 已知不足（待 omenic 原生化）
+## 6. 已知不足（待 kymido 原生化）
 
-- 目前 17 模板来自 compass，**不是 omenic 原生**——omp RPC 概念没体现
-- phase 内子动作的 deps 顺序写死在 YAML 里，omenic 上想跑得先做 store/graph 层
-- `invariants` 的 17 个子检查是「文本清单」，omenic 化后想做自动化检查（1→n）
+- 目前 17 模板来自 compass，**不是 kymido 原生**——omp RPC 概念没体现
+- phase 内子动作的 deps 顺序写死在 YAML 里，kymido 上想跑得先做 store/graph 层
+- `invariants` 的 17 个子检查是「文本清单」，kymido 化后想做自动化检查（1→n）
 - 没有 omic 自己的 `cmp run <id>` 集成——等 MVP 跑通后转写

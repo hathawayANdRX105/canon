@@ -4,7 +4,7 @@
 //! layer stays dep-free even with the flow tool family; the flow tools
 //! themselves live in `flow::tools`.
 //!
-//! Wire shapes match what `omenic`'s own MCP client speaks
+//! Wire shapes match what `kymido`'s own MCP client speaks
 //! (`crates/mcp`, protocol revision 2025-06-18), so both consumers are covered.
 //!
 //! Spec tools are shells over the engine; flow tools are shells over the

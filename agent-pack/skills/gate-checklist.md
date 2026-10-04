@@ -6,7 +6,7 @@ license: MIT
 
 # Gate Checklist — 项目级自定义检查
 
-`.githooks/spec/checklist_*.yaml` 是 omenic gate 的"项目级规则"入口。
+`.githooks/spec/checklist_*.yaml` 是 kymido gate 的"项目级规则"入口。
 每份 yaml = 一条检查，gate 把内容（git diff / 全文 / 静态扫描结果）喂给
 任意 harness（可执行文件），harness 回传 finding JSON，gate 走既有
 FAIL/WARN/INFO 出口。
@@ -27,9 +27,9 @@ FAIL/WARN/INFO 出口。
 ## 前置条件
 
 ```bash
-# 1. 装 omenic gate 二进制 (CK-04 已实现)
-#    拷 omenic PR #273 impl 编译出的 release 版
-cp /path/to/omenic/.wt/271-feat-gate-checklist/target/release/gate \
+# 1. 装 kymido gate 二进制 (CK-04 已实现)
+#    拷 kymido（原 omenic）PR #273 impl 编译出的 release 版
+cp /path/to/kymido/.wt/271-feat-gate-checklist/target/release/gate \
    ~/.local/bin/canon
 
 # 2. 装 LLM CLI (任选)
@@ -51,12 +51,12 @@ sudo pacman -S jq
 cd /path/to/your-project
 mkdir -p .githooks/spec
 
-# 从 omenic 拷协议 + demo (CK-04 mode: grep 已合)
-cp /path/to/omenic/.wt/271-feat-gate-checklist/.githooks/spec/CHECKLIST_SPEC.md \
+# 从 kymido（原 omenic）拷协议 + demo (CK-04 mode: grep 已合)
+cp /path/to/kymido/.wt/271-feat-gate-checklist/.githooks/spec/CHECKLIST_SPEC.md \
    .githooks/spec/
-cp /path/to/omenic/.wt/271-feat-gate-checklist/.githooks/spec/CHECKLIST_DEMO_README.md \
+cp /path/to/kymido/.wt/271-feat-gate-checklist/.githooks/spec/CHECKLIST_DEMO_README.md \
    .githooks/spec/
-cp /path/to/omenic/.wt/271-feat-gate-checklist/.githooks/spec/llm-checklist-harness.sh \
+cp /path/to/kymido/.wt/271-feat-gate-checklist/.githooks/spec/llm-checklist-harness.sh \
    .githooks/spec/
 chmod +x .githooks/spec/llm-checklist-harness.sh
 ```
@@ -227,8 +227,8 @@ LLM_DRY_RUN=1 MOCK_FINDINGS='[{"id":"X-01","severity":"WARN","line":1,"message":
   canon pre-push
 ```
 
-`llm-checklist-harness.sh` 完整源码在 omenic `.wt/271-feat-gate-checklist/.githooks/spec/`。
-不在 omenic 仓库也没事 — 拷到任意项目 `.githooks/spec/` 就能用。
+`llm-checklist-harness.sh` 完整源码在 kymido（原 omenic）`.wt/271-feat-gate-checklist/.githooks/spec/`。
+不在 kymido 仓库也没事 — 拷到任意项目 `.githooks/spec/` 就能用。
 
 ## Finding JSON 协议（harness 输出）
 
@@ -323,7 +323,7 @@ cat your_file.rs | LLM_DRY_RUN=1 MOCK_FINDINGS='[]' \
   sh .githooks/spec/llm-checklist-harness.sh
 
 # 4. 跑全部 mock 用 CHECKLIST_DEMO_MOCK.sh
-cp /path/to/omenic/.wt/271-feat-gate-checklist/.githooks/spec/CHECKLIST_DEMO_MOCK.sh \
+cp /path/to/kymido/.wt/271-feat-gate-checklist/.githooks/spec/CHECKLIST_DEMO_MOCK.sh \
    .githooks/spec/
 chmod +x .githooks/spec/CHECKLIST_DEMO_MOCK.sh
 # 临时把 harness.command 改成 sh .githooks/spec/CHECKLIST_DEMO_MOCK.sh
@@ -384,19 +384,19 @@ git submodule add <repo-with-githooks> .githooks-std
 
 ## 协议详细
 
-`.githooks/spec/CHECKLIST_SPEC.md`（从 omenic 拷来）有完整协议：
+`.githooks/spec/CHECKLIST_SPEC.md`（从 kymido（原 omenic）拷来）有完整协议：
 - 三种 mode 的 stdin/argv 协议
 - finding JSON 字段定义
 - 严重度合并规则
 - 退出码语义
 
-CK-04 = `mode: grep` 是 ferrite 端需求倒推到 omenic 实现的（项目级规则
+CK-04 = `mode: grep` 是 ferrite 端需求倒推到 kymido 实现的（项目级规则
 不只是 LLM，还可能是 grep/find 这种零成本静态检查）。
 
 ## Omenic 端参考
 
 - impl PR: https://github.com/hathawayANdRX105/omenic/pull/273 (commits 累加)
-- 协议 SPEC: omenic `.wt/271-feat-gate-checklist/.githooks/spec/CHECKLIST_SPEC.md`
+- 协议 SPEC: kymido（原 omenic）`.wt/271-feat-gate-checklist/.githooks/spec/CHECKLIST_SPEC.md`
 - 测试: `cargo test -p spec --lib checklist` 13 个单元测试
 - ferrite 端 PR: `feat/checklist-grep-frontend` 分支
 - sentinel 端: `feat/gate-checklist-demo` 本地分支

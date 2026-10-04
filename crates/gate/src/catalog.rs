@@ -104,7 +104,7 @@ fn hooks_from_dispatch(dispatch: Option<&YamlValue>, source: &str) -> Vec<String
 /// (`#   IS-04: FAIL — Done when 缺少 checkbox`). Only the `severity_overrides:`
 /// mapping below it is machine-read by the gate binary, and that mapping is
 /// usually empty — the comment is the only complete statement of what exists,
-/// rules with no active override (IS-00..03, PR-01/02, RV-07, WS-*, CL-*).
+/// rules with no active override (IS-00..03, PR-01/02, WS-*, CL-*).
 fn parse_registry(raw: &str) -> Vec<Rule> {
     let mut out = vec![];
     for line in raw.lines() {
