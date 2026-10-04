@@ -19,7 +19,7 @@ jobs:
       # 仓级 .cargo/config.toml 设 build.rustc-wrapper="sccache"（跨 worktree
       # 编译缓存，见该文件注释），runner 默认无 sccache 会直接 build 失败。
       - name: Install sccache
-        uses: mozilla-actions/sccache-action@v0.8
+        uses: mozilla-actions/sccache-action@v0.0.11
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: .
