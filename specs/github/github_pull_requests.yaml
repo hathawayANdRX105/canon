@@ -92,6 +92,15 @@ linkage_check:
   plain_text_links_severity: "INFO"   # Part of/Related 提示级别
   fixes_epic_severity: "WARN"         # Fixes 目标是 parent issue 时提示级别
 
+# ── merge 门禁开关（GT-* @ gh pr merge 拦截）────────────────────
+# 四项都缺省为 true（见 gh_wrap::gate_switch），写出来是为了让本仓的
+# 强制策略在 spec 层可见、可按仓覆盖。
+merge_requires_body: true    # GT-BODY — 合并必须带 --body 说明原因
+merge_checkbox_gate: true    # GT-CHK — PR 内 checkbox 必须全勾
+merge_title_gate: true       # CM-01/02 — squash 标题须为 conventional commit
+merge_requires_squash: true  # GT-METHOD — 只允许 squash（--merge/--rebase/--auto 一律拒绝）
+# 走 merge commit 的仓（自身有例外约定）设 false。
+
 # 规则严重级别覆盖 (可选)
 # 格式: "规则ID": "FAIL" | "WARN" | "INFO"
 # 默认严重级别如下, 按需调整:

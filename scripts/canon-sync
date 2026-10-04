@@ -121,8 +121,8 @@ def status(project: str):
             q_rel = os.path.join("quality", os.path.basename(rel))
             q_abs = os.path.join(p_hooks, "spec", q_rel)
             if os.path.isfile(q_abs):
-                (dup_layer if filecmp.cmp(abs_p, q_abs, shallow=False)
-                 else dup_layer).append(f"{rel} ({'identical' if filecmp.cmp(abs_p, q_abs, shallow=False) else 'DIFFERS'} to {q_rel})")
+                kind = "identical" if filecmp.cmp(abs_p, q_abs, shallow=False) else "DIFFERS"
+                dup_layer.append(f"{rel} ({kind} to {q_rel})")
             else:
                 project_only.append(rel)
         else:
@@ -144,6 +144,28 @@ def status(project: str):
     return 1 if (drift or only_canon) else 0
 
 
+def stale_root_duplicates(p_hooks: str):
+    """根层残留副本：spec/ 下有 checklist_X.yaml 且 spec/quality/ 也有同名。
+
+    canon 把 checklist 分发到 spec/quality/，但早期版本不清项目原有的根层
+    同名文件，于是两份共存。engine::find_specs 递归 walk 且按文件名排序、
+    不去重，两份都会加载执行——同一规则跑两次，一次用旧版配置。
+    """
+    spec = os.path.join(p_hooks, "spec")
+    quality = os.path.join(spec, "quality")
+    if not os.path.isdir(quality):
+        return []
+    canon_q = os.path.join(CANON_HOOKS, "spec", "quality")
+    out = []
+    for f in sorted(os.listdir(spec)):
+        if not (f.startswith("checklist_") and f.endswith(".yaml")):
+            continue
+        if not os.path.isfile(os.path.join(canon_q, f)):
+            continue  # 项目自有规则，canon 无同名，不动
+        out.append(os.path.join(spec, f))
+    return out
+
+
 def push(project: str):
     proot = project_root(project)
     p_hooks = os.path.join(proot, ".githooks")
@@ -163,7 +185,14 @@ def push(project: str):
             continue
         shutil.copy2(src, tgt)
         n += 1
-    print(f"pushed {n} file(s) -> {p_hooks}")
+    removed = 0
+    for stale in stale_root_duplicates(p_hooks):
+        os.remove(stale)
+        removed += 1
+    msg = f"pushed {n} file(s) -> {p_hooks}"
+    if removed:
+        msg += f"; removed {removed} stale root duplicate(s)"
+    print(msg)
     return 0
 
 
