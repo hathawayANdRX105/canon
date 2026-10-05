@@ -284,7 +284,7 @@ timeout: 30
 1. 加 `crates/spec/src/tools/checklist.rs`（~120 行）
 2. `src/main.rs` 在 PreCommit/PrePush/Merge 路径里调 `run_all`
 3. `.githooks/spec/dispatch.yaml` 加 `checklist` topic
-4. `.githooks/spec/SPEC_OVERVIEW.md` 加「主题九：Checklist（CK-01）」章节
+4. `.githooks/spec/docs/SPEC_OVERVIEW.md` 加「主题九：Checklist（CK-01）」章节
 5. demo yaml + mock harness 脚本（不需真调 LLM；echo mock JSON 即可）
 6. `ferrite` 加 `.githooks/` + `canon init` → 跑 `canon pre-push` 验证
 

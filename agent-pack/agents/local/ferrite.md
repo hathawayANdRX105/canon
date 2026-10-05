@@ -219,7 +219,7 @@ crates/web/<prefix-feature>/
 
 > 提交 / 推送被拦、创建 PR 被拒、要查规则时 → 读 **`.agent/rules/gates.md`**。
 > 规则总览在 `.githooks/GATE_HANDBOOK.md`（三层检查 + 16 条规则表）；
-> 规则对照清单在 `.githooks/spec/SPEC_OVERVIEW.md`。
+> 规则对照清单在 `.githooks/spec/docs/SPEC_OVERVIEW.md`。
 
 - 拦截信息**逐条读完再修根因**：禁止 `--no-verify`、禁止用 `| head -5` 之类截断后忽略。
   **FAIL 必须清零**；WARN 说明理由后可放行。

@@ -81,7 +81,7 @@ CPU 密集型命令（编译/测试/装包）一律 `systemd-run --user --scope 
 | 发新版本（版本号怎么算、tag、Release 核对） | `.agent/tasks/versioning.md`（流程 + 功能域清单） |
 | TUN 历史排查结论、实验室用法、部署拓扑 | `todo/tun-handover.md`（已冻结，TUN 不做了，仅作史料） |
 | 数据面/TUN 实验（不动宿主机） | `~/.local/bin/silverq-lab.sh`（容器 netns 完整透明链路） |
-| 提交/推送/合并被拦 | `.githooks/GATE_HANDBOOK.md` + `.githooks/spec/SPEC_OVERVIEW.md` |
+| 提交/推送/合并被拦 | `.githooks/GATE_HANDBOOK.md` + `.githooks/spec/docs/SPEC_OVERVIEW.md` |
 | CI 结构与三种 feature 矩阵的理由 | 根 `README.md` 的 CI 一节 |
 | 调度/数据面行为细节 | 根 `README.md`（关键设计 + 已知范围，与代码同步维护） |
 
