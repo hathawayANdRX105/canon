@@ -38,6 +38,25 @@ OWNED_FILES = ["canon", "spec/dispatch.yaml", "spec/severity_overrides.yaml"]
 # 受保护：push 永不触碰
 PROTECTED = ["spec/custom"]
 
+# 已退役规则：push 时从项目整份删掉（canon 正本已无此规则，退役决策与处置记录见
+# todo/problem/gate-doc-sync-readme-drift.md —— 该 todo/ 不入库，是本地问题档案）。
+RETIRED_RULES = {"checklist_doc_sync.yaml"}
+
+# 根层散落规则的归位表：文件名前缀 → 目标子目录。
+# 目标子目录同时是 dispatch.yaml 的 topic 载体（catalog::topic_of 要求相对路径含 `/`），
+# 所以规则必须住在子目录里才会被路由；根层的同名文件是死的重复层。
+ROOT_PREFIX_DIRS = (
+    ("checklist_", "quality"),
+    ("cleanup_", "cleanup"),
+    ("code_", "code"),
+    ("github_", "github"),
+    ("workspace_", "workspace"),
+)
+# 根层的非规则文件（dispatch.yaml / severity_overrides.yaml 由 engine 从根读，
+# 必须留根；harness 脚本被 spec 用绝对路径引用；项目自有配置不认识就不动）。
+ROOT_FILE_DIRS = {"SPEC_OVERVIEW.md": "docs"}
+ROOT_STAY = {"dispatch.yaml", "severity_overrides.yaml"}
+
 
 def project_root(project: str) -> str:
     p = os.path.join("/home/hathaway/projects", project)
@@ -133,10 +152,33 @@ def status(project: str):
             elif not os.path.isfile(canon_q):
                 project_only.append(f"spec/{rel}")
 
+    # 根层散落：可自动归位的 + 内容打架的（都不改工作区，只报）
+    spec_root = os.path.join(p_hooks, "spec")
+    root_move, root_dup, root_conflict = [], [], []
+    if os.path.isdir(spec_root):
+        for entry in sorted(os.scandir(spec_root), key=lambda e: e.name):
+            if not entry.is_file():
+                continue
+            if entry.name in RETIRED_RULES:
+                root_conflict.append(f"spec/{entry.name} (RETIRED — push 会删除)")
+                continue
+            sub = root_rule_dir(entry.name)
+            if not sub:
+                continue
+            tgt = os.path.join(spec_root, sub, entry.name)
+            if not os.path.exists(tgt):
+                root_move.append(f"spec/{entry.name} -> spec/{sub}/{entry.name}")
+            elif filecmp.cmp(entry.path, tgt, shallow=False):
+                root_dup.append(f"spec/{entry.name} (dup of spec/{sub}/{entry.name})")
+            else:
+                root_conflict.append(f"spec/{entry.name} vs spec/{sub}/{entry.name} DIFFERS")
+
     drift = sorted(set(drift))
     print(f"== {project}: canon status ==")
     for name, items in [("DRIFT (canon newer)", drift), ("ONLY-CANON (missing)", only_canon),
                         ("DUPLICATE-LAYER (root copy of quality/)", dup_layer),
+                        ("ROOT-LAYER (push 会归位)", root_move + root_dup),
+                        ("ROOT-CONFLICT (需人工合并/退役)", root_conflict),
                         ("PROJECT-ONLY (protected)", project_only)]:
         print(f"\n[{name}] {len(items)}")
         for i in items:
@@ -144,26 +186,66 @@ def status(project: str):
     return 1 if (drift or only_canon) else 0
 
 
-def stale_root_duplicates(p_hooks: str):
-    """根层残留副本：spec/ 下有 checklist_X.yaml 且 spec/quality/ 也有同名。
+def remove_retired(p_hooks: str):
+    """删除已退役规则（递归，跳过受保护的 custom/ 与缓存）。"""
+    spec = os.path.join(p_hooks, "spec")
+    out = []
 
-    canon 把 checklist 分发到 spec/quality/，但早期版本不清项目原有的根层
-    同名文件，于是两份共存。engine::find_specs 递归 walk 且按文件名排序、
-    不去重，两份都会加载执行——同一规则跑两次，一次用旧版配置。
+    def walk(d: str):
+        for entry in sorted(os.scandir(d), key=lambda e: e.name):
+            if entry.is_dir():
+                if entry.name not in ("custom", "__pycache__"):
+                    walk(entry.path)
+            elif entry.name in RETIRED_RULES:
+                os.remove(entry.path)
+                out.append(os.path.relpath(entry.path, p_hooks))
+
+    if os.path.isdir(spec):
+        walk(spec)
+    return out
+
+
+def root_rule_dir(name: str):
+    """根层文件名 → 应住的子目录；None = 留在根层。"""
+    if name in ROOT_STAY:
+        return None
+    if name.endswith(".yaml"):
+        for prefix, sub in ROOT_PREFIX_DIRS:
+            if name.startswith(prefix):
+                return sub
+    return ROOT_FILE_DIRS.get(name)
+
+
+def relocate_root_specs(p_hooks: str):
+    """把 spec/ 根层散落的规则文件归位到子目录。
+
+    三种结局，都不丢内容：子目录没有同名文件 → 移动；同名且内容一致 → 删根层
+    副本（重复层会让 engine 加载两遍、同一规则跑两次）；同名但内容不一致 →
+    留在根层报 conflict，内容合并是人工活，不静默覆盖任何一边。
     """
     spec = os.path.join(p_hooks, "spec")
-    quality = os.path.join(spec, "quality")
-    if not os.path.isdir(quality):
-        return []
-    canon_q = os.path.join(CANON_HOOKS, "spec", "quality")
-    out = []
-    for f in sorted(os.listdir(spec)):
-        if not (f.startswith("checklist_") and f.endswith(".yaml")):
+    moved, dropped, conflicts = [], [], []
+    if not os.path.isdir(spec):
+        return moved, dropped, conflicts
+    for entry in sorted(os.scandir(spec), key=lambda e: e.name):
+        if not entry.is_file():
             continue
-        if not os.path.isfile(os.path.join(canon_q, f)):
-            continue  # 项目自有规则，canon 无同名，不动
-        out.append(os.path.join(spec, f))
-    return out
+        sub = root_rule_dir(entry.name)
+        if not sub:
+            continue
+        tgt_dir = os.path.join(spec, sub)
+        tgt = os.path.join(tgt_dir, entry.name)
+        if not os.path.exists(tgt):
+            os.makedirs(tgt_dir, exist_ok=True)
+            shutil.move(entry.path, tgt)
+            moved.append(f"spec/{entry.name} -> spec/{sub}/{entry.name}")
+        elif filecmp.cmp(entry.path, tgt, shallow=False):
+            os.remove(entry.path)
+            dropped.append(f"spec/{entry.name} (dup of spec/{sub}/{entry.name})")
+        else:
+            conflicts.append(f"spec/{entry.name} vs spec/{sub}/{entry.name} DIFFERS")
+    return moved, dropped, conflicts
+
 
 
 def push(project: str):
@@ -185,14 +267,15 @@ def push(project: str):
             continue
         shutil.copy2(src, tgt)
         n += 1
-    removed = 0
-    for stale in stale_root_duplicates(p_hooks):
-        os.remove(stale)
-        removed += 1
+    retired = remove_retired(p_hooks)
+    moved, dropped, conflicts = relocate_root_specs(p_hooks)
     msg = f"pushed {n} file(s) -> {p_hooks}"
-    if removed:
-        msg += f"; removed {removed} stale root duplicate(s)"
+    if moved or dropped or retired:
+        msg += (f"; relocated {len(moved)} root spec(s), removed {len(dropped)} duplicate(s)"
+                f", retired {len(retired)} rule(s)")
     print(msg)
+    for c in conflicts:
+        print(f"  CONFLICT (needs manual merge, left at root): {c}")
     return 0
 
 
