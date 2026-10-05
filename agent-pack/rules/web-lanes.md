@@ -101,12 +101,12 @@ git push origin web-dev
 
 ## Gate 门禁交互（已核对，不挡快速开发）
 
-本地 commit/push 跑 `pre-commit`/`pre-push`（workspace + code + checklist + doc_sync + code_doc），
+本地 commit/push 跑 `pre-commit`/`pre-push`（workspace + code + checklist + code_doc），
 merge 期跑 `github/pr_gates` + clippy 等。结论：
 
 | 时机 | 门禁 | 对本流程的影响 |
 |---|---|---|
-| 每次本地 commit/push | doc_sync（新 crate 必须配 README）FAIL | 新 web crate 记得同时建 README |
+| 每次本地 commit/push | ~~doc_sync~~（规则已整条删除，README 不再受 gate 管） | 新 crate 不必建 README，职责写进 crate 代码注释与根 README |
 | 每次本地 commit/push | shared_components_check（≥2 个 page 共用的组件必须进共享 crate）FAIL | 组件被第二个 page 用时主动搬 `ui-components` |
 | 每次本地 commit/push | structure_check（面板禁直用 `mock::`）FAIL / copy_constants WARN | 老规矩，见 `.agent/rules/gates.md` |
 | 仅 web-dev→main 的 PR | pr_labels FAIL（type label）、pr_crg_review FAIL（PR 需 CRG 结论评论） | **review 角色的产出就是这条评论**，闭环 |

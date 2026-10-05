@@ -68,7 +68,7 @@ git push origin web-dev && git branch -d feat/xxx
 canon check                        # FAIL 必须清零再 push，WARN 说明理由后可放行
 ```
 
-**新 crate 必须同时建 README**（doc_sync FAIL）；组件被第二个 page 使用时搬进
+组件被第二个 page 使用时搬进
 `crates/web/ui-components`（shared_components_check FAIL）。
 
 ## 4. 汇报格式（每轮结束）
