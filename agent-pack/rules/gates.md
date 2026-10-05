@@ -25,7 +25,9 @@
 - **拦截信息逐条读完再修根因**。禁止用 `--no-verify` 跳过，禁止截断输出后假装没看见。
 - **FAIL 必须清零。** WARN 可以在说明理由后放过。
 - **GitHub 操作在创建时就会校验**（不是等推送才发现）。所以创建 PR / issue 之前先跑预检，不要等撞墙。
-- 加新规则只改 `.githooks/spec/checklist_*.yaml`，不要改闸门程序本身。
+- 加新规则只改 `.githooks/spec/quality/checklist_*.yaml`，不要改闸门程序本身。
+  （规则必须住在 `quality` / `code` / `cleanup` / `workspace` / `github` 子目录里才会被
+  catalog 路由；写在 spec 根层或 `custom/` 的 yaml 不会被加载，等于没写。）
 
 ---
 

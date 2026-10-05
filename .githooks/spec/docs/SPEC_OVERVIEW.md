@@ -160,7 +160,9 @@
 
 ## 主题八：Checklist（CK-01，gate checklist，**已实现**）
 
-- `.githooks/spec/checklist_*.yaml`：项目级 LLM 检查清单；glob 自动发现，按字典序跑
+- `.githooks/spec/quality/checklist_*.yaml`：项目级 LLM 检查清单；catalog 只扫
+  `quality|code|cleanup|workspace|github` 五个子目录（spec 根层与 `custom/` 不加载），
+  目录内按字典序跑
 - `mode: diff`（默认）传 `git diff <scope>` 给 harness；`mode: file` 每个变更文件单独传全文
 - harness = 任意可执行文件，stdout 必须是 finding JSON 数组（与 code/ocr/CRG 同协议）
 - 严重度合并：harness 报的与 yaml `fail_severity` **就高取大**（harness FAIL 永远阻断）

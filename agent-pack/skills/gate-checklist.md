@@ -1,15 +1,19 @@
 ---
 name: gate-checklist
-description: 'Guide for creating and using custom project-level gate checklist rules (.githooks/spec/checklist_*.yaml). Use when adding new automated checks (grep, diff, or file modes) to pre-commit, pre-push, or merge hooks without modifying the canon binary.'
+description: 'Guide for creating and using custom project-level gate checklist rules (.githooks/spec/quality/checklist_*.yaml). Use when adding new automated checks (grep, diff, or file modes) to pre-commit, pre-push, or merge hooks without modifying the canon binary.'
 license: MIT
 ---
 
 # Gate Checklist — 项目级自定义检查
 
-`.githooks/spec/checklist_*.yaml` 是 kymido gate 的"项目级规则"入口。
+`.githooks/spec/quality/checklist_*.yaml` 是 canon gate 的"项目级规则"入口。
 每份 yaml = 一条检查，gate 把内容（git diff / 全文 / 静态扫描结果）喂给
 任意 harness（可执行文件），harness 回传 finding JSON，gate 走既有
 FAIL/WARN/INFO 出口。
+
+文件**必须**放在 `quality/`（`code/` `cleanup/` `workspace/` `github/` 同理按前缀分家）：
+catalog 只扫这五个子目录，写在 spec 根层或 `custom/` 的 yaml 不会被加载，等于没写。
+canon 分发只覆盖它自己拥有的文件，项目自有的规则名不会被 push 删掉。
 
 不需要写 Rust，不需要碰 gate 源码，加 yaml 就完事。
 
@@ -106,7 +110,7 @@ canon init
 ### 模式 1: grep（推荐，零 LLM）
 
 ```yaml
-# .githooks/spec/checklist_no_print.yaml
+# .githooks/spec/quality/checklist_no_print.yaml
 # 禁 src/ 内 print() — 用 logging
 enabled: true
 hooks: [pre-commit, pre-push, merge]
@@ -150,7 +154,7 @@ timeout: 10
 ### 模式 2: diff（增量评审，需 LLM）
 
 ```yaml
-# .githooks/spec/checklist_no_debug_log.yaml
+# .githooks/spec/quality/checklist_no_debug_log.yaml
 # diff 中不能有 println!/dbg!
 enabled: true
 hooks: [pre-commit, pre-push, merge]
@@ -178,7 +182,7 @@ timeout: 30
 ### 模式 3: file（全文判断，需 LLM）
 
 ```yaml
-# .githooks/spec/checklist_module_size.yaml
+# .githooks/spec/quality/checklist_module_size.yaml
 # 单文件 .rs > 800 行 → WARN
 enabled: true
 hooks: [pre-push, merge]   # 慢检查不放 pre-commit
@@ -271,7 +275,7 @@ sentinel 本地分支 `feat/gate-checklist-demo` (无 remote)
 ### Case 3: API 路由必须 /v2/ 命名空间 (LLM diff)
 
 ```yaml
-# .githooks/spec/checklist_api_v2.yaml
+# .githooks/spec/quality/checklist_api_v2.yaml
 enabled: true
 hooks: [pre-push, merge]
 fail_severity: FAIL
@@ -288,7 +292,7 @@ timeout: 30
 ### Case 4: 巨型 .rs 文件告警 (LLM file)
 
 ```yaml
-# .githooks/spec/checklist_oversize.yaml
+# .githooks/spec/quality/checklist_oversize.yaml
 enabled: true
 hooks: [pre-push, merge]
 fail_severity: WARN
@@ -327,7 +331,7 @@ cp /path/to/kymido/.wt/271-feat-gate-checklist/.githooks/spec/CHECKLIST_DEMO_MOC
    .githooks/spec/
 chmod +x .githooks/spec/CHECKLIST_DEMO_MOCK.sh
 # 临时把 harness.command 改成 sh .githooks/spec/CHECKLIST_DEMO_MOCK.sh
-$EDITOR .githooks/spec/checklist_xxx.yaml
+$EDITOR .githooks/spec/quality/checklist_xxx.yaml
 # 测
 CHECKLIST_DEMO_FINDINGS='[{"id":"D","severity":"WARN","line":1,"message":"x"}]' \
   canon pre-push
