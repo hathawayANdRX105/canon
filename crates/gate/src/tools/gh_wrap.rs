@@ -795,14 +795,32 @@ pub fn intercept_pr_create(args: &[String]) -> i32 {
     0
 }
 
+/// 纯决策：args 是否表达了 squash-only 的意图。抽成独立函数是为了可测——
+/// `intercept_pr_merge` 的其余分支都要打 GitHub API，单测覆盖不到。
+///
+/// 无显式 `--squash` 即非 squash（gh 默认走 merge commit，交互式菜单同理）；
+/// 出现任一互斥 flag 也算违规，即便同时带了 `--squash`——语义矛盾时按拒绝
+/// 处理，不猜用户意图。gh 的 `-m`/`-r`/`-F` 是 `--merge`/`--rebase`/`--auto`
+/// 的短形式，一并拦。
+pub fn merge_method_is_squash(args: &[String]) -> bool {
+    let has_squash = args.iter().any(|a| a == "--squash");
+    let has_other = args.iter().any(|a| {
+        matches!(
+            a.as_str(),
+            "--merge" | "--rebase" | "--auto" | "--ff-only" | "--no-squash" | "-m" | "-r" | "-F"
+        )
+    });
+    has_squash && !has_other
+}
+
 /// GT-BODY + GT-CHK + GT-05 + GT-06 + CM-01/02 + GT-07: pr merge
 ///
 /// Policy blocks are Findings — severities overridable via dispatch.yaml /
 /// global severity_overrides.yaml, and the blocks themselves switchable via
 /// github_pull_requests.yaml (`merge_requires_body` / `merge_checkbox_gate` /
-/// `merge_title_gate`) and github_issues.yaml (`merge_fixes_gate` /
-/// `epic_sub_issue_gate`). Fail-closed data errors still hard-block:
-/// refusing on uncertainty is a safety property, not policy.
+/// `merge_title_gate` / `merge_requires_squash`) and github_issues.yaml
+/// (`merge_fixes_gate` / `epic_sub_issue_gate`). Fail-closed data errors
+/// still hard-block: refusing on uncertainty is a safety property, not policy.
 pub fn intercept_pr_merge(args: &[String]) -> i32 {
     let pr_cfg = crate::shared::load_spec_yaml("github_pull_requests.yaml");
     let issue_cfg = crate::shared::load_spec_yaml("github_issues.yaml");
@@ -816,6 +834,20 @@ pub fn intercept_pr_merge(args: &[String]) -> i32 {
             "GT-BODY",
             Severity::Fail,
             "gh pr merge 必须带 --body 说明合并原因，例如：gh pr merge <N> --squash --body \"Agent 🤖 - Merge: 原因说明\"",
+        ));
+    }
+
+    // GT-METHOD (switch: merge_requires_squash): 本仓只走 squash merge。
+    // merge commit 会把分支上每个中间提交原样落进主干，破坏「一个任务一个分支
+    // 一个干净提交」的分发纪律，也让 revert 粒度失控。检测到 --merge /
+    // --rebase / --auto 时直接拒绝，gh 的交互式选择同理（无显式 flag 即非 squash）。
+    if gate_switch(pr_cfg.as_ref(), "merge_requires_squash") && !merge_method_is_squash(args) {
+        findings.push(Finding::new(
+            "GT-METHOD",
+            Severity::Fail,
+            "本仓只允许 squash merge：gh pr merge 必须带 --squash，\
+             且不得同时出现 --merge/--rebase/--auto/--ff-only/--no-squash。\
+             示例：gh pr merge <N> --squash --body \"Agent 🤖 - Merge: 原因说明\"",
         ));
     }
 
@@ -1218,5 +1250,59 @@ pub fn dispatch(args: &[String]) -> i32 {
 
 #[cfg(test)]
 mod tests {
-    // (gh_wrap 的 DWJ 纯决策测试已随模块迁至 tools/done_when.rs)
+    use super::merge_method_is_squash;
+
+    fn args(v: &[&str]) -> Vec<String> {
+        v.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn squash_flag_alone_is_accepted() {
+        assert!(merge_method_is_squash(&args(&[
+            "pr", "merge", "12", "--squash", "--body", "x"
+        ])));
+    }
+
+    #[test]
+    fn no_merge_method_is_rejected() {
+        // gh 不带 flag 时默认走 merge commit，交互式选择同理 —— 非 squash。
+        assert!(!merge_method_is_squash(&args(&["pr", "merge", "12"])));
+        assert!(!merge_method_is_squash(&args(&[
+            "pr", "merge", "12", "--body", "x"
+        ])));
+    }
+
+    #[test]
+    fn explicit_conflicting_methods_are_rejected() {
+        for flag in [
+            "--merge",
+            "--rebase",
+            "--auto",
+            "--ff-only",
+            "--no-squash",
+            "-m",
+            "-r",
+            "-F",
+        ] {
+            assert!(
+                !merge_method_is_squash(&args(&["pr", "merge", "12", flag])),
+                "{flag} must be rejected"
+            );
+        }
+    }
+
+    #[test]
+    fn squash_plus_conflicting_flag_is_rejected() {
+        // 同时带 --squash 和 --merge 语义矛盾，按拒绝处理（不猜用户意图）。
+        assert!(!merge_method_is_squash(&args(&[
+            "pr", "merge", "12", "--squash", "--merge"
+        ])));
+        assert!(!merge_method_is_squash(&args(&[
+            "pr",
+            "merge",
+            "12",
+            "--squash",
+            "--no-squash"
+        ])));
+    }
 }
