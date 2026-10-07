@@ -15,9 +15,10 @@
 
 ## 占位符与未完成
 
-- 未实现的函数或 trait 用语言原生宏，并带 issue 号：
-  - Rust：`todo!("TODO(#123): 说明这里要做什么")` / `unimplemented!("…")`
-- TODO / FIXME 注释必须带 issue 号：`// TODO(#123): …`。
+- 未实现的函数或 trait 用语言原生宏，并带可追溯标识（PR 号 / 分支名 / 模块名皆可）：
+  - Rust：`todo!("TODO(PR-12): 说明这里要做什么")` / `unimplemented!("…")`
+- TODO / FIXME 注释必须带可追溯标识：`// TODO(PR-12): …`。
+- 标识是信息位，不要求对应任何外部系统。
 - 不留空的 `todo!()` / `pass` / `NotImplemented` 桩而无说明。
 
 ## 复用与删除
