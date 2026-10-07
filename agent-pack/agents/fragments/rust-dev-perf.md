@@ -10,7 +10,7 @@
 - 不要在会话里自行 `export RUSTC_WRAPPER` 或改 jobs——统一走仓配置；
   重命令照旧套 cgroup CPU 配额（`systemd-run --user --scope -p CPUQuota=70% --`）。
 - 增量编译已关（缓存优先）：同树连续小改动按 crate 级重编是预期行为，不是
-  回归；若本仓热重载明显变慢，提 issue 议局部放开。
+  回归；若本仓热重载明显变慢，跟用户确认后局部放开。
 - 新建 `.wt` worktree 直接用；旧布局 worktree 若报 workspace 收编错误，
   根因与修法见 canon 仓 `Cargo.toml` 的 `exclude` 注释。
 - 配置细节、坑清单与实测基线：skill `rust-dev-perf`。

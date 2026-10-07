@@ -1,4 +1,4 @@
-<!-- managed by canon agents.yaml @ 2026-10-04 -->
+<!-- managed by canon agents.yaml @ 2026-10-08 -->
 ## canon 约定
 
 canon 是**规范与 agent 文档的正本仓**。别的项目想改规范、改 agent 约定，来这里改，再分发回去。
@@ -128,7 +128,7 @@ just review          # canon check 全套自检
 
 ## 发现处置纪律
 
-自动检查（canon 的 `FAIL`/`WARN`、`jev` L3 语义发现、CRG / `ocr review` 审查意见）
+自动检查（canon 的 `FAIL`/`WARN`、`jev` L3 语义发现、CRG 审查意见）
 产出的是**发现**，不是判决。每条发现都必须被显式处置，不存在"绕过"这个选项。
 
 ### 先读规范，再改代码
@@ -157,8 +157,8 @@ just review          # canon check 全套自检
 
 | 禁止 | 为什么 | 正确做法 |
 |---|---|---|
-| 改 `.githooks/spec/` 规则、降低 `fail_severity`、删 spec 文件 | 把约束改没，不是修问题 | 开 issue 说明规则缺陷，交维护者决定 |
-| `--no-verify`、跳过钩子、直接推 | 绕过的是整个门禁体系 | 修到清零；规则有误走 issue |
+| 改 `.githooks/spec/` 规则、降低 `fail_severity`、删 spec 文件 | 把约束改没，不是修问题 | 在对话里说明规则缺陷，交用户决定 |
+| `--no-verify`、跳过钩子、直接推 | 绕过的是整个门禁体系 | 修到清零；规则有误上报用户 |
 | `head` / `tail` / `grep -v` 截断输出后当没看见 | 后面的 finding 被吞 | 完整读输出 |
 | 加 `#[allow(dead_code)]` / `# noqa` 消告警 | 压制信号而非解决 | 删无用代码，或写清保留理由 |
 | 建空文件 / 空目录 / 占位文件骗过目录类规则 | 结构噪音 | 真按规则合并或删除 |
@@ -170,13 +170,13 @@ just review          # canon check 全套自检
 - **每条 finding 一个处置**：修复（默认）或**书面驳回**。
 - 修复 → 在交付记录里写：`规则 ID → 根因 → 改法（file:line）`。
 - 驳回 → 必须写 `规则 ID + 不修理由 + 依据`，由维护者裁决。沉默即违规。
-- 交付记录落点：PR 正文 `## Delivery record` 段，或 issue 的交付评论。
+- 交付记录落点：PR 正文 `## Delivery record` 段。
 - WARN 与 FAIL 同等对待。WARN 只是不拦，不是可忽略。
 
 ### 规范层级
 
 - `.githooks/` 是 canon 领地：agent 不改规则。
-- `.agent/rules/`、`specs/rules/` 是规范正本：发现规则与现实冲突 → 提 issue，不自行改写。
+- `.agent/rules/`、`specs/rules/` 是规范正本：发现规则与现实冲突 → 上报用户，不自行改写。
 - 本纪律与各仓既有条款冲突时，以本纪律为准（它更严格）。
 
 ## 代码风格
@@ -196,9 +196,10 @@ just review          # canon check 全套自检
 
 ### 占位符与未完成
 
-- 未实现的函数或 trait 用语言原生宏，并带 issue 号：
-  - Rust：`todo!("TODO(#123): 说明这里要做什么")` / `unimplemented!("…")`
-- TODO / FIXME 注释必须带 issue 号：`// TODO(#123): …`。
+- 未实现的函数或 trait 用语言原生宏，并带可追溯标识（PR 号 / 分支名 / 模块名皆可）：
+  - Rust：`todo!("TODO(PR-12): 说明这里要做什么")` / `unimplemented!("…")`
+- TODO / FIXME 注释必须带可追溯标识：`// TODO(PR-12): …`。
+- 标识是信息位，不要求对应任何外部系统。
 - 不留空的 `todo!()` / `pass` / `NotImplemented` 桩而无说明。
 
 ### 复用与删除
@@ -227,7 +228,7 @@ just review          # canon check 全套自检
 - 不要在会话里自行 `export RUSTC_WRAPPER` 或改 jobs——统一走仓配置；
   重命令照旧套 cgroup CPU 配额（`systemd-run --user --scope -p CPUQuota=70% --`）。
 - 增量编译已关（缓存优先）：同树连续小改动按 crate 级重编是预期行为，不是
-  回归；若本仓热重载明显变慢，提 issue 议局部放开。
+  回归；若本仓热重载明显变慢，跟用户确认后局部放开。
 - 新建 `.wt` worktree 直接用；旧布局 worktree 若报 workspace 收编错误，
   根因与修法见 canon 仓 `Cargo.toml` 的 `exclude` 注释。
 - 配置细节、坑清单与实测基线：skill `rust-dev-perf`。
@@ -294,24 +295,14 @@ just review          # canon check 全套自检
   `61958173+hathawayANdRX105@users.noreply.github.com`（服务端 squash 落库时写的）。
 - 禁止 `Co-authored-by:`  trailer 署其他人或机器人账号。
 
-### Issue
-
-Issue 是**追踪单元**，不是 PR 的前置条件——默认开发流是纯 PR 开发，不要求先建 issue。
-只有这些情况才建 issue：记录遗留/暂缓事项、登记需要后续开发的工作、留下需要检索的决策记录。
-
-- 标题中文；正文 heading 英文、内容中文。
-- sub-issue 必须自包含：正文不写 `Parent:` / `Related:` / PR 占位符，直接写清它要什么。
-- 关闭前 `Done when` 的 checkbox 全勾。
-
 ### PR
 
 - 标题纯英文（conventional commit 风格）；正文小节标题英文、内容中文。
 - 正文按仓库模板（`.github/PULL_REQUEST_TEMPLATE.md`）写：背景 / 改了什么 / 为什么 /
   实现步骤 / 交付记录 / 怎么验证 / 检查清单。
-- 不强制关联 issue：确实在关闭某个 issue 时才写 `Fixes #<n>`（一个 PR 只关一个）；
-  纯 PR 开发什么都不用写。审查发现的问题在同一 PR 上继续提交修复，不另开 issue/PR。
+- 验收标准写在 PR 的 `Construction plan` 里。审查发现的问题在同一 PR 上继续提交修复，不另开 PR。
 - 开启或更新 PR 后看 CI 结果到底（`gh pr checks`），红了就修，不等用户来问。
-- 被 canon 拦下就修代码，**不改规则**。规则确有缺陷 → 开 issue 交维护者裁决。
+- 被 canon 拦下就修代码，**不改规则**。规则确有缺陷 → 上报用户裁决。
 
 ### 合并
 

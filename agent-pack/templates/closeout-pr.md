@@ -17,7 +17,7 @@
   能按文件 / 范围 / 主题 / 调用链 / 测试拆就拆，不把半个模块丢给一个子代理。
 - CPU-heavy 命令（build / test / install / bundle）必须 `systemd-run --user --scope -p CPUQuota=65% --`；
   本地只跑 <2 min 快速针对性检查，其余测试一律推到 PR CI。
-- 审查走 **CRG（结构层面）+ ocr（规范层面）双层**；ocr 必须按文件 / 模块分批调用，
+- 审查走 **CRG（结构层面）+ 语义审查（规范层面）双层**；语义审查必须按文件 / 模块分批调用，
   不许一次喂全 repo。
 - 每轮「审查 + 修复」写 **一条** PR comment：标题 `Agent 🤖 - <topic>`，
   正文先列发现的问题、再写修复情况（附修复 commit SHA 与验证命令）；
@@ -25,7 +25,7 @@
 - `gh` 命令必须走 `~/.local/bin/gh` 拦截版；gate 打出的拦截 / FAIL 信息**不许忽略**——
   FAIL 即停手，按提示修正后重过 gate，通过才继续（细则见 `.agent/rules/gates.md`）。
 - 不绕过 `.githooks/`，merge 前必须跑过 `hooks/merge --dry-run` 预检。
-- **终止条件**：任何循环（fix→audit、CI、ocr、smoke、gate 重试）同一问题修 2 轮仍不过 →
+- **终止条件**：任何循环（fix→audit、CI、语义审查、smoke、gate 重试）同一问题修 2 轮仍不过 →
   停下向用户报备已试过的方案，不无限循环。
 
 ## 前置条件
@@ -37,16 +37,16 @@
 
 ## workflow（按阶段执行）
 
-### 1. review（CRG + ocr）
+### 1. review（CRG + 语义审查）
 
 - `code-review-graph detect-changes --brief --base <base_sha>` 确认改动范围与风险，逐条过。
-- ocr 按 PR diff / 模块分批喂。
+- 语义审查（`canon check --sla l2`）按 PR diff / 模块分批喂。
 - 发现 bug / problem → 回 fix 修复 → 重新 review，直到干净。
 - 每轮（review + fix）→ 1 条 PR comment（含发现、修复 commit、验证命令）。
 
 ### 2. smoke
 
-- 真实用户路径跑一遍：CLI 命令 / 真实 URL / 真实进程；UI 截图或 OCR 对比。
+- 真实用户路径跑一遍：CLI 命令 / 真实 URL / 真实进程；UI 截图对比。
 - 发现问题 → 回 fix 做二次修复。
 - 通过 → 在 PR 写一条「smoke 验证通过 / 用的方法 / 结果」comment。
 
@@ -86,5 +86,5 @@ loop1:
 
 - merge 后清理：`--delete-branch` 已清本地 + 远端分支；
   确认 `.wt/<branch>` 工作树目录已删——残留用 `git worktree remove` 清（**严禁 rm**），只清本会话自己建的。
-- report：PR 链接、改了哪些文件、跑了哪些测试、CRG / ocr / CI / smoke 结果、
+- report：PR 链接、改了哪些文件、跑了哪些测试、CRG / 语义审查 / CI / smoke 结果、
   剩余风险（含未跑的测试与已知问题）。

@@ -53,11 +53,11 @@ license: MIT
   │   CI 失败 → 提取日志回阶段 2 精准修复
   ▼
 阶段 5  代码审查（tool review）
-  │   code-review-graph update → detect-changes → ocr review（commit 级分批）
+  │   code-review-graph update → detect-changes → 语义审查（canon check --sla l2，分批）
   │   发现 bug → 回阶段 2 修 → 再 review，直到干净
   ▼
 阶段 6  验收（smoke）
-  │   真实用户路径跑一遍，截图/OCR 对比
+  │   真实用户路径跑一遍，截图对比
   ▼
 阶段 7  收尾（tidy + report）
   │   gate 复检 + fmt + docs 同步 → PR comment
@@ -219,12 +219,9 @@ code-review-graph update --brief
 # 结构层（CRG）
 code-review-graph detect-changes --base <base_sha>
 
-# 规范层（ocr）—— commit 级分批：每个子任务一个独立 commit，ocr 按 commit 喂入
-# 若子任务已各自 commit，逐个跑：
-ocr review -c <task_commit_1_sha>
-ocr review -c <task_commit_2_sha>
-# 若整范围一起 review（较少用）：
-# ocr review --from <base_sha> --to <branch>
+# 规范层（语义审查）—— 按模块 / 按 PR diff 分批，别一次喂全仓
+# 基线用 GATE_BASE 收窄到本次改动范围：
+GATE_BASE=<base_sha> canon check --sla l2
 ```
 
 发现 bug / 问题 → 回阶段 2 修 → 重新 review，直到干净。
@@ -251,7 +248,7 @@ ocr review -c <task_commit_2_sha>
 3. **格式**：`cargo fmt --all`（若改动文件，重跑最小验收 + tool review + smoke）
 4. **docs 同步**：crate `README.md` 的"待实现占位清单"逐项打勾，过期注释更新
 
-**第 5 步报告**：PR 发最终总结 comment，格式 = 改了哪些文件 / 跑了哪些测试 / CRG+ocr+smoke 结果 / PR 链接 / 剩余风险
+**第 5 步报告**：PR 发最终总结 comment，格式 = 改了哪些文件 / 跑了哪些测试 / CRG+语义审查+smoke 结果 / PR 链接 / 剩余风险
 
 ---
 

@@ -21,13 +21,13 @@
   纯配置 / 文档类子任务（无符号图）豁免：退化为对 suspect area 做定向 grep / 读。
 - **测试全部放 PR CI 跑**；本地只跑 <2 min 快速针对性检查；
   确需本地执行的重命令（build / install / bundle）必须 `systemd-run --user --scope -p CPUQuota=65% --`。
-- 审查走 **CRG（结构层面）+ ocr（规范层面）双层**；ocr 必须按文件 / 模块分批调用，不许一次喂全 repo。
+- 审查走 **CRG（结构层面）+ 语义审查（规范层面）双层**；语义审查必须按文件 / 模块分批调用，不许一次喂全 repo。
 - 每轮「审查 + 修复」写 **一条** PR comment（先列问题、再写修复，附修复 commit SHA 与验证命令）；
   smoke 验证再单独 **一条** comment。两种留言可多次出现。
 - `gh` 命令必须走 `~/.local/bin/gh` 拦截版；gate 打出的拦截 / FAIL 信息**不许忽略**——
   FAIL 即停手，按提示修正后重过 gate，通过才继续；不绕过 `.githooks/`，
   merge 前必须跑过 `hooks/merge --dry-run` 预检。
-- **终止条件**：任何循环（dev→audit、CI、ocr、smoke、gate 重试）同一问题修 2 轮仍不过 →
+- **终止条件**：任何循环（dev→audit、CI、语义审查、smoke、gate 重试）同一问题修 2 轮仍不过 →
   停下向用户报备已试过的方案，不无限循环。
 
 ## workflow（按阶段执行）
@@ -79,17 +79,17 @@ loop1:
 - **CI 未绿不得进入 review / merge**；CI 失败 → 当新子任务回 loop1，修到绿。
 - test 只保证**代码逻辑**；**功能正确性由 smoke 兜底**，CI 绿 ≠ 功能正确。
 
-### 5. review（CRG + ocr）
+### 5. review（CRG + 语义审查）
 
 - CRG：`code-review-graph detect-changes --brief --base <base_sha>` 确认改动范围与风险，逐条过。
-- ocr：按 PR diff / 模块分批喂。
+- 语义审查（`canon check --sla l2`）：按 PR diff / 模块分批喂。
 - 发现 bug / problem → 回 loop1 修复 → 重跑审查，直到干净。
 - 每轮（审查 + 修复）→ 1 条 PR comment（格式见规范）。
 
 ### 6. smoke
 
 - smoke 是**功能层**的最终验证：真实用户路径跑一遍（CLI 命令 / 真实 URL / 真实进程；
-  UI 截图或 OCR 对比），确认功能真的正确，不许拿 CI 绿替代；判据要可脚本化、主控可复跑。
+  UI 截图对比），确认功能真的正确，不许拿 CI 绿替代；判据要可脚本化、主控可复跑。
 - 发现问题 → 更新 todo → 回 loop1 二次修复。
 - 通过 → PR 写一条 smoke comment（验证方法 + 结果）。
 
@@ -114,5 +114,5 @@ loop1:
 - merge 后清理：`--delete-branch` 已清本地 + 远端分支；
   确认 `.wt/<branch>` 工作树目录已删——残留用 `git worktree remove` 清（**严禁 rm**），
   只清本会话自己建的。
-- report：PR 链接、改了哪些文件、跑了哪些测试、CRG / ocr / CI / smoke 结果、
+- report：PR 链接、改了哪些文件、跑了哪些测试、CRG / 语义审查 / CI / smoke 结果、
   剩余风险（含未跑的测试与已知问题）。

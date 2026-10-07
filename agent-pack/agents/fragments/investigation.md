@@ -9,7 +9,7 @@
 ## 审查两层
 
 1. **结构层**：`code-review-graph detect-changes` 看结构影响、循环依赖、风险面。
-2. **规范层**：`ocr review`（**代码审查工具**，与 OCR 截图识别无关）看代码规范。
+2. **规范层**：`canon check`（含 jev 语义层）看代码规范。
    按模块分批喂，不要一次性喂整个仓。
 
 - 审查发现逐条处置：修或书面驳回（同发现处置纪律）。
@@ -29,5 +29,5 @@
 
 ## 别造 demo 污染真实仓
 
-- 验证 issue/PR 流程、gh 拦截、规则改动，用专用沙盒仓（如 `demo-githooks`），
-  不在业务仓创建 demo issue/PR。
+- 验证 PR 流程、gh 拦截、规则改动，用专用沙盒仓（如 `demo-githooks`），
+  不在业务仓创建 demo PR。

@@ -7,5 +7,5 @@ steps:
   - { title: "开发：实现改动", kind: work, state: 开发 }
   - { title: "校验：跑真实命令/复现路径，失败回开发", kind: work, state: 校验 }
   - { title: "规范清洁：canon preflight FAIL 清零", kind: spec, spec_ref: preflight, state: 规范清洁 }
-  - { title: "审查：CRG/ocr 审查 + 逐条处置", kind: spec, spec_ref: review_chain, state: 审查 }
+  - { title: "审查：结构层 + 语义层审查 + 逐条处置", kind: spec, spec_ref: review_chain, state: 审查 }
   - { title: "清理整理：分支/worktree/临时进程", kind: work, state: 完成 }
