@@ -244,8 +244,7 @@ crates/web/<prefix-feature>/
   没有文档注释视为不完整交付。
 - **调查与审查**：调查先用 `code-review-graph update` 建图谱再查调用关系，不要逐文件翻；
   审查分两层——先 CRG 看结构（`code-review-graph detect-changes`），
-  再用 `ocr review` 看规范（按模块分批，禁止一次性喂整个仓库）。
-  **注意：`OCR` 是截图识别工具，`ocr` 命令是代码审查工具**，别混淆。
+  再用语义审查看规范（`canon check --sla l2`，按模块分批，禁止一次性喂整个仓库）。
 
 ---
 

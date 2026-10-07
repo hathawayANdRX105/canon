@@ -40,7 +40,18 @@ PROTECTED = ["spec/custom"]
 
 # 已退役规则：push 时从项目整份删掉（canon 正本已无此规则，退役决策与处置记录见
 # todo/problem/gate-doc-sync-readme-drift.md —— 该 todo/ 不入库，是本地问题档案）。
-RETIRED_RULES = {"checklist_doc_sync.yaml"}
+# 2026-10-08：ocr_* 系列改名为 semantic_*；旧文件名在此列出，成员仓 push 时清掉。
+RETIRED_RULES = {
+    "checklist_doc_sync.yaml",
+    "checklist_ocr_rust.yaml",
+    "checklist_ocr_go.yaml",
+    "checklist_ocr_javascript.yaml",
+    "checklist_ocr_default.yaml",
+    "ocr-rust.json",
+    "ocr-go.json",
+    "ocr-javascript.json",
+    "ocr-default.json",
+}
 
 # 根层散落规则的归位表：文件名前缀 → 目标子目录。
 # 目标子目录同时是 dispatch.yaml 的 topic 载体（catalog::topic_of 要求相对路径含 `/`），

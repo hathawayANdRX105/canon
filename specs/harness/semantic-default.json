@@ -1,5 +1,5 @@
 {
-  "ocr_default_review": {
+  "semantic_default_review": {
     "intent": "Generic code review against the OpenCodeReview default rubric (internal/config/rules/rule_docs/default.md), applied to changed files NOT already covered by the language-specific checklists (no .rs/.go/.js/.jsx/.ts/.tsx). Judge the CHANGED code. Favor precision over recall: report only defects likely real; treat correctness and security findings as blocking, style-only as advisory. Before reporting any non-local claim, establish the call site, ownership, synchronization, and trust boundary from the diff and provided context; report a finding only on concrete evidence actually present in the change; prefer a false negative over a false positive; do not turn formatter/linter-enforced style into blocking findings. The overall_severity score counts only defects that survive this guard.",
     "paths_include": [
       "**/*.py", "**/*.sh", "**/*.bash",

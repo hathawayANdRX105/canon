@@ -9,7 +9,7 @@
 //! All RV-* rules: RV-01 (checkbox forbidden), RV-02 (allowed reply words),
 //! RV-03 (reply detail), RV-04 (inline review format), RV-06 (inline findings
 //! have reply). The CRG-comment rules (RV-05, the CRG half of RV-04) went away
-//! with the `code-review-graph` and `ocr` binaries.
+//! with the `code-review-graph` and `open-code-review` binaries.
 
 use regex::Regex;
 use serde_yaml::Value as YamlValue;
