@@ -83,7 +83,8 @@ LAYER_OPEN_RE = re.compile(r"@layer\s+components\s*\{")
 def git_ls_files(root: str, patterns: list[str]) -> list[str]:
     out: list[str] = []
     for pat in patterns:
-        r = subprocess.run(["git", "ls-files", "--", pat], cwd=root, capture_output=True, text=True)
+        r = subprocess.run(["git", "ls-files", "--", pat], cwd=root,
+                           capture_output=True, text=True, check=False)
         out.extend(l for l in r.stdout.splitlines() if l.strip())
     return sorted(set(out))
 
@@ -103,7 +104,7 @@ def is_exempt_token(tok: str, allow: set[str]) -> bool:
         return True
     if NON_UTILITY_OK.match(tok):
         return True
-    if "{" in tok or "}":  # 动态插值
+    if "{" in tok or "}" in tok:  # 动态插值
         return True
     if not TAILWIND_TOKEN.match(tok):
         return True  # 不是 Tailwind 形态（自定义物理类等）→ 本规则不判
@@ -114,12 +115,15 @@ def glob_has_hit(root: str, pattern: str) -> bool:
     return bool(git_ls_files(root, [pattern]))
 
 
+
+
 def scan_rsx(root: str, findings: list[dict], allow: set[str]) -> None:
     files = git_ls_files(root, ["crates/web/**/*.rs", "apps/*/src/**/*.rs"])
     for rel in files:
         path = os.path.join(root, rel)
         try:
-            src = open(path, encoding="utf-8").read()
+            with open(path, encoding="utf-8") as fh:
+                src = fh.read()
         except (OSError, UnicodeDecodeError):
             continue
         for lineno, line in enumerate(src.splitlines(), 1):
@@ -136,40 +140,35 @@ def scan_rsx(root: str, findings: list[dict], allow: set[str]) -> None:
                                    f"住 kit 资产 CSS 的语义配方（ui-*），rsx 只发射语义类 + data-* 状态。"
                                    f"确认是文档化覆盖槽/动态插值误报时，加入 allowlist 文件并注明理由。",
                     })
-def is_exempt_token(tok: str, allow: set[str]) -> bool:
-    if tok in allow:
-        return True
-    if NON_UTILITY_OK.match(tok):
-        return True
-    if "{" in tok or "}" in tok:  # 动态插值
-        return True
-    if not TAILWIND_TOKEN.match(tok):
-        return True  # 不是 Tailwind 形态（自定义物理类等）→ 本规则不判
-    root_m = TAILWIND_TOKEN.match(tok).group(0).split(":")[-1]
-    root_m = root_m.split("/")[0].split("[")[0]
-    return not KNOWN_UTILITY_ROOTS.match(root_m + "-")
 def scan_css(root: str, findings: list[dict]) -> None:
     files = [f for f in git_ls_files(root, ["crates/web/ui-kit/assets/*.css", "apps/*/assets/*.css"])
              if "tailwind.out" not in f and ".min." not in f]  # 生成产物不判
     for rel in files:
         path = os.path.join(root, rel)
         try:
-            src = open(path, encoding="utf-8").read()
+            with open(path, encoding="utf-8") as fh:
+                src = fh.read()
         except (OSError, UnicodeDecodeError):
             continue
-        in_components = 0
+        # brace 深度追踪：@layer components { … } 内的嵌套规则体（.ui-* { … }）
+        # 也算 components 层——单计数器会把嵌套 } 误当层关闭导致漏检（探针实测）。
+        depth = 0
+        in_components = False
         for lineno, line in enumerate(src.splitlines(), 1):
             stripped = line.strip()
-            if LAYER_OPEN_RE.search(line):
-                in_components += 1
+            if not in_components and LAYER_OPEN_RE.search(line):
+                in_components = True
+                depth += line.count("{") - line.count("}")
                 continue
-            if in_components and stripped == "}":
-                in_components -= 1
-                continue
-            if not in_components:
+            if in_components:
+                depth += line.count("{") - line.count("}")
+                if depth <= 0:
+                    in_components = False
+                    continue
+            else:
                 continue
             body = stripped
-            if body.startswith("/*") or body.startswith("*") or body.startswith("//"):
+            if body.startswith(("/*", "*", "//")) or body.endswith("{"):
                 continue
             if PALETTE_CLASS_RE.search(body):
                 findings.append({
@@ -201,7 +200,7 @@ def main() -> int:
     args = ap.parse_args()
 
     root = subprocess.run(["git", "rev-parse", "--show-toplevel"],
-                          capture_output=True, text=True).stdout.strip()
+                          capture_output=True, text=True, check=False).stdout.strip()
     if not root:
         print("[]")
         return 0
