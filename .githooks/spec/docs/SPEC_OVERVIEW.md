@@ -11,6 +11,14 @@
 ├── spec/                      # 规则配置（改规则只改这里，不改脚本）
 │   ├── SPEC_OVERVIEW.md      # 本文件（规范总览）
 │   ├── dispatch.yaml         # 钩子→主题映射（哪个钩子跑哪些检查）
+│   ├── dioxus/                # Dioxus + CSS 规则族（topic: dioxus）
+│   │   ├── checklist_dioxus_rsx_nesting.yaml       # RSX 嵌套深度
+│   │   ├── checklist_dioxus_style_scatter.yaml     # 内联 class 散落/裸色板
+│   │   ├── checklist_dioxus_css_semantic.yaml      # rsx 只许语义类（泛化样式收敛）
+│   │   ├── checklist_css_token_composition.yaml    # components 层 token 组合纪律
+│   │   ├── checklist_web_spec.yaml                 # web-spec 语义层 11 问句（jev）
+│   │   ├── checklist_web_spec_deterministic.yaml   # web-spec 确定性层
+│   │   └── web_spec.json                           # 语义层问句载荷
 │   ├── github_issues.yaml    # Issue 规则（IS-* 检查项）
 │   ├── github_pull_requests.yaml  # PR 规则（PR-* 检查项）
 │   ├── github_reviews.yaml   # Review 评论格式（RV-* 检查项）

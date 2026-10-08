@@ -78,7 +78,7 @@ fn topic_of(source: &str) -> Option<String> {
     if dir == "github" {
         return Some(format!("github/{}", name.trim_end_matches(".yaml")));
     }
-    matches!(dir, "code" | "cleanup" | "workspace").then(|| dir.to_string())
+    matches!(dir, "code" | "cleanup" | "workspace" | "dioxus").then(|| dir.to_string())
 }
 
 fn hooks_from_dispatch(dispatch: Option<&YamlValue>, source: &str) -> Vec<String> {
@@ -166,7 +166,14 @@ pub fn load(spec_dir: &Path) -> Vec<Rule> {
     let dispatch = read_yaml(&spec_dir.join("dispatch.yaml"));
     let mut out: Vec<Rule> = vec![];
 
-    for sub in ["quality", "code", "cleanup", "workspace", "github"] {
+    for sub in [
+        "quality",
+        "code",
+        "cleanup",
+        "workspace",
+        "github",
+        "dioxus",
+    ] {
         let dir = spec_dir.join(sub);
         if !dir.is_dir() {
             continue;

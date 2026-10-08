@@ -33,11 +33,47 @@ MAPPED_DOCS = []
 
 # canon-owned 相对路径（相对 .githooks/）。目录 = 整目录分发；文件 = 单文件。
 OWNED_DIRS = ["hooks", "spec/github", "spec/workspace", "spec/cleanup",
-              "spec/code", "spec/quality", "spec/harness", "spec/docs"]
+              "spec/code", "spec/quality", "spec/harness", "spec/docs", "spec/dioxus"]
 OWNED_FILES = ["canon", "spec/dispatch.yaml", "spec/severity_overrides.yaml"]
 # 受保护：push 永不触碰
 PROTECTED = ["spec/custom"]
 
+# 已退役规则：push 时从项目整份删掉（canon 正本已无此规则，退役决策与处置记录见
+# todo/problem/gate-doc-sync-readme-drift.md —— 该 todo/ 不入库，是本地问题档案）。
+RETIRED_RULES = {
+    # web-spec / dioxus 规则族 2026-10-08 从 quality/ 迁入 dioxus/ 子目录（泛化为
+    # 「dioxus+css 语义 token」规则家族）：旧路径 push 时从成员仓清掉，防新旧双跑。
+    "checklist_web_spec.yaml",
+    "checklist_web_spec_deterministic.yaml",
+    "checklist_dioxus_rsx_nesting.yaml",
+    "checklist_dioxus_style_scatter.yaml",
+    "web_spec.json",
+    # —— 以下为历史退役（保留原语义）——
+    "checklist_doc_sync.yaml",
+    "checklist_ocr_rust.yaml",
+    "checklist_ocr_go.yaml",
+    "checklist_ocr_javascript.yaml",
+    "checklist_ocr_default.yaml",
+    "ocr-rust.json",
+    "ocr-go.json",
+    "ocr-javascript.json",
+    "ocr-default.json",
+}
+
+# 根层散落规则的归位表：文件名前缀 → 目标子目录。
+# 目标子目录同时是 dispatch.yaml 的 topic 载体（catalog::topic_of 要求相对路径含 `/`），
+# 所以规则必须住在子目录里才会被路由；根层的同名文件是死的重复层。
+ROOT_PREFIX_DIRS = (
+    ("checklist_", "quality"),
+    ("cleanup_", "cleanup"),
+    ("code_", "code"),
+    ("github_", "github"),
+    ("workspace_", "workspace"),
+)
+# 根层的非规则文件（dispatch.yaml / severity_overrides.yaml 由 engine 从根读，
+# 必须留根；harness 脚本被 spec 用绝对路径引用；项目自有配置不认识就不动）。
+ROOT_FILE_DIRS = {"SPEC_OVERVIEW.md": "docs"}
+ROOT_STAY = {"dispatch.yaml", "severity_overrides.yaml"}
 
 def project_root(project: str) -> str:
     p = os.path.join("/home/hathaway/projects", project)

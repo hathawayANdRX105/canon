@@ -1,0 +1,30 @@
+# CK-CSS-TOKEN-COMPOSITION: 语义 CSS 组合纪律（样式收敛两支柱之二，泛化 PR #30/#45）
+#
+# 为什么: kit 资产 CSS 是样式唯一真源（ui-component-principles §4.1）。components
+#   层规则体里出现裸 #hex 或 @apply 原始色板类（zinc/emerald-…-NNN）= 绕开
+#   theme.css 语义 token，主题变更再次散架。PR #45 已把 ferrite kit 内全部裸色
+#   值绑到 var(--*)——本规则锁住「不再新增」。
+# 判据（css_token_guard.py --mode css，l1 确定性）:
+#   CSS-RAW-PALETTE-APPLY  @apply 引用原始色板类（bg-zinc-800 / text-emerald-500 …）
+#   CSS-HARDCODED-HEX      规则体裸 #hex（行内无 var(--) 且非 gradient 语境）
+# 口径: 只扫 @layer components 层（rule body）；@utility 段与 token 声明段
+#   （:root/@theme）不判——那些本来就住色值。theme 镜像不变量由
+#   checklist_dioxus_css_mirror.yaml 覆盖，不重复。
+# 可移植: git ls-files 无 assets/*.css 命中恒输出 []（静默=未验证）。
+# 严重度: WARN 起步；ferrite 基线 0 发现，首周零误报后可升 FAIL。
+enabled: true
+hooks: [pre-push, merge]
+sla: l1
+fail_severity: WARN
+match:
+  paths_include: ["**/*.css"]
+  paths_exclude: ["target/", ".wt/", "node_modules/", "**/node_modules/**"]
+mode: grep
+harness:
+  command: "python3"
+  args:
+    - ".githooks/spec/harness/css_token_guard.py"
+    - "--mode"
+    - "css"
+optional: false
+timeout: 60
