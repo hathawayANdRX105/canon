@@ -150,19 +150,25 @@ def scan_css(root: str, findings: list[dict]) -> None:
                 src = fh.read()
         except (OSError, UnicodeDecodeError):
             continue
-        in_components = 0
+        # brace 深度追踪：@layer components { … } 内的嵌套规则体（.ui-* { … }）
+        # 也算 components 层——单计数器会把嵌套 } 误当层关闭导致漏检（探针实测）。
+        depth = 0
+        in_components = False
         for lineno, line in enumerate(src.splitlines(), 1):
             stripped = line.strip()
-            if LAYER_OPEN_RE.search(line):
-                in_components += 1
+            if not in_components and LAYER_OPEN_RE.search(line):
+                in_components = True
+                depth += line.count("{") - line.count("}")
                 continue
-            if in_components and stripped == "}":
-                in_components -= 1
-                continue
-            if not in_components:
+            if in_components:
+                depth += line.count("{") - line.count("}")
+                if depth <= 0:
+                    in_components = False
+                    continue
+            else:
                 continue
             body = stripped
-            if body.startswith(("/*", "*", "//")):
+            if body.startswith(("/*", "*", "//")) or body.endswith("{"):
                 continue
             if PALETTE_CLASS_RE.search(body):
                 findings.append({
