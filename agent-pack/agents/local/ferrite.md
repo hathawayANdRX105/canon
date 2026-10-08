@@ -62,6 +62,9 @@
 - 手动全量（主仓目录）：`gh workflow run ci-dispatch.yml --ref <branch> -f full=true`；
   应急绕开私仓直接打壳仓：`gh workflow run ci.yml -R hathawayANdRX105/ferrite-ci -f sha=<sha> -f pr=<N> -f base=main`。
 - 看结果：PR 的 `shell-ci` 状态 → 壳仓 run；或 `gh run list -R hathawayANdRX105/ferrite-ci -L 5`。
+- 发布同走壳仓：推 `ferrite-v*` tag → 主仓 `ferrite-release.yml` 秒级派发 → 壳仓 `release.yml`
+  构建并把 Release（asset+notes）用 PAT 发回**私有主仓**；壳仓不落 artifact（私有代码产物
+  不进公开仓）。主仓手动触发只 dry-run；**合并新派发器之前不得推 tag**（旧全量版会烧私有分钟）。
 - **不准在本地运行中等及以上的测试**（只许 `cargo check -p` 与 3 秒内单用例调试）——
   失效模式判据（feature 门禁假绿、`#[ignore]`、e2e 30 秒整数倍=PG 事故）见 **`.agent/rules/testing-ci.md`**，新增测试前必读。
 - 缓存不变量：只有写入方（main push / 手动 full）回填 sccache（日键）/ cargo（lock 键），PR 只读；
