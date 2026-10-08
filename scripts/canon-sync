@@ -194,12 +194,28 @@ def push(project: str):
         if rel == "canon":
             os.chmod(tgt, 0o755)
         n += 1
+    # RETIRED_RULES：正本已无此规则，成员仓整份删掉（递归，custom/ 除外）——
+    # 防新旧路径同时加载、同一规则跑两遍（canon-check 陷阱：engine 不去重）。
+    removed = []
+    for name in sorted(RETIRED_RULES):
+        for dirpath, dirnames, filenames in os.walk(p_hooks):
+            if os.path.relpath(dirpath, p_hooks).replace(os.sep, "/") == "spec/custom":
+                dirnames[:] = []
+                continue
+            if name in filenames:
+                os.remove(os.path.join(dirpath, name))
+                removed.append(os.path.relpath(os.path.join(dirpath, name), p_hooks))
     for src, tgt in mapped_deployments(p_hooks):
         if same(src, tgt):
             continue
         shutil.copy2(src, tgt)
         n += 1
-    print(f"pushed {n} file(s) -> {p_hooks}")
+    msg = f"pushed {n} file(s) -> {p_hooks}"
+    if removed:
+        msg += f"; retired {len(removed)} rule file(s)"
+        for r in removed:
+            msg += f"\n  - {r}"
+    print(msg)
     return 0
 
 
