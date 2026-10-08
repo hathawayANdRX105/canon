@@ -66,6 +66,13 @@ CI 全部在公开壳仓 `hathawayANdRX105/ferrite-ci` 跑（计费原因见 AGE
 | 手动全量 | 主仓目录：`gh workflow run ci-dispatch.yml --ref <branch> -f full=true` |
 | 看结果 | 主仓 PR 的 `shell-ci` 状态（点进去是壳仓 run）；`gh run list -R hathawayANdRX105/ferrite-ci -L 5` |
 
+**两关口语义（必须分清）**：
+
+| 关卡 | 性质 | 要求 |
+|---|---|---|
+| 快关（PR push） | **阻塞** | `shell-ci` 绿是合并前提；红了 `gh pr checks <N>` 拉壳仓日志修复重推，CI 没跑完不许 merge |
+| 全量（main push / 手动 full） | **异步、离线跟进** | 不阻塞合并，但**必须回查并汇报**：触发后用 bash 长间隔轮询（`gh run watch <id> -R hathawayANdRX105/ferrite-ci --interval 120` 或间隔更大的轮询），无论成败都要汇报 run id + 结论；红了立即开修复任务，禁止静默收尾 |
+
 快关机制：`testless select --from <base>` 选出受影响的**测试名**过滤器 → `cargo test --workspace -- <过滤名>` 只跑这些测试。
 `just test-fast` 的三种收尾（都绝不静默跳测试）：
 
