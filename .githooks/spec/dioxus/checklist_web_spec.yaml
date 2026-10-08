@@ -25,6 +25,6 @@ harness:
   args:
     - ".githooks/spec/harness/jev_rule.py"
     - "--config"
-    - ".githooks/spec/quality/web_spec.json"
+    - ".githooks/spec/dioxus/web_spec.json"
 optional: true
 timeout: 300
