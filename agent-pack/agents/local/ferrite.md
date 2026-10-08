@@ -28,21 +28,32 @@
      禁止让子代理自己推导相对路径。
 ---
 
-## CI 处理（公开壳仓 + 私有实现仓）
+## CI 处理（主仓派发 + 公开壳仓执行）
 
-**为什么**：私有仓的 GitHub CI 按「运行 workflow 的仓」计费——公开仓免费无上限，私有仓 Free 只有 2000 分钟/月。
-重活测试烧分钟，所以把 CI 放公开壳仓 `NewXapi/ferrite-ci` 跑：它用 PAT 检出私有 `ferrite`（+ 私有依赖 `ui-kit`），
-跑完把结果回写私有 commit。代码不出 GitHub，分钟几乎为 0。
+**为什么**：GitHub CI 按「运行 workflow 的仓」计费——公开仓免费无上限，私有仓 Free 只有 2000 分钟/月。
+重活测试烧分钟，所以 CI 全部放公开壳仓 `hathawayANdRX105/ferrite-ci` 跑：它用 PAT 检出主仓
+`hathawayANdRX105/ferrite`（私有；本地目录 `~/projects/mono`），跑完把结果以 commit status 回写主仓 commit。
 
-**怎么触发**：`gh workflow run "CI (private ferrite proxy)" -R NewXapi/ferrite-ci -f ref=<branch/sha>`。
-要自动挡合并：私有 ferrite 再放个 5 行 dispatch + branch protection 要求 context `ci`（壳仓回写的那个）。
+**架构**：主仓 `.github/workflows/ci-dispatch.yml`（只做派发，秒级、不烧私有分钟）→ 壳仓 `ci.yml`
+（入参 sha/pr/base/full；`lint-check` ∥ `test` 两关卡**并行**，test 关卡带 PG18 服务，e2e 真跑；
+`report` 关卡聚合回写 status）。主仓 PR 的分支保护要求 context **`shell-ci`**——
+**不得占用 `ci` 这个 context 名**：Actions app 会绑定同名 check，PAT 回写的状态永远满足不了保护规则。
 
-**不变量（别破坏）**：壳仓 `on:` 只有 workflow_dispatch + repository_dispatch，无 pull_request/push/issue（否则 fork
-PR 能拿 PAT 投毒）；cache 只存 `~/.cargo` 不存 `target/`；日志不 echo 私有源码。
+**怎么跑 CI 测试**：
+- **自动**：PR push / main push 自动派发。PR 走快关（`just test-fast`，testless 按 diff 影响分析，
+  零命中自动降级全量）；main push 走全量（`just test`）并回填缓存。
+- **手动全量**（在主仓目录）：`gh workflow run ci-dispatch.yml --ref <branch> -f full=true`。
+- **看结果**：PR 的 `shell-ci` 状态点进壳仓 run；或 `gh run list -R hathawayANdRX105/ferrite-ci -L 5`。
 
-**坑**：`cargo fmt` 勿用 `--all`（会递归进 ui-kit）→ 壳仓 fmt 只查 ferrite 自身成员；ui-kit 在 runner 上落在 `$HOME/ui-kit`。
+**缓存不变量（别破坏）**：只有写入方（main push / 手动 full）回填 sccache 与 cargo 缓存，PR 只读不写
+（PR 侧天然零缓存垃圾）；sccache 日键、cargo 键 = `Cargo.lock` 哈希；**无定期全量清缓存**，
+旧条目靠 GitHub 7 天 LRU 自动淘汰，手动清理跑壳仓 `cache-admin` workflow（按键前缀删）。
+壳仓 `on:` 只有 `workflow_dispatch`（无 pull_request/push，防 fork 借 PAT 投毒）；日志不 echo 私有源码。
 
-> 完整 workflow 与逐行说明见 `NewXapi/ferrite-ci/.github/workflows/ci.yml`。
+**坑**：装 `just` 走 GitHub releases（just.systems CDN 会 403）；工具链/依赖升级后如缓存中毒，
+把壳仓 workflow 的键前缀 `v0.10.0` bump 一档并手动跑 cache-admin。
+
+> 完整 workflow 与逐行说明见 `hathawayANdRX105/ferrite-ci/.github/workflows/ci.yml`。
 
 ---
 
@@ -83,7 +94,7 @@ crates/web/<prefix-feature>/
 
 | 术语 | 位置 | 含义 |
 |---|---|---|
-| **后端域** | `crates/api/` | 全部后端服务平铺大容器，包含 `auth`（通用账号中心）、`admin-*`（管理服务）、`tavern-*`（酒馆服务）。 |
+| **后端域** | `crates/api/` | 全部后端服务平铺大容器，共 8 个 crate：`auth`（通用账号中心，guard 层 `auth::routes`）、`billing`（商业化）、`control-plane`（管理配置面：渠道/模型/分组/令牌/代理节点，与 `crates/gateway` 的 data plane 对仗）、`db`（sqlx 迁移入口）、`observe`（观测）、`router`（路由聚合 + auth 域 HTTP 路由）、`api-mcp`（MCP 客户端）、`tavern`（酒馆服务）。 |
 | **前端域** | `crates/web/` | 全部前端组件与界面平铺大容器，包含 `ui-components`（跨端通用组件）、`admin-page-*`、`tavern-page-*`。 |
 | **共享契约** | `crates/contract/` | 跨端共享的独立数据传输对象 (DTO) 与纯协议错误定义。 |
 | **网关与执行** | `crates/gateway/`、`crates/harness/` | 渠道调度转发引擎与 Agent 运行时。 |
@@ -137,7 +148,9 @@ crates/web/<prefix-feature>/
 ## 密钥与敏感信息
 
 - 禁止提交：真实 IP 地址、上游 / 内网地址、API key、token、密钥、密码。提交前扫一眼 diff。
-- 本地配置放 `config/config.toml`（已 gitignore，模板见 `config/config.toml.example`）
+- 本地配置：relay 引导参数放 `config/config.toml`（已 gitignore；文件可选——
+  缺文件走 env `DATABASE_URL`/`LISTEN`，见 `apps/api/src/config.rs` 模块头；
+  文件模板参考 `deploy/config/config.toml`，运行时配置全在 PG）
   或 `.env*`（已 gitignore）；文档与示例用占位符（`<API_KEY>`、`127.0.0.1`）。
 
 ---
@@ -173,7 +186,7 @@ crates/web/<prefix-feature>/
   `just dev-check`（环境体检）、`just dev-backend start|update|stop|status`（共享后端）、
   `just db-seed` / `just db-reset`（测试数据）、`just verify`（fmt + clippy + check 全套）。
   开工前先跑 `just dev-check` 自检环境，不要手工拼这些命令。
-- **免登录调试前端**（`debug-auto-login`，默认关）：`just dev-web <端口> debug` 会自动登录
+- **免登录调试前端**（`debug-auto-login`，默认关）：`just dev-web debug`（端口 auto：10000-16000 随机位分配，占用则 +1 换，最多换 3 次）会自动登录
   dev 种子账号 `admin_dev`；想手动调登录页就打开 `#login`（auth hash 不触发自动登录）。
   主动「退出登录」不会被自动重登顶掉。
 
@@ -190,8 +203,8 @@ crates/web/<prefix-feature>/
 | 提交 / 推送被拦、创建 PR 被拒、要查检查规则 | `.agent/rules/gates.md` |
 | 启动后端 / 数据库 / 前端，或前端报错、构建卡住 | `.agent/rules/dev-env.md` |
 | 写前端界面、写 Rust 公共接口、调查或审查代码 | `.agent/rules/conventions.md` |
-| 要跑 web 双车道（快速开发 / 审查修复 / 发布） | `.agent/rules/web-lanes.md` + 任务书 `.agent/tasks/dev-web-lane.md` / `.agent/tasks/webfix-lane.md` |
-| 要派一件具体的事给某个 agent（写任务书） | 开发任务用 `.agent/tasks/dev.md`，收尾合并用 `.agent/tasks/closeout-pr.md`；空白模板 `.agent/tasks/TEMPLATE.md` |
+| 要跑 web 双车道（快速开发 / 审查修复 / 发布） | `.agent/rules/web-lanes.md`（任务书已移除，用 `task-brief` / `pr-orchestration` skill 现场生成） |
+| 要派一件具体的事给某个 agent（写任务书） | `task-brief`（填号派工单）/ `pr-orchestration`（开 PR 干活、拆任务、派子代理） |
 | 想了解 `.agent/` 目录本身怎么组织 | `.agent/README.md` |
 
 ---
@@ -201,17 +214,19 @@ crates/web/<prefix-feature>/
 > 要写测试、跑测试、看 CI 结果，或怀疑「CI 绿了但没验东西」时 → 读
 > **`.agent/rules/testing-ci.md`**（含三种「看起来通过、其实没验证」的情况的判据和处理方法）。
 
-- 本地只做 `cargo check -p <crate>`（编译验证）和极小的单用例调试（3 秒内跑完的（注意：除非需要快速测试，不然不准在本地跑测试，把测试放到PR的 CI 上进行）
-  `cargo test -p <crate> -- <测试名>`）；所有 `cargo test` 交给 PR 的 CI 按 `git diff` 动态选包。
-  本机可用内存不多，**严禁**本地跑 `cargo test --all` 或整个 workspace 编译（会假死）。
-- 「通过」= CI 全绿；CI 未全绿不得 closeout / merge。
+- **不准在本地运行中等及以上的测试**。本地只允许两种命令：
+  `cargo check -p <crate>`（编译验证）和 3 秒内跑完的单用例调试（`cargo test -p <crate> -- <测试名>`），
+  且都必须套 cgroup CPU 配额。除这两类之外的一切测试执行——整包 `cargo test -p <crate>`（不带用例名过滤）、
+  整个 test binary、多包 / `--workspace` / `just test` / e2e——都算中等及以上，**一律交给 PR 的 CI 跑**
+  （本机内存不足，多 crate 并发编译会假死）。CI 触发与结果查看方式见上文「CI 处理」节。
+- 「通过」= CI 全绿（`shell-ci` 状态）；CI 未全绿不得 closeout / merge。
   工具链版本**以本地为准**：CI 侧新版 clippy 拦分支（新增 lint）时，
-  把壳仓 `NewXapi/ferrite-ci` 的 workflow 里 `dtolnay/rust-toolchain@stable` 钉到本地版本
+  把壳仓 `hathawayANdRX105/ferrite-ci` 的 workflow 里 `dtolnay/rust-toolchain@stable` 钉到本地版本
   （`rustc --version` 查），**禁止用 `rustup update stable` 临时升级本地工具链对齐 CI**。
-- **注意三种「看起来通过、其实没验证」的情况**（新增测试前必须读 `.agent/rules/testing-ci.md`）：
+- **「CI 绿了但没验证」的失效模式仍然存在**（新增测试前必须读 `.agent/rules/testing-ci.md`）：
   加 feature 门禁的测试 CI 不会执行（显示 `running 0 tests` 但整体绿）；
-  e2e 测试在 CI 里因为没有数据库而超时跳过，却记为通过；
-  标了 `#[ignore]` 的测试在 CI 里永远不跑（仓库现有 61 个）。
+  标了 `#[ignore]` 的测试在 CI 里永远不跑；e2e 现在有 PG18 服务真跑断言，
+  但耗时恰好是 30 秒整数倍仍意味着数据库没连上（那是 CI 事故，要查，不是跳过）。
 
 ---
 
@@ -266,7 +281,7 @@ crates/web/<prefix-feature>/
   修 + 测试/e2e，`--no-ff` 合回，并为发布 PR 产出 CRG 结论评论。
 - 唯一 PR = `web-dev → main`（merge commit，禁 squash），发布前先 `merge main` 同步；
   推 web-dev / 建 PR 时 `.githooks` 闸门照跑（FAIL 清零，闸门不绕）。
-- 验证 = dev 浏览器自测（`just dev-web-rebuild <port> [debug]` → 强刷）；
+- 验证 = dev 浏览器自测（`just dev-web-rebuild [port] [debug]`，port 缺省 auto 10000-16000 → 强刷）；
   车道内不单写 PR 评论。
 - 车道用固定 worktree `.wt/web-dev` / `.wt/web-fix`，共享 `CARGO_TARGET_DIR`；
   不为小改动新开一次性 worktree。

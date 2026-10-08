@@ -121,7 +121,7 @@ projects:
     - sensitive-ops
     - git-workflow
   ferrite:
-    root: ferrite
+    root: mono  # GitHub: hathawayANdRX105/ferrite；本地目录暂名 mono，改名后同步此值
     titles:
       local/: ferrite 约定
     include:

@@ -23,7 +23,7 @@
 projects:
   # 各项目安装清单
   ferrite:
-    root: /home/hathaway/projects/ferrite
+    root: /home/hathaway/projects/mono  # GitHub: hathawayANdRX105/ferrite；本地目录改名后同步此值
     files:
       - src: agent-pack/rules/agent-readme.md
         to: .agent/README.md
