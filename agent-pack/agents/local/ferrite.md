@@ -50,7 +50,9 @@
 
 计费原因（私有仓 2000 分钟/月）→ CI 全部在公开壳仓 `hathawayANdRX105/ferrite-ci` 跑：
 主仓 `ci-dispatch.yml` 秒级派发 → 壳仓 `lint-check` ∥ `test`（PG18 服务）→ 回写主仓 commit status。
-主仓 PR 保护只认 context **`shell-ci`**；`ci` 这个名字**不得占用**（Actions app 绑定同名 check，PAT 回写无法满足）。
+主仓是免费计划私有仓，**没有服务端 branch protection**——红灯拦不住平台 merge，
+合并门 = canon gh shim + agent 纪律：merge 前必须核实 commit status **`shell-ci`** 绿；
+`ci` 这个名字**不得占用**（Actions app 绑定同名 check，回写会混淆）。
 
 **两关口语义（重要）**：
 
