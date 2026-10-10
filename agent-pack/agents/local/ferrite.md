@@ -33,13 +33,14 @@
 | 术语 | 位置 | 含义 |
 |---|---|---|
 | 后端域 | `crates/api/` | 8 个 crate：`auth`、`billing`、`control-plane`（管理配置面）、`db`、`observe`、`router`、`api-mcp`、`tavern`。职责详单见 README |
-| 前端域 | `crates/web/` | `ui-components`（跨端组件）、`admin-page-*`、`tavern-page-*` |
+| 前端域 | `crates/web/` | `ui-kit`（设计系统）、`admin`/`auth`/`client`/`console`/`tavern`/`insights`/`i18n` + kymido 投影层 `harness-*` |
 | 共享契约 | `crates/contract/` | 跨端 DTO 与协议错误；**唯一的跨域共享点** |
 | 网关与执行 | `crates/gateway/`、`crates/harness/` | 调度转发引擎与 Agent 运行时 |
-| 应用 | `apps/<name>/` | 唯一有 `main.rs` 的组装层：`api`、`admin-web`、`tavern-web` |
+| 应用 | `apps/<name>/` | 唯一有 `main.rs` 的组装层：`api`、`web`、`kit-demo`（ui-kit 演示场，wasm） |
 
 - 功能 crate 只出 library API（独立 `Cargo.toml` + workspace member），不定义进程入口；
-  组装只在 `apps/`：`api` 装后端与 gateway/harness，两个 web app 装前端与 `ui-components`。
+  组装只在 `apps/`：`api` 装后端与 gateway/harness；`web` 与 `kit-demo` 两个 wasm app 装前端——
+  `web` 是前端单体入口（消费 `ui-kit`），`kit-demo` 是 ui-kit 组件演示场。
 - 域间禁止私有依赖，跨端数据只走 `crates/contract` DTO；新 DTO 先声明、由一个会话统一改。
 - **域目录独占**：会话接手 `crates/<domain>/` 即独占，不准越界改其他域；跨域重构先在 PR 报备清单确认无冲突。
   新增/移动 crate 才动根 `Cargo.toml`，改完在 PR 说明新增 member。
@@ -139,6 +140,6 @@
 
 ## 目标约束
 
-- `crates/harness/{core,prompt,tools}` 与 `crates/web/tavern-*`、`admin-*` 必须支持 `wasm32-unknown-unknown`。
+- `crates/harness/{core,agent-prompts,tools}` 与 `crates/web/` 下的 Dioxus 前端 crate（含 `harness-*` 投影层）必须支持 `wasm32-unknown-unknown`。
 - 测试放 crate 同级 `tests/`，不在 `src/` 用 `#[cfg(test)]`。
 - 新增/移动功能 crate 同步更新根 `Cargo.toml` members 与 README crate 清单。

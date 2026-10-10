@@ -26,8 +26,8 @@
 - 交互元素都要加 `data-testid`，值用元素的 `name` 属性值。
 - 容器元素要加 `role` 和 `aria-label`。
 - 每个页面写一份契约文件，位置是**该页面所在 crate 里的** `specs/ui/<页面名>.yaml`
-  （例如 `crates/web/admin-page-admin/specs/ui/aliases.yaml`），列出 role、name、testid、action。
-  现成的例子：`crates/web/admin-page-admin/specs/ui/` 下有 5 份，照着写。
+  （例如 `crates/web/admin/specs/ui/aliases.yaml`），列出 role、name、testid、action。
+  现成的例子：`crates/web/admin/specs/ui/` 下有 4 份，照着写。
 - PR 的冒烟验证用 `tab.ariaSnapshot()` 检查 role、name、testid 是否正确。
   这是 Playwright 的 API：`tab` 是会话工具 `browser` 打开的页签对象，
 - 截图只作为辅助手段（看视觉风格和品牌效果），失败的时候附上截图。

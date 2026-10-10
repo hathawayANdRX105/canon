@@ -1,6 +1,6 @@
 # 任务书：web 开发车道（dev 角色）
 
-**什么时候用**：web 域（`crates/web/*`、`apps/admin-web`、`apps/tavern-web`）的快速改动。
+**什么时候用**：web 域（`crates/web/*`、`apps/web`、`apps/kit-demo`）的快速改动。
 流程总规则读 `.agent/rules/web-lanes.md`；本任务书只讲开发角色怎么跑。
 
 **角色定位**：敏捷开发。不派子代理、不做 CRG、不写 PR 评论、不开 PR——
@@ -42,7 +42,7 @@ just aino-check                   # 体检：service + 桥 + 前端三绿
 ## 2. 开发循环（改 → 一条命令 → 强刷）
 
 ```bash
-# 改代码（含 ui-components 等依赖 crate，dx 不会自动重编）
+# 改代码（含 ui-kit 等依赖 crate，dx 不会自动重编）
 just dev-web-rebuild 8090 debug   # 一键：重编 wasm → 杀旧 dx → 原档位重启
 # 浏览器强刷一次（wasm/js 有缓存）；功能不对就继续改，循环同上
 ```
@@ -69,7 +69,7 @@ canon check                        # FAIL 必须清零再 push，WARN 说明理�
 ```
 
 组件被第二个 page 使用时搬进
-`crates/web/ui-components`（shared_components_check FAIL）。
+`crates/web/ui-kit`（shared_components_check FAIL）。
 
 ## 4. 汇报格式（每轮结束）
 

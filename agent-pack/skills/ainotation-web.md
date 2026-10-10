@@ -1,6 +1,6 @@
 ---
 name: ainotation-web
-description: 'Ainotation 视觉标注反馈闭环：启动 admin-web 开发环境 + 标注同步栈（service/bridge/grant），并用 MCP 读写用户在页面上的 UI 标注。凡是用户提到「启动前端标注」「看我的标注/反馈」「ainotation」「页面标的问题改一下」，或要在 PR smoke 之外理解用户对 UI 的视觉意见，都用本技能——即使用户没说「ainotation」这个词。'
+description: 'Ainotation 视觉标注反馈闭环：启动 apps/web 前端开发环境 + 标注同步栈（service/bridge/grant），并用 MCP 读写用户在页面上的 UI 标注。凡是用户提到「启动前端标注」「看我的标注/反馈」「ainotation」「页面标的问题改一下」，或要在 PR smoke 之外理解用户对 UI 的视觉意见，都用本技能——即使用户没说「ainotation」这个词。'
 license: MIT
 ---
 
@@ -8,14 +8,14 @@ license: MIT
 
 ## 目标
 
-用户在浏览器里对 admin-web 页面**点选元素写反馈**（带 DOM 选择器/样式/截图），
+用户在浏览器里对 `apps/web` 前端页面**点选元素写反馈**（带 DOM 选择器/样式/截图），
 agent 通过 MCP 读取这些标注并完成 UI 修改。本技能让你能在任何 worktree 会话里
 把整条链拉起来、读出标注、并回答/闭环。
 
-**架构一句话**：浏览器 SDK（bundle 注入 admin-web）→ IndexedDB → grant 同步到
+**架构一句话**：浏览器 SDK（bundle 注入 `apps/web`）→ IndexedDB → grant 同步到
 本地 service → MCP（`@ainotation/mcp`）→ agent。
 同步桥是本项目自建的（上游只给 Vite 插件提供中间件桥，`dx serve` 挂不了），
-原理与协议细节见 `apps/admin-web/AINOTATION.md`，本技能只讲**怎么做**。
+原理与协议细节见 `apps/web/AINOTATION.md`，本技能只讲**怎么做**。
 
 ## 启动顺序（硬约束：service 必须先于 agent 的 ainotation MCP 可用）
 
@@ -76,7 +76,7 @@ bundle 内容变化会改变 manganis 指纹 → **必须重启 dx**（`--watch 
 | 症状 | 原因 | 处理 |
 |---|---|---|
 | 页面白屏、无头浏览器 tab 卡死 | 旧版 DropdownMenu busy-poll 钉死 wasm 主线程（web-visual 会话修复 `67963a3`） | 确认分支含该修复，缺则 cherry-pick，重启 dx |
-| `Err 404 - dx is not serving a web app` | wasm 还在编（首次 336s+，多会话抢核更久） | 等；判据是 `/wasm/admin-web.js` 200 且 `target/wasm32-unknown-unknown/wasm-dev/deps/*.wasm` 落盘 |
+| `Err 404 - dx is not serving a web app` | wasm 还在编（首次 336s+，多会话抢核更久） | 等；判据是 `apps/web` 的 dx 产物 `target/dx/*/debug/web/public/wasm/*.js` 落盘（目录名取 `apps/web/Dioxus.toml` 的 `[application] name`）且 cargo 中间产物 `target/wasm32-unknown-unknown/wasm-dev/deps/*.wasm` 落盘 |
 | ainotation 工具调用挂起 | service 不健康或晚于 omp 会话启动 | `just aino-service` + `/mcp reconnect ainotation` |
 | `just aino-service` 报 already locked | 别的 service 实例持锁（可能僵尸） | `pgrep -af 'cli.mjs service'` 查归属，确认无主再清 |
 | npx 拉 mcp 包超时 | 走代理慢 | 直接 `node ~/.npm/_npx/*/node_modules/@ainotation/mcp/dist/cli.mjs`（绕过 npx 解析） |
@@ -85,6 +85,6 @@ bundle 内容变化会改变 manganis 指纹 → **必须重启 dx**（`--watch 
 ## 边界
 
 - 仅开发环境：release 构建无 bundle（`debug_assertions` 门控），生产无痕。
-- grant token 含在 `apps/admin-web/assets/ainotation/connection.json`（已 gitignore），
+- grant token 含在 `apps/web/assets/ainotation/connection.json`（已 gitignore），
   泄露面仅限本机 localhost。
 - Dioxus 重渲染会替换节点：结构改动后旧标注目标失效，重新标注即可。
