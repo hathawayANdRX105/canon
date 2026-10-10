@@ -18,7 +18,11 @@
 #   跳过（只会多报不会假绿）；.min. / .map 无条件跳过。
 # 可移植: 不写死任何仓库布局；适用面自动探测，语料/判定项计数走 stderr（--stats 可
 #   单独打印），让「绿」与「真的查过 N 个文件」可区分。
-# 严重度: WARN 起步（fail_severity 与 harness 取 min）；升 FAIL 以量化基线为准。
+# 严重度: WARN 起步（fail_severity 与 harness 取 min）。升 FAIL 的前置条件 = 全部成员仓
+#   命中归零：带存量升 FAIL 会拦住每次无关提交，逼人绕闸，反而比 WARN 更糟。
+# 实测基线 2026-10-10：mono（PR #115 后）30 个 CSS / 6744 条声明 → 5 命中（3 处发光色
+#   没有语义槽、2 处浅色主题 hover 反色待维护者定配色口径）；canon 9 个 CSS / 3507 条
+#   声明 → 3 命中（kit 的 info/success 边框与 hover 底色直写色板类）。存量 8 条清零即升 FAIL。
 enabled: true
 hooks: [pre-push, merge]
 sla: l1

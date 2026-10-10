@@ -17,9 +17,13 @@
 # 可移植: 适用面 = 仓里存在含 rsx! 的跟踪 .rs（不写死 crates/… 路径，换仓扫 0 文件
 #   会显式报 NO-CORPUS 而不是假绿）；语料/判定项计数走 stderr，--stats 单独打印。
 # 口径: mode: grep 恒全仓扫描（git ls-files），无视 target 范围（canon-check 陷阱 2）。
-# 严重度: WARN 起步。mono 基线 7 处 / 4 个 token（row-text、row-tip、
-#   row-tip-anchor、scroll-subtle，均为 kit widgets.css 里文档化「留在 markup 侧」的
-#   宿主类）——allowlist 登记归零后即可升 FAIL。
+# 严重度: WARN 起步（fail_severity 与 harness 取 min）。升 FAIL 的前置条件 = 全部成员仓
+#   命中归零（带存量升 FAIL 会拦住无关提交、逼人绕闸）。
+# 实测基线 2026-10-10：mono 397 个含 rsx! 的文件 / 4279 条 class 字面量 → 0 命中
+#   （早期 7 处已清零：row-tip / row-tip-anchor / scroll-subtle 是两侧都查无定义的
+#   死类名，已删；row-text 是 kit 宿主基座类，登记进 custom/css_token_allowlist.txt）；
+#   canon 自家 web 看板 3 个文件 / 65 条 → 99 命中（样式未落 kit 配方的存量）。
+#   → canon 那 99 条清完即升 FAIL。
 enabled: true
 hooks: [pre-push, merge]
 sla: l1
