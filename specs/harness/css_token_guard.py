@@ -319,8 +319,6 @@ def main() -> int:
     ap.add_argument("--judge-utility", action="store_true",
                     help="连 @utility 段一起判（默认沿用 v1 口径不判）")
     ap.add_argument("--stats", action="store_true", help="只输出语料/判定统计 JSON")
-    ap.add_argument("--corpus-glob", default=None,
-                    help="已废弃：语料靠扫描自动发现，写死路径会造成假绿（传入即忽略）")
     args = ap.parse_args()
 
     root = subprocess.run(["git", "rev-parse", "--show-toplevel"],
@@ -328,9 +326,6 @@ def main() -> int:
     if not root:
         print("[]")
         return 0
-    if args.corpus_glob:
-        print("css_token_guard: --corpus-glob 已忽略（适用面自动探测；写死布局会假绿）",
-              file=sys.stderr)
 
     stats = {"mode": args.mode, "corpus_files": 0, "judged": 0,
              "guard_allowed": 0, "skipped_files": 0}
