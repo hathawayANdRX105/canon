@@ -1,0 +1,8 @@
+# css_guard_skip.txt —— CSS 语义 token 规则（checklist_css_token_composition.yaml，
+# harness css_token_guard.py --mode css）的**整文件**豁免名单。一行一个 fnmatch glob
+# （匹配仓库相对路径），`#` 行是注释；行内不能再跟注释。custom/ 是项目自留地，
+# canon-sync push 永不覆盖（canon 自己也走同一套口径，不自外于规则）。
+
+# Tailwind v4 构建产物（tailwindcss CLI 生成）。里面的 hex 是 @theme 变量表与 utility
+# 定义的展开结果，改它等于改构建输入；判定应落在生成它的 kit 源 CSS 上。
+crates/web/assets/tailwind.out.css

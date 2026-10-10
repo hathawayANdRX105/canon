@@ -33,7 +33,7 @@ MAPPED_DOCS = []
 
 # canon-owned 相对路径（相对 .githooks/）。目录 = 整目录分发；文件 = 单文件。
 OWNED_DIRS = ["hooks", "spec/github", "spec/workspace", "spec/cleanup",
-              "spec/code", "spec/quality", "spec/harness", "spec/docs"]
+              "spec/code", "spec/quality", "spec/harness", "spec/docs", "spec/dioxus"]
 OWNED_FILES = ["canon", "spec/dispatch.yaml", "spec/severity_overrides.yaml"]
 # 受保护：push 永不触碰
 PROTECTED = ["spec/custom"]
@@ -51,6 +51,25 @@ RETIRED_RULES = {
     "ocr-go.json",
     "ocr-javascript.json",
     "ocr-default.json",
+}
+
+# 适用面门（canon 子目录 → 判据名）：家族规则只发给真用得上的仓。dioxus 家族的判据 =
+# 目标仓有 dioxus 依赖或 `rsx!` 宏，与 harness 的 *-NO-CORPUS 自查同口径；不满足就不
+# 分发，别让别仓的 pre-commit 白背一条永不命中的进程。
+GATED_DIRS = {"spec/dioxus": "dioxus"}
+
+# 家族搬家表：文件名 → canon 现居子目录。成员仓落在别处（根层或旧子目录）的同名副本
+# push 时清掉：engine 递归加载 checklist，同名两份 = 同一条规则跑两遍。
+# 2026-10-10：dioxus 家族由 quality/ 迁到 dioxus/（mono 早就自己这么摆了，canon 没跟
+# 上，于是 canon 侧对这些规则的更新进不了 mono）。内容不一致的不删，报 conflict。
+MOVED_RULES = {
+    "checklist_dioxus_rsx_nesting.yaml": "dioxus",
+    "checklist_dioxus_style_scatter.yaml": "dioxus",
+    "checklist_web_spec.yaml": "dioxus",
+    "checklist_web_spec_deterministic.yaml": "dioxus",
+    "web_spec.json": "dioxus",
+    "checklist_css_token_composition.yaml": "dioxus",
+    "checklist_dioxus_css_semantic.yaml": "dioxus",
 }
 
 # 根层散落规则的归位表：文件名前缀 → 目标子目录。
@@ -101,12 +120,32 @@ def mapped_deployments(p_hooks: str):
     return out
 
 
-def owned_rels():
+def has_evidence(proot: str, kind: str) -> bool:
+    """目标仓是否落在某家族的适用面内（只查 git 跟踪文件，不吃工作区噪声）。"""
+    if kind != "dioxus":
+        return True
+
+    def hits(needle: str) -> list:
+        r = subprocess.run(["git", "-C", proot, "grep", "-l", "--fixed-strings", needle],
+                           capture_output=True, text=True, check=False)
+        return [ln.strip() for ln in r.stdout.splitlines() if ln.strip()]
+
+    if any(p.endswith(".toml") for p in hits("dioxus")):
+        return True
+    return any(p.endswith(".rs") for p in hits("rsx!"))
+
+
+def owned_rels(proot: str):
+    """canon-owned 相对路径；GATED_DIRS 里的目录还要目标仓有适用面证据。"""
     rels = []
     for d in OWNED_DIRS:
         base = os.path.join(CANON_HOOKS, d)
-        if os.path.isdir(base):
-            rels.extend(os.path.join(d, f) for f in walk_files(base))
+        if not os.path.isdir(base):
+            continue
+        gate = GATED_DIRS.get(d)
+        if gate and not has_evidence(proot, gate):
+            continue
+        rels.extend(os.path.join(d, f) for f in walk_files(base))
     for f in OWNED_FILES:
         if os.path.isfile(os.path.join(CANON_HOOKS, f)):
             rels.append(f)
@@ -128,9 +167,9 @@ def checklist_yamls(spec_dir: str):
 def status(project: str):
     proot = project_root(project)
     p_hooks = os.path.join(proot, ".githooks")
-    drift, only_canon, dup_layer, project_only = [], [], [], []
+    drift, only_canon, dup_layer, project_only, moved_stale = [], [], [], [], []
 
-    for rel in owned_rels():
+    for rel in owned_rels(proot):
         tgt = os.path.join(p_hooks, rel)
         if not os.path.exists(tgt):
             only_canon.append(rel)
@@ -144,24 +183,33 @@ def status(project: str):
         elif not same(src, tgt):
             drift.append(f".githooks/{rel} <- {os.path.relpath(src, CANON)}")
 
-    # 旧布局重复层：非 quality/ 的 checklist 与 quality/ 同名
+    # checklist 归属：住在 canon-owned 子目录里的按正本比对；住在别处的，与 quality/
+    # 同名 = 旧布局重复层，在 MOVED_RULES 里 = 搬家后没清干净的旧副本，其余项目自有。
+    owned_subs = {d.split("/", 1)[1] for d in OWNED_DIRS if "/" in d and d.startswith("spec/")}
     yamls = checklist_yamls(os.path.join(p_hooks, "spec"))
     for rel, abs_p in sorted(yamls.items()):
-        if not rel.startswith("quality" + os.sep):
-            q_rel = os.path.join("quality", os.path.basename(rel))
-            q_abs = os.path.join(p_hooks, "spec", q_rel)
-            if os.path.isfile(q_abs):
-                kind = "identical" if filecmp.cmp(abs_p, q_abs, shallow=False) else "DIFFERS"
-                dup_layer.append(f"{rel} ({kind} to {q_rel})")
+        base = os.path.basename(rel)
+        top = rel.split(os.sep, 1)[0] if os.sep in rel else ""
+        if top in owned_subs:
+            gate = GATED_DIRS.get("spec/" + top)
+            if gate and not has_evidence(proot, gate):
+                moved_stale.append(f"spec/{rel} (本仓无 {gate} 证据：canon 不分发该家族)")
+                continue
+            canon_p = os.path.join(CANON_SPEC, top, base)
+            if os.path.isfile(canon_p):
+                if not same(canon_p, abs_p):
+                    drift.append(f"spec/{rel}")
             else:
-                project_only.append(rel)
-        else:
-            base = os.path.basename(rel)
-            canon_q = os.path.join(CANON_SPEC, "quality", base)
-            if os.path.isfile(canon_q) and not same(canon_q, abs_p):
-                drift.append(f"spec/{rel}")
-            elif not os.path.isfile(canon_q):
                 project_only.append(f"spec/{rel}")
+            continue
+        q_abs = os.path.join(p_hooks, "spec", "quality", base)
+        if os.path.isfile(q_abs):
+            kind = "identical" if filecmp.cmp(abs_p, q_abs, shallow=False) else "DIFFERS"
+            dup_layer.append(f"{rel} ({kind} to quality/{base})")
+        elif base in MOVED_RULES:
+            moved_stale.append(f"spec/{rel} (正本已迁 spec/{MOVED_RULES[base]}/，push 会删)")
+        else:
+            project_only.append(rel)
 
     # 根层散落：可自动归位的 + 内容打架的（都不改工作区，只报）
     spec_root = os.path.join(p_hooks, "spec")
@@ -188,6 +236,7 @@ def status(project: str):
     print(f"== {project}: canon status ==")
     for name, items in [("DRIFT (canon newer)", drift), ("ONLY-CANON (missing)", only_canon),
                         ("DUPLICATE-LAYER (root copy of quality/)", dup_layer),
+                        ("MOVED/STALE (旧副本或适用面外)", moved_stale),
                         ("ROOT-LAYER (push 会归位)", root_move + root_dup),
                         ("ROOT-CONFLICT (需人工合并/退役)", root_conflict),
                         ("PROJECT-ONLY (protected)", project_only)]:
@@ -258,12 +307,47 @@ def relocate_root_specs(p_hooks: str):
     return moved, dropped, conflicts
 
 
+def retire_moved(p_hooks: str):
+    """清掉搬家规则留在旧位置的副本（内容与正本一致才删，不一致报 conflict）。
+
+    engine 递归加载 spec/ 下所有 checklist，同一条规则摆两份就跑两遍（两倍的进程与
+    两倍的报告）。正本位置（MOVED_RULES 的目标子目录）不动；正本还没落到目标位置时
+    也不动——那是唯一副本，删了就丢规则。
+    """
+    spec = os.path.join(p_hooks, "spec")
+    dropped, conflicts = [], []
+    if not os.path.isdir(spec):
+        return dropped, conflicts
+
+    def walk(d: str):
+        for entry in sorted(os.scandir(d), key=lambda e: e.name):
+            if entry.is_dir():
+                if entry.name not in ("custom", "__pycache__"):
+                    walk(entry.path)
+                continue
+            sub = MOVED_RULES.get(entry.name)
+            if not sub or os.path.basename(d) == sub:
+                continue
+            keeper = os.path.join(spec, sub, entry.name)
+            if not os.path.isfile(keeper):
+                continue
+            if filecmp.cmp(entry.path, keeper, shallow=False):
+                os.remove(entry.path)
+                dropped.append(os.path.relpath(entry.path, p_hooks))
+            else:
+                conflicts.append(f"{os.path.relpath(entry.path, p_hooks)} vs "
+                                 f"spec/{sub}/{entry.name} DIFFERS")
+
+    walk(spec)
+    return dropped, conflicts
+
+
 
 def push(project: str):
     proot = project_root(project)
     p_hooks = os.path.join(proot, ".githooks")
     n = 0
-    for rel in owned_rels():
+    for rel in owned_rels(proot):
         src = os.path.join(CANON_HOOKS, rel)
         tgt = os.path.join(p_hooks, rel)
         if same(src, tgt):
@@ -280,19 +364,21 @@ def push(project: str):
         n += 1
     retired = remove_retired(p_hooks)
     moved, dropped, conflicts = relocate_root_specs(p_hooks)
+    stale, stale_conflicts = retire_moved(p_hooks)
+    conflicts += stale_conflicts
     msg = f"pushed {n} file(s) -> {p_hooks}"
-    if moved or dropped or retired:
+    if moved or dropped or retired or stale:
         msg += (f"; relocated {len(moved)} root spec(s), removed {len(dropped)} duplicate(s)"
-                f", retired {len(retired)} rule(s)")
+                f", retired {len(retired)} rule(s), cleared {len(stale)} moved copy(s)")
     print(msg)
     for c in conflicts:
-        print(f"  CONFLICT (needs manual merge, left at root): {c}")
+        print(f"  CONFLICT (needs manual merge, left in place): {c}")
     return 0
 
 
 def collect(project: str):
     proot = project_root(project)
-    canon_names = {os.path.basename(r) for r in owned_rels()}
+    canon_names = {os.path.basename(r) for r in owned_rels(proot)}
     p_hooks = os.path.join(proot, ".githooks")
     p_spec = os.path.join(p_hooks, "spec")
     print(f"== {project}: collect candidates (项目有, canon 无) ==")
