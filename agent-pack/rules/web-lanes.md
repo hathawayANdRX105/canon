@@ -1,6 +1,6 @@
 # Web 双车道流程（web-dev / webfix 角色）
 
-**什么时候用**：改动只落在 web 域（`crates/web/*`、`apps/admin-web`、`apps/tavern-web`）的
+**什么时候用**：改动只落在 web 域（`crates/web/*`、`apps/web`、`apps/kit-demo`）的
 快速开发。其他域（gateway / harness / api / contract）不受影响，PR 照旧直提 `main`。
 
 本文件是 `todo/web-dev-and-web-fix.md`（维护者原始策略）的修订版，补了四个洞：
@@ -107,7 +107,7 @@ merge 期跑 `github/pr_gates` + clippy 等。结论：
 | 时机 | 门禁 | 对本流程的影响 |
 |---|---|---|
 | 每次本地 commit/push | ~~doc_sync~~（规则已整条删除，README 不再受 gate 管） | 新 crate 不必建 README，职责写进 crate 代码注释与根 README |
-| 每次本地 commit/push | shared_components_check（≥2 个 page 共用的组件必须进共享 crate）FAIL | 组件被第二个 page 用时主动搬 `ui-components` |
+| 每次本地 commit/push | shared_components_check（≥2 个 page 共用的组件必须进共享 crate）FAIL | 组件被第二个 page 用时主动搬 `crates/web/ui-kit` |
 | 每次本地 commit/push | structure_check（面板禁直用 `mock::`）FAIL / copy_constants WARN | 老规矩，见 `.agent/rules/gates.md` |
 | 仅 web-dev→main 的 PR | pr_labels FAIL（type label）、pr_crg_review FAIL（PR 需 CRG 结论评论） | **review 角色的产出就是这条评论**，闭环 |
 | 仅 merge 期 | clippy FAIL、crg_impact WARN（diff 跨 3+ crate） | webfix 角色发布前本地跑一次 clippy |

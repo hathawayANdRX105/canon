@@ -15,7 +15,7 @@
 | 某个卡片报 404，但用 curl 或干净浏览器访问同一个地址是 200 | 浏览器缓存里存着之前代理配置错误时的响应，直接被重放——**请求根本没发出去** | 在 `dx` 的日志里搜这个路径，**搜不到请求就是实锤**。处理：清浏览器缓存或重启 webview |
 | 本地构建卡住不动（rustc 长时间没有任何进展 / cargo 等锁） | 另一个会话的构建进程被限流器暂停了，一直持有 cargo 全局锁 | 先 `ps -eo pid,stat,args \| awk '$2 ~ /^T/'` 找出被暂停的进程，再用 `readlink /proc/<pid>/cwd` 确认是哪个目录的。**属于活会话的用 `kill -CONT` 恢复，不要 kill**；只有确认无主的才杀 |
 | `just dev-web` 报 `Failed to find binary package to build` | 已修复（2026-09-18）：配方里用了 `$(justfile_directory)`，但 just 没有这个变量，shell 展开成空字符串，导致 `cd /apps/admin-web` 失败 | 现在已改成 `justfile()` 内置函数，正常可用 |
-| 改了 `crates/web/ui-components` 之类的依赖 crate（或任何代码），页面没变化 | `dx` 不自动重建 wasm（`--watch false`），且只对结构变更重跑 bindgen | 跑 `just dev-web-rebuild <port>`（一键重编+重启；免登录档加 `debug`），浏览器再强刷一次 |
+| 改了 `crates/web/ui-kit` 之类的依赖 crate（或任何代码），页面没变化 | `dx` 不自动重建 wasm（`--watch false`），且只对结构变更重跑 bindgen | 跑 `just dev-web-rebuild <port>`（一键重编+重启；免登录档加 `debug`），浏览器再强刷一次 |
 | 第一次跑 `dx` 很久还没监听端口，以为启动失败 | 首次编译 wasm 很慢，实测要 336 秒 | 等。判断是否正常：看 dx 的日志输出有没有在编译 |
 | 改了 `crates/api` 的代码，但前端行为没变 | 后端是常驻进程，不会自动加载新代码 | 跑 `just dev-backend update`（约 3 秒，会重建并重启，**登录状态不会丢**） |
 
