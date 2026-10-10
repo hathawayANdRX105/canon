@@ -160,9 +160,9 @@
 
 ## 主题八：Checklist（CK-01，gate checklist，**已实现**）
 
-- `.githooks/spec/quality/checklist_*.yaml`：项目级 LLM 检查清单；catalog 只扫
-  `quality|code|cleanup|workspace|github` 五个子目录（spec 根层与 `custom/` 不加载），
-  目录内按字典序跑
+- `checklist_*.yaml` 住在 `.githooks/spec/` 的**任意子目录**都会被收上来（`checklist`
+  是跨目录 topic，见 `catalog::topic_of()`）；根层文件算不出 topic 因而不执行，
+  `custom/` 不参与加载。目录内按字典序跑，同一规则放两个目录 = 跑两遍
 - `mode: diff`（默认）传 `git diff <scope>` 给 harness；`mode: file` 每个变更文件单独传全文
 - harness = 任意可执行文件，stdout 必须是 finding JSON 数组（与 code/CRG harness 同协议）
 - 严重度合并：harness 报的与 yaml `fail_severity` **就高取大**（harness FAIL 永远阻断）
@@ -248,6 +248,21 @@ ferrite 是两层布局（`crates/<domain>/<crate>/src`），而规则原先写�
 | `review_chain` | l3 | pre-push, merge | INFO（harness 透传） | 模型审查三档降级：jev（`TYPESAFE_API_KEY`）→ 小模型（`REVIEW_LLM_*`）→ 无（INFO）；per-question 阈值，p≥fail FAIL；`tier`/`confidence` extra |
 
 close 路径另有 `done_when_judge`（`github_issues.yaml`）：GT-04 机械门过后，Done when 每条过同一套三档模型评审（问题集 `harness/jev_questions_done_when.json`，`default_fail: 0.85`），p(未达标)≥0.85 FAIL 硬拦；任何基础设施失败降 `DWJ-SKIPPED` INFO 不阻断。
+
+### dioxus 家族（canon `specs/dioxus/`，只发给有 dioxus 证据的仓）
+
+> 分发判据 = 目标仓跟踪文件里有 dioxus 依赖或 `rsx!` 宏（`scripts/canon-sync` 的
+> `GATED_DIRS` + `has_evidence()`）；不满足的仓一条都收不到。规则自身也会自查语料，
+> 语料为空输出 `*-NO-CORPUS` INFO（绿 ≠ 查过，见 `specs/harness/css_token_guard.py`）。
+
+| 名字 | SLA | 触发 | 严重度 | 检测内容 |
+|---|---|---|---|---|
+| `dioxus_rsx_nesting` | l1 | pre-push, merge | WARN | rsx 组件嵌套 >1 层（`dioxus_web.py` 花括号栈计数，`--nesting-limit 1`，只判 `--scope changed`） |
+| `dioxus_style_scatter` | l1 | pre-push, merge | WARN | rsx 里成组散写 class（`DIOXUS-INLINE-CLASS`）、硬编码 `#hex`、原始色板类（`dioxus_web.py --only style`） |
+| `dioxus_css_semantic` | l1 | pre-push, merge | WARN | rsx `class:` 字面量只许语义类（`ui-*`/`role-*`/data-*）；项目自有物理类只能登记 `custom/css_token_allowlist.txt`（`css_token_guard.py --mode rsx`） |
+| `css_token_composition` | l1 | pre-push, merge | WARN | kit CSS 规则体禁 `@apply` 原始色板类与裸 `#hex`；自定义属性行/渐变/带 alpha 的 black/white 不判，生成物与样张走 `custom/css_guard_skip.txt`（`css_token_guard.py --mode css`） |
+| `web_spec_deterministic` | l1 | pre-push, merge | WARN | web-spec R1.3（一组件一体一个 `rsx!`）+ H3（rsx 元素体内中文为 0），纯计数不付 LLM |
+| `web_spec` | l2 | pre-push, merge | WARN（`optional: true`） | web-spec 语义层 11 问句逐文件 jev 判决（条文全文在 `dioxus/web_spec.json` 的 intent）；无 key 时降 WARN 不清零 |
 
 ### 项目侧 checklist（成员仓自带，未收录进 canon `specs/quality/`）
 
