@@ -1,0 +1,40 @@
+# CK-DIOXUS-CSS-SEMANTIC: rsx 只许语义类（样式收敛两支柱之一，泛化 ferrite PR #30/#45）
+#
+# 为什么: rsx 里散写 Tailwind utility，主题变更无法一次传播、语义漂移不可见
+#   （ui-component-principles §4.1 的推广条款）。ferrite 两次收敛（页面侧 #30、
+#   组件侧 #45）验证了这条契约可全量落地：rsx 只发射 kit 语义类（ui-*/role-*）
+#   + data-* 状态属性，样式真身住 kit 资产 CSS。
+# 判据（css_token_guard.py --mode rsx，l1 确定性）:
+#   RSX-RAW-UTILITY  class 字符串字面量中出现 Tailwind utility 形态 token
+#   RSX-NO-CORPUS    跟踪 .rs 里没有 rsx! = 本仓不在适用面内（INFO：绿不等于查过）
+# 豁免（规则内置 + 项目 allowlist 双层）:
+#   - 动态插值（{expr}）、data-*/aria-* 属性值、非 Tailwind 形态的自定义物理类
+#   - 通用语义前缀 ui- / role- / cva-（跨仓成立的那一小撮）
+#   - 项目 allowlist：.githooks/spec/custom/css_token_allowlist.txt（每行一 token，
+#     # 注释；custom/ 目录 canon-sync 永不触碰）——项目自有物理类（row-text、
+#     card-frame 之类 kit 资产里定义的宿主类）、文档化覆盖槽（avatar size_parts、
+#     dropdown w-full）与 demo 展示画布**只能**在这里登记，不写死进规则。
+# 可移植: 适用面 = 仓里存在含 rsx! 的跟踪 .rs（不写死 crates/… 路径，换仓扫 0 文件
+#   会显式报 NO-CORPUS 而不是假绿）；语料/判定项计数走 stderr，--stats 单独打印。
+# 口径: mode: grep 恒全仓扫描（git ls-files），无视 target 范围（canon-check 陷阱 2）。
+# 严重度: WARN 起步。mono 基线 7 处 / 4 个 token（row-text、row-tip、
+#   row-tip-anchor、scroll-subtle，均为 kit widgets.css 里文档化「留在 markup 侧」的
+#   宿主类）——allowlist 登记归零后即可升 FAIL。
+enabled: true
+hooks: [pre-push, merge]
+sla: l1
+fail_severity: WARN
+match:
+  paths_include: ["**/*.rs"]
+  paths_exclude: ["target/", ".wt/", "node_modules/"]
+mode: grep
+harness:
+  command: "python3"
+  args:
+    - ".githooks/spec/harness/css_token_guard.py"
+    - "--mode"
+    - "rsx"
+    - "--allow-file"
+    - ".githooks/spec/custom/css_token_allowlist.txt"
+optional: false
+timeout: 60

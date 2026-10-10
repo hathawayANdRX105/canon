@@ -23,6 +23,11 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: .
+      # python harness 的判定语义靠样张钉住（语境/豁免口径极易回归，见文件头）
+      - name: Harness self-test (python)
+        run: python3 specs/harness/test_css_token_guard.py
+      - name: Distribution self-test (python)
+        run: python3 scripts/test_canon_sync.py
       - name: Format check
         run: cargo fmt --all -- --check
       - name: Build

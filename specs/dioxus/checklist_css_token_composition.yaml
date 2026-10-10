@@ -1,0 +1,39 @@
+# CK-CSS-TOKEN-COMPOSITION: 语义 CSS 组合纪律（样式收敛两支柱之二，泛化 PR #30/#45）
+#
+# 为什么: kit 资产 CSS 是样式唯一真源（ui-component-principles §4.1）。components
+#   层规则体里出现裸 #hex 或 @apply 原始色板类（zinc/emerald-…-NNN）= 绕开
+#   theme.css 语义 token，主题变更再次散架。PR #45 已把 ferrite kit 内全部裸色
+#   值绑到 var(--*)——本规则锁住「不再新增」。
+# 判据（css_token_guard.py --mode css，l1 确定性，语料靠 git 跟踪清单扫描）:
+#   CSS-RAW-PALETTE-APPLY  规则体 @apply 引用原始色板类（bg-zinc-800、text-emerald-500，
+#                          以及不带 alpha 的 white/black——主题切换不传播，ferrite #101）
+#   CSS-HARDCODED-HEX      规则体普通属性值里的裸 #hex（同行无 var(--) 且非渐变语境）
+#   CSS-GUARD-NO-CORPUS    语料为空 = 本仓不在适用面内（INFO：绿不等于查过）
+# 口径: 扫全部跟踪 CSS，逐声明判。自定义属性行（--x: #hex）**永远豁免**——那是色值的
+#   住处，无论住在 :root、`.dark, [data-theme=…]` 还是组件局部；@theme / @layer tokens
+#   整块豁免；@utility 段默认不判（--judge-utility 摸底）；@media/@supports/@layer 继承
+#   外层。带 alpha 的 black/white 叠加层（bg-black/60、border-white/15）与渐变不判。
+# 豁免: 生成物与厂商快照整文件走项目侧 .githooks/spec/custom/css_guard_skip.txt
+#   （一行一个 glob，# 注释）；个别行用 /* guard:allow 理由 */。名单缺失 = 一个都不
+#   跳过（只会多报不会假绿）；.min. / .map 无条件跳过。
+# 可移植: 不写死任何仓库布局；适用面自动探测，语料/判定项计数走 stderr（--stats 可
+#   单独打印），让「绿」与「真的查过 N 个文件」可区分。
+# 严重度: WARN 起步（fail_severity 与 harness 取 min）；升 FAIL 以量化基线为准。
+enabled: true
+hooks: [pre-push, merge]
+sla: l1
+fail_severity: WARN
+match:
+  paths_include: ["**/*.css"]
+  paths_exclude: ["target/", ".wt/", "node_modules/", "**/node_modules/**"]
+mode: grep
+harness:
+  command: "python3"
+  args:
+    - ".githooks/spec/harness/css_token_guard.py"
+    - "--mode"
+    - "css"
+    - "--skip-file"
+    - ".githooks/spec/custom/css_guard_skip.txt"
+optional: false
+timeout: 60
