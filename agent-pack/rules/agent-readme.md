@@ -37,21 +37,8 @@
 3. 引用别的文档一律写全路径（例如 `.agent/rules/dev-env.md`；gate 规则总览走 `gate-spec` skill，各仓 `.githooks/spec/docs/SPEC_OVERVIEW.md` 为播种副本），
    不要写「见 xxx.md」「见 §3.3」「见上表」这类要猜的指代。
 
-## `tasks/` —— 任务书
-
-一次性的活。跟 skill 的区别：skill 是可复用的能力包（被工具自动加载）；
-任务书是「让某个 agent 去做某件事」的工单，做完就失效。
-
-**用法**：复制 `.agent/tasks/TEMPLATE.md`，改名为任务名（如 `fix-ci-silent-skip.md`），
-按模板填完。做完之后勾掉验收项、在 PR 评论留下证据，然后删掉这份文件。
-
-**现成的任务书**（已按 ferrite 约定适配，直接用）：
-
-| 文件 | 什么时候用 |
-|---|---|
-| `.agent/tasks/dev.md` | 从零开发一个功能 / 修复的完整流程（建 worktree、draft PR、拆任务、派子代理、审查、测试、合并） |
-| `.agent/tasks/closeout-pr.md` | PR 已就绪后的收尾：审查、smoke、修复、合并、清理 |
-| `.agent/tasks/TEMPLATE.md` | 空白模板——上面两份不适配时复制它从头写 |
+> `tasks/`（任务书目录）已移除——工单改由 `task-brief` / `pr-orchestration` 等
+> skill 直接生成，不再在仓里维护模板文件。
 
 要点：
 - 工作目录必须写**全局绝对路径**——子代理一律按这个路径工作，禁止自己推导相对路径

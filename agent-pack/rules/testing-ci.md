@@ -34,7 +34,7 @@
   ```rust
   // ⚠️ DB 门禁：此用例在 CI 上真跑（test 关卡带 Postgres 服务）；连不上库会 return 并被记为 passed（假绿）。
   //   本地替代：FERRITE_E2E_DATABASE_URL=postgres://ferrite:ferrite@127.0.0.1:5433/ferrite_e2e \
-  //   cargo test -p tests-e2e --test <文件名>
+  //   cargo test -p tests-http --test <文件名>
   ```
 
 ---
@@ -108,7 +108,7 @@ CI 全部在公开壳仓 `hathawayANdRX105/ferrite-ci` 跑（计费原因见 AGE
 
 **残留的失效信号**：门禁写法是"连不上库就 return"——服务容器缺失 / 故障时，`tests/` 下的 e2e（连接 URL 取 `FERRITE_E2E_DATABASE_URL`，未设时本地默认 `postgres://ferrite:ferrite@127.0.0.1:5433/ferrite_e2e`）打印 `skipping e2e: postgres unreachable` 然后 `return`，被记为通过。每个测试连接超时 30 秒，N 个测试就是 N×30 秒。**现在出现 30 秒整数倍 = PG 服务或环境变量坏了，是 CI 事故**：拉壳仓 run 日志查 service 段，修好重跑，不当「正常跳过」放行。
 
-例外：`tests/gateway_e2e.rs` 用 MockEgress 模拟上游，不连数据库，任何环境都真跑。
+例外：`tests/gateway_http.rs` 用 MockEgress 模拟上游，不连数据库，任何环境都真跑。
 
 **本地替代**：`FERRITE_E2E_DATABASE_URL` 指向本地真库（Docker 容器 `uf-local-postgres` 的 5433 端口，`ferrite_e2e` 库）只用于开发中快速复现单用例，不承担验收职责。
 

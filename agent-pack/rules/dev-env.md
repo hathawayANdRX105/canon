@@ -2,7 +2,7 @@
 
 **什么时候读这份文档**：要启动开发环境、前端报错连不上、构建卡住、或改完代码页面没变化的时候。
 
-**这份文档解决什么**：本地跑着一套**多会话共享**的服务（后端 3211、数据库、前端 8090）。
+**这份文档解决什么**：本地跑着一套**多会话共享**的服务（后端 3211、数据库、前端 auto 端口 10000-16000）。
 不知道怎么启动、或者误操作停掉/重置了共享服务，会影响其他所有正在开发的人。
 
 ---
@@ -11,12 +11,13 @@
 
 | 你看到的现象 | 真正的原因 | 怎么办 |
 |---|---|---|
-| 页面报 500，提示 `Connection refused` | 后端或前端进程已经死了。最常见的原因是用 `nohup ... &` 启动——工具调用一结束，整个进程组被回收，服务静默死亡 | 先跑 `just dev-check` 看 3211 和 8090 是否在监听；后端用 `just dev-backend start` 重启，前端用持久后台任务重启 |
+| 页面报 500，提示 `Connection refused` | 后端或前端进程已经死了。最常见的原因是用 `nohup ... &` 启动——工具调用一结束，整个进程组被回收，服务静默死亡 | 先跑 `just dev-check` 看 3211 和 10000-16000 前端端口是否在监听；后端用 `just dev-backend start` 重启，前端用持久后台任务重启 |
 | 某个卡片报 404，但用 curl 或干净浏览器访问同一个地址是 200 | 浏览器缓存里存着之前代理配置错误时的响应，直接被重放——**请求根本没发出去** | 在 `dx` 的日志里搜这个路径，**搜不到请求就是实锤**。处理：清浏览器缓存或重启 webview |
 | 本地构建卡住不动（rustc 长时间没有任何进展 / cargo 等锁） | 另一个会话的构建进程被限流器暂停了，一直持有 cargo 全局锁 | 先 `ps -eo pid,stat,args \| awk '$2 ~ /^T/'` 找出被暂停的进程，再用 `readlink /proc/<pid>/cwd` 确认是哪个目录的。**属于活会话的用 `kill -CONT` 恢复，不要 kill**；只有确认无主的才杀 |
 | `just dev-web` 报 `Failed to find binary package to build` | 已修复（2026-09-18）：配方里用了 `$(justfile_directory)`，但 just 没有这个变量，shell 展开成空字符串，导致 `cd /apps/admin-web` 失败 | 现在已改成 `justfile()` 内置函数，正常可用 |
 | 改了 `crates/web/ui-kit` 之类的依赖 crate（或任何代码），页面没变化 | `dx` 不自动重建 wasm（`--watch false`），且只对结构变更重跑 bindgen | 跑 `just dev-web-rebuild <port>`（一键重编+重启；免登录档加 `debug`），浏览器再强刷一次 |
 | 第一次跑 `dx` 很久还没监听端口，以为启动失败 | 首次编译 wasm 很慢，实测要 336 秒 | 等。判断是否正常：看 dx 的日志输出有没有在编译 |
+| 页面显示另一个分支/worktree 的内容，或一直停在"正在重新构建"占位页 | 同一 bin target（admin-web）的所有会话共用同一个产物目录 `target/dx/admin-web/debug/web/public`（dev-web 配方**故意**把 `CARGO_TARGET_DIR` 共享到主仓 target/，保持 cargo 指纹 + sccache 跨会话命中），N 个会话 = N 个写者写同一个目录，伺服的是最后那个构建 | 先跑 `just dev-web status`：列出所有在跑的 dx serve（app/pid/端口/项目目录）+ 各产物目录 mtime，看清哪个 worktree 拥有那个页面；复用那个 server 的端口，或先在它的 worktree 里 `just dev-web stop`。新起的实例会被 `scripts/dev-web.sh` 自动拒绝（打印对方的 pid/项目目录/端口；确要强行用 `FORCE=1 just dev-web <port> [mode]`，风险自担） |
 | 改了 `crates/api` 的代码，但前端行为没变 | 后端是常驻进程，不会自动加载新代码 | 跑 `just dev-backend update`（约 3 秒，会重建并重启，**登录状态不会丢**） |
 
 ---
@@ -25,7 +26,7 @@
 
 - **所有启停、灌数据、体检操作尽可能走 `justfile` 里的配方**，除非出现额外情况，可以使用bash调用。
   命令清单在 `justfile` 文件顶部的"使用场景速查"，出问题看文件末尾的"疑难问题 → 推荐处理"。
-- **开工前先跑一次 `just dev-check`**：一条命令同时检查 3211、8090 的监听状态和后端运行状态。
+- **开工前先跑一次 `just dev-check`**：一条命令同时检查 3211、10000-16000 前端端口的监听状态和后端运行状态。
 - **长驻服务必须用会话的持久后台任务来启动**（不是 `nohup &`），启动后要确认端口真的在监听，再往下做别的事。
   「持久后台任务」指的是你所在 agent 运行时的**托管后台进程功能**
   （omp 的 `hub start` / `herdr` / 其它运行时的等价物）——不是 shell 的 `&`。
@@ -42,13 +43,14 @@
 
 | 步骤 | 命令 | 说明 |
 |---|---|---|
-| 1. 体检 | `just dev-check` | 检查 3211 / 8090 监听状态和后端进程 |
+| 1. 体检 | `just dev-check` | 检查 3211 / 10000-16000 前端端口监听状态和后端进程 |
 | 2. 确认数据库容器 | `docker ps --filter name=uf-local-postgres` | 状态必须是 Up。如果没起：`docker start uf-local-postgres` |
 | 3. 灌测试数据 | `just db-seed` | 可以重复执行（幂等）。数据乱了用 `just db-reset && just db-seed` |
 | 4. 确认后端起没起 | `just dev-backend status` | 已经在跑就**不要**再 start。没起才 `just dev-backend start` |
 | 5. 验证后端 | `curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3211/api/dashboard` | 返回 **401 是正常的**（说明服务活着、接口需要登录）；返回连接被拒说明没起来 |
-| 6. 启动前端 | `just dev-web 8090`（用持久后台任务，见第二节） | 启动后确认 8090 在监听；`curl http://127.0.0.1:8090/` 应该返回 200。`dx` 是 Dioxus 的官方开发 CLI（装在 PATH 里，`dx --help` 可查），配方内部就是调它 |
-| 7. 免登录调前端 | `just dev-web 8090 debug` | 与上一行唯一区别：编译时多开 `debug-auto-login` feature（自动登录测试账号 `admin_dev`）。想手动测登录页就打开 `#login` 锚点；自己点"退出登录"不会被自动重登顶掉 |
+| 6. 启动前端 | `just dev-web`（默认普通档 = 手动登录；端口 auto：在 10000-16000 随机位分配，占用则 +1 换最多 3 次；用持久后台任务，见第二节；dx 日志在 `/tmp/ferrite-dev-web-<worktree>.log`） | 分配结果打 stdout（`== auto 端口分配: <port> ==`）；`ss -ltn` 确认该端口在监听，`curl http://127.0.0.1:<port>/` 应该返回 200。`dx` 是 Dioxus 的官方开发 CLI（装在 PATH 里，`dx --help` 可查），配方内部就是调它。**同 bin target 已有别的 worktree 的 dx 在跑时，start 会打印对方信息并拒绝再起第二个**（共用产物目录，后起者会静默伺服别人的构建）；确要自起先 `just dev-web status` 看清归属 |
+| 7. 免登录调前端 | `just dev-web debug`（auto 端口；= `just dev-web <port> debug`；普通档 `just dev-web <port>`） | 与上一行唯一区别：编译时多开 `debug-auto-login` feature（自动登录测试账号 `admin_dev`）。想手动测登录页就打开 `#login` 锚点；自己点"退出登录"不会被自动重登顶掉 |
+| 8. 停/体检前端 dx | `just dev-web stop` / `just dev-web status` | `stop` 只停**本 worktree 脚本起过**的 dx 实例（`/tmp/ferrite-dev-web-<worktree>.state` 识别 + cmdline 归属校验，拒绝碰别的进程）；`status` 列出所有在跑的 dx serve（app/pid/端口/项目目录）+ 各 bin target 产物目录 mtime。页面显示另一个分支的内容时先跑它 |
 
 **前端报 `Connection refused` 时，先看后端**：前端 `dx` 的代理指向 3211，后端死了前端必然报错。
 先跑 `just dev-check` 确认后端状态，不要先去折腾前端。
@@ -62,7 +64,7 @@
 怎么做：
 
 1. 换端口启动独立后端：`FERRITE_DEV_LISTEN=127.0.0.1:<端口> scripts/dev-backend.sh start`
-2. 编辑**本 worktree 自己的** `config/config.toml`（这个文件不进 git，每个 worktree 独立），把数据库连接指向另一个库
+2. 把数据库连接指向另一个库：编辑**本 worktree 自己的** `config/config.toml`（不进 git，每个 worktree 独立），或不建文件直接 `DATABASE_URL=<连接串> ...`（两种途径等价，文件字段优先）
 3. 灌数据到那个库：`just PG_DB=<你的库名> db-seed`（`justfile` 里的 `PG_CONTAINER` / `PG_USER` / `PG_DB` 三个变量都可以这样覆盖）
 
 **两条红线**：
@@ -78,3 +80,28 @@
 - 共享后端（3211）的启停只通过 `scripts/dev-backend.sh`；遇到 404 / 502 先判断存活状态再动。
 - 用户报错但 curl 测试正常时，先怀疑浏览器缓存重放。服务端无法清除已经缓存的内容，只能让用户清缓存或重启 webview。后端 `/api` 和 `/tavern` 已经加了 `Cache-Control: no-store` 防止再发生。
 - 历史坑（已修）：`just dev-web` 曾经用不存在的 `$(justfile_directory)`，导致 `cd` 到错误目录。
+
+---
+
+## 五、codegraph 索引（图谱工具引导）
+
+`cg_query` / `cg_callers` / `cg_callees` / `cg_impact` / `cg_affected` 五个工具是**进程内只读**查询，直接读 `.codegraph/codegraph.db`（由外部 `codegraph` CLI 维护的符号/调用图索引）。harness 侧**零 spawn**：不启动任何子进程，只开 db 查。
+
+**引导（bootstrap）**：
+
+1. 首次使用先 `codegraph init`（在仓库根；首建较慢，之后增量快）。它生成 `.codegraph/codegraph.db`（nodes / edges / FTS5）。
+2. 工具从 `path` 参数（默认 `.`，向上最多 10 层）自动定位该 db；**索引缺失时错误会直接提示 `codegraph init`**，agent 可用 bash 补建。
+3. `.codegraph/` 已 gitignore：索引是本地缓存，不进 git，可随时删掉重建。
+
+**何时用哪个**：
+
+| 意图 | 工具 |
+|---|---|
+| 按名/语义找符号（含 docstring / 签名） | `cg_query` |
+| 某符号的直接调用方 / 被调方（单跳 calls 边） | `cg_callers` / `cg_callees` |
+| 改这个符号会波及谁（反向 BFS，depth 默认 2、上限 3） | `cg_impact` |
+| 给定变更文件列表，该跑哪些测试文件（反向 BFS + 测试文件过滤） | `cg_affected` |
+
+**不要用我**：字面串检索用 `grep`；找文件路径用 `glob`；codegraph 是**符号 / 调用图关系**，不是文本搜索。
+
+**G4 局限**：Rust 域跨文件调用边可能缺失（外部索引解析限制），结果供参考；承重判断前建议与 `grep` 交叉验证。五个工具的每条成功输出都附了这一行提示。
