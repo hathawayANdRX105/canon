@@ -7,6 +7,43 @@
 use gate::shared::{Finding, Severity, apply_check_allowlist, apply_family_severity};
 
 #[test]
+fn catalog_load_covers_every_topic_directory() {
+    // Regression: the sub-directory list was hardcoded, so dioxus/ rules were
+    // invisible to spec_catalog/spec_explain while the engine still ran them.
+    // Any directory holding an `enabled: true` checklist must be visible.
+    let dir = tempfile::tempdir().unwrap();
+    for sub in ["quality", "dioxus", "some_new_topic"] {
+        std::fs::create_dir_all(dir.path().join(sub)).unwrap();
+        std::fs::write(
+            dir.path()
+                .join(sub)
+                .join(format!("checklist_{sub}_thing.yaml")),
+            "enabled: true\nfail_severity: WARN\nhooks: [merge]\nharness: {command: sh, args: []}\n",
+        )
+        .unwrap();
+    }
+    // A directory without rules must contribute nothing, not blow up.
+    std::fs::create_dir_all(dir.path().join("docs")).unwrap();
+    std::fs::write(dir.path().join("docs/notes.yaml"), "title: just docs\n").unwrap();
+
+    let rules = gate::catalog::load(dir.path());
+    let sources: Vec<_> = rules.iter().map(|r| r.source.as_str()).collect();
+    assert_eq!(
+        sources.len(),
+        3,
+        "every topic dir must be catalogued, got {sources:?}"
+    );
+    assert!(
+        sources.iter().any(|s| s.starts_with("dioxus/")),
+        "{sources:?}"
+    );
+    assert!(
+        sources.iter().any(|s| s.starts_with("some_new_topic/")),
+        "a newly added topic dir must not be silently skipped: {sources:?}"
+    );
+}
+
+#[test]
 fn broken_checklist_spec_blocks_instead_of_silently_dropping() {
     let dir = tempfile::tempdir().unwrap();
     std::fs::write(

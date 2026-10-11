@@ -166,11 +166,21 @@ pub fn load(spec_dir: &Path) -> Vec<Rule> {
     let dispatch = read_yaml(&spec_dir.join("dispatch.yaml"));
     let mut out: Vec<Rule> = vec![];
 
-    for sub in ["quality", "code", "cleanup", "workspace", "github"] {
-        let dir = spec_dir.join(sub);
-        if !dir.is_dir() {
-            continue;
-        }
+    // Enumerate the topic directories instead of listing them here: a new
+    // topic dir (dioxus/…) was silently invisible to spec_catalog/spec_explain
+    // until this scan existed, because only the engine's filesystem walk knew
+    // about it. Directories without `enabled: true` yamls yield nothing
+    // (checklist_rule returns None), so docs/ harness/ ledger/ are harmless.
+    let mut subs: Vec<String> = std::fs::read_dir(spec_dir)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .filter(|e| e.path().is_dir())
+        .map(|e| e.file_name().to_string_lossy().into_owned())
+        .collect();
+    subs.sort();
+    for sub in subs {
+        let dir = spec_dir.join(&sub);
         let mut files: Vec<_> = std::fs::read_dir(&dir)
             .into_iter()
             .flatten()
@@ -182,7 +192,7 @@ pub fn load(spec_dir: &Path) -> Vec<Rule> {
         for f in files {
             if sub == "github" {
                 out.extend(github_rules(&f, spec_dir));
-            } else if let Some(mut r) = checklist_rule(&f, sub) {
+            } else if let Some(mut r) = checklist_rule(&f, &sub) {
                 // Topic-driven files (code_*, cleanup_*, workspace_*) carry no
                 // `hooks:` of their own; dispatch.yaml is the routing table.
                 if r.hooks.is_empty() {
