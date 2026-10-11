@@ -53,6 +53,8 @@ MAX_FILES = 20          # per run, most-changed first is not knowable; stdin ord
 STATE_CAP = 16_000      # chars per jev state
 POOL = 8                # concurrent jev calls
 TIMEOUT = 60            # per jev call, seconds
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import jev_env  # endpoint pair resolution (JEV_* wins over legacy TYPESAFE_*)
 
 
 def parse_files(payload: str):
@@ -211,9 +213,7 @@ def main():
     rev = rev or os.environ.get("GATE_BASE", "")
     if rev:
         files = [f for f in files if f[0] in changed_since(root, rev)]
-    key = os.environ.get("TYPESAFE_API_KEY")
-    base = os.environ.get("TYPESAFE_API_BASE", "https://api.typesafe.ai").rstrip("/")
-    model = os.environ.get("JEV_MODEL", "jev-latest")
+    base, key, model = jev_env.resolve()
 
     jobs = []   # (rule_id, rule, rel, content)
     for rel, content in files:
@@ -245,7 +245,7 @@ def main():
                     judged[i], notes[i] = None, f"{type(e).__name__}: {e}"[:120]
     else:
         for i in range(len(jobs)):
-            judged[i], notes[i] = None, "TYPESAFE_API_KEY not set"
+            judged[i], notes[i] = None, "no jev endpoint pair configured"
 
     findings = []
     for i, (rid, rule, rel, _c) in enumerate(jobs):

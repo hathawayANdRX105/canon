@@ -327,3 +327,20 @@ timeout: 30
 外加 `evidence_sufficient` 总判（true=证据空/仅声明，0.9 / 0.6）。
 PR body 来源：`GATE_PR_BODY_FILE` 文件钩子优先，否则 `gh pr view`；无 body / 无声明 / 任何基础设施
 失败 → 单条 INFO 降级，永不阻断（policy layer，DWJ 契约）。手动跑：`canon check delivery_claims`。
+
+## pr_consistency（CK-PR-CONSISTENCY，L3 模型层）
+
+`checklist_pr_consistency.yaml`（`mode: diff`，`sla: l3`，仅 `merge`，`optional: true`，`fail_severity: WARN`）：
+CM-03 只比 (标题 type, 分支) 字符串元组，补一层语义对照——一题 noul「标题/描述与 diff 实际内容矛盾或明显失配」
+（陈述式负面命题，0.85/0.6）。compare 型判断误报率高于逐条声明核验，**severity 封顶 WARN**
+（harness 内部降档并标 semantic advisory）。PR 标题正文经 `GATE_PR_TITLE_FILE`/`GATE_PR_BODY_FILE`
+钩子或 `gh pr view`；缺失或基建失败 → 单条 INFO 不阻断。手动跑：`canon check pr_consistency`。
+
+## rule_selector（CK-RULE-SELECTOR，L3 模型层）
+
+`checklist_rule_selector.yaml`（`mode: diff`，`sla: l3`，仅 `merge`，`optional: true`，`fail_severity: WARN`）：
+确定性 `paths_include` glob 保持权威，jev 只兜漏网：对「没有任何域规则 glob 命中」的变更文件，
+问规则目录里哪些规则 intent 管辖此改动（choice governs/not_relevant，`fail_labels: ["governs"]`，
+p≥0.85 才出 `RULE-SELECTOR-<ID>` WARN，提示补 match 或写书面驳回；每文件 ≤5 条、单调用 ≤12 题、
+候选 >25 先按文件类型粗筛）。纯 catch-all 与 l3 层规则不计覆盖也不进候选。
+无端点对 / 目录不可读 → 单条 INFO，永不阻断。手动跑：`canon check rule_selector`。
