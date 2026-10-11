@@ -22,10 +22,14 @@ Claims: bullets (`- ` / `1. `) plus short paragraphs inside the Delivery record
 section, blanks dropped, at most MAX_CLAIMS; overflow is reported explicitly
 as INFO rather than silently truncated.
 
-Direction: each claim question is a noul whose true = "the evidence does not
-support, or contradicts, this claim" (HIGH = BAD, same direction as severity),
-thresholds from jev_questions_delivery.json (0.85 fail / 0.6 warn);
-p >= fail -> FAIL, p >= warn -> WARN, otherwise the INFO reference line.
+Direction: each claim question is a noul whose true = "this claim is unsupported
+by, or contradicted by, the diff evidence" (HIGH = BAD, same direction as
+severity). The question must be phrased as the declarative negative proposition
+above, never as a "Does the evidence support...?" question: the model reads
+true through the question's own wording, so an interrogative flips the verdict
+(measured: real claims 0.79/0.82 vs fabricated claim low — inverted; declarative
+gives fabricated 0.92 vs real 0.27). Thresholds from jev_questions_delivery.json
+(0.85 fail / 0.6 warn); p >= fail -> FAIL, p >= warn -> WARN, else INFO.
 
 Degradation (policy layer, DWJ contract): jev tier only — same env as
 review_chain (TYPESAFE_API_KEY / TYPESAFE_API_BASE / JEV_MODEL). Any
@@ -121,11 +125,17 @@ def load_claims(claims: list) -> dict:
     warn = float(qfile.get("default_warn", 0.6))
     questions = {}
     for i, claim in enumerate(claims):
+        # Declarative negative proposition: the instruction text must agree with
+        # criteria.true, because the model reads "true" through the question's
+        # own wording. An interrogative ("Does the evidence support...?") makes
+        # true=supported, which flips every verdict against the criteria (measured
+        # on the same endpoint: real claims scored high, fabricated low).
         questions[f"claim_{i}"] = {
             "type": "noul",
             "instructions": (
-                "Does the diff evidence support this delivery claim? Claim: "
-                f"`{claim}` Judge only what the evidence shows, not what the claim says."
+                "This delivery claim is unsupported by the diff evidence, or "
+                f"contradicted by it. Claim: `{claim}` Judge only what the "
+                "evidence shows, not what the claim asserts."
             ),
             "criteria": {
                 "true": "evidence is absent, unrelated, or contradicts the claim",

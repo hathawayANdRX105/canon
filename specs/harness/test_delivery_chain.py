@@ -193,12 +193,30 @@ class DeliveryChainTest(unittest.TestCase):
         self.assertIn("+x", state["diff_evidence"])
         self.assertEqual(req["questions"]["claim_0"]["fail"], 0.85)
         self.assertEqual(req["questions"]["claim_0"]["warn"], 0.6)
-        self.assertIn("evidence", req["questions"]["claim_0"]["instructions"])
+        self.assertIn("unsupported by the diff evidence",
+                      req["questions"]["claim_0"]["instructions"])
+        self.assertNotIn("Does the diff evidence support",
+                         req["questions"]["claim_0"]["instructions"])
 
     def test_low_p_produces_no_findings(self):
         out, _ = self.run_harness(
             SAMPLE_BODY, {"claim_0": 0.2, "claim_1": 0.2, "claim_2": 0.2, "evidence_sufficient": 0.1})
         self.assertEqual(out, [])
+
+    def test_question_wording_pins_direction(self):
+        # 方向钉:题目必须是陈述式负面命题（与 criteria.true 同向），
+        # 疑问句会让模型顺问句把 true 读成「supported」，判定整体翻转。
+        out, req = self.run_harness(
+            SAMPLE_BODY, {"claim_0": 0.9, "claim_1": 0.2, "claim_2": 0.2})
+        q0 = req["questions"]["claim_0"]
+        self.assertIn("unsupported by the diff evidence", q0["instructions"])
+        self.assertIn("contradicted by it", q0["instructions"])
+        self.assertNotIn("Does the diff evidence support", q0["instructions"])
+        # 高 p = 「未被支持/矛盾」概率高 → finding 必须是「未被证据支持」语义
+        f0 = next(f for f in out if f["id"] == "DELIVERY-CLAIM-0")
+        self.assertEqual(f0["severity"], "FAIL")
+        self.assertIn("声明未被证据支持", f0["message"])
+        self.assertNotIn("声明被证据支持", f0["message"])
 
     def test_evidence_sufficient_high_p_finding(self):
         out, req = self.run_harness(
