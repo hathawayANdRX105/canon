@@ -25,7 +25,7 @@
 projects:
   # 各项目安装清单
   ferrite:
-    root: /home/hathaway/projects/mono  # GitHub: hathawayANdRX105/ferrite；本地目录改名后同步此值
+    root: mono  # GitHub: hathawayANdRX105/ferrite；本地目录改名后同步此值
     files:
       - src: agent-pack/rules/agent-readme.md
         to: .agent/README.md
@@ -50,12 +50,12 @@ projects:
       - src: agent-pack/rules/workflow-state.md
         to: .agent/rules/workflow-state.md
   kime:
-    root: /home/hathaway/projects/kime
+    root: kime
     files:
       - src: agent-pack/rules/workflow-state.md
         to: .agent/rules/workflow-state.md
   kymido:
-    root: /home/hathaway/projects/kymido
+    root: kymido
     files:
       - src: agent-pack/rules/workflow-state.md
         to: .agent/rules/workflow-state.md
@@ -66,58 +66,34 @@ projects:
       - src: agent-pack/rules/workflow-state.md
         to: .agent/rules/workflow-state.md
   silverq:
-    root: /home/hathaway/projects/silverq
+    root: silverq
     files:
       - src: agent-pack/rules/workflow-state.md
         to: .agent/rules/workflow-state.md
       - src: agent-pack/rules/workflow-state.md
         to: .agent/rules/workflow-state.md
   oh-my-pi:
-    root: /home/hathaway/projects/oh-my-pi
-    files:
-      - src: agent-pack/rules/workflow-state.md
-        to: .agent/rules/workflow-state.md
-  deskctl:
-    root: /home/hathaway/projects/deskctl
-    files:
-      - src: agent-pack/rules/gates.md
-        to: .agent/rules/gates.md
-      - src: agent-pack/rules/workflow-state.md
-        to: .agent/rules/workflow-state.md
-  gugu:
-    root: /home/hathaway/projects/gugu
+    root: oh-my-pi
     files:
       - src: agent-pack/rules/workflow-state.md
         to: .agent/rules/workflow-state.md
   new-api:
-    root: /home/hathaway/projects/new-api
+    root: new-api
     files:
       - src: agent-pack/rules/workflow-state.md
         to: .agent/rules/workflow-state.md
   herdr:
-    root: /home/hathaway/projects/herdr
+    root: herdr
     files:
   dotfiles:
-    root: /home/hathaway/projects/dotfiles
-    files:
-  claude-code:
-    root: /home/hathaway/projects/claude-code
-    files:
-  ainotation:
-    root: /home/hathaway/projects/ainotation
+    root: dotfiles
     files:
   sentinel:
-    root: /home/hathaway/projects/sentinel
+    root: sentinel
     files:
   tolaria:
-    root: /home/hathaway/projects/tolaria
-    files:
-  novel:
-    root: /home/hathaway/projects/novel
+    root: tolaria
     files:
   algorchemy:
-    root: /home/hathaway/projects/algorchemy
-    files:
-  ui-kit:
-    root: /home/hathaway/projects/ui-kit
+    root: algorchemy
     files:

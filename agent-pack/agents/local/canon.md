@@ -47,6 +47,23 @@ scripts/agents status      # 全项目漂移检查
 `CANON_PROJECTS_BASE`（缺省 `~/projects`）下。换机器或换 checkout 根目录只需改
 环境变量，不用动 `agents.yaml`。
 
+`agent-sync.yaml` 与 `scripts/canon-sync` 用**同一套解析规则**，同一个
+`CANON_PROJECTS_BASE` 环境变量生效。三处保持一致，改一处不要漏另两处。
+
+### 项目增删：改一处不够
+
+停用一个项目要同时摘掉它在三份清单里的登记，外加一份共享片段：
+
+| 位置 | 作用 | 漏了会怎样 |
+|---|---|---|
+| `agents.yaml` | 组装项目 AGENTS.md | `scripts/agents` 仍往那仓推生成物 |
+| `agent-sync.yaml` | 分发任务书 / 规则文档 | 仍往那仓推文档 |
+| `Justfile` 的 `MEMBER_REPOS` | `canon-sync` 分发二进制 + specs | `just push` 对已停用仓报 not found |
+| `agent-pack/agents/local/<项目>.md` | 项目独有条目 | 变成无主文件，日后真遗漏时无从分辨 |
+
+判据：`scripts/agents list` 报「未被引用」的 fragment 就是无主的；
+`agent-sync status` 输出里不出现该项目即为已摘干净。
+
 ## 其他文档的分发
 
 `agent-pack/tasks/`、`agent-pack/rules/`、`agent-pack/skills/` 里的文档走 `agent-sync`：

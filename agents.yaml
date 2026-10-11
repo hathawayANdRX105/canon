@@ -84,18 +84,6 @@ projects:
     - investigation
     - git-workflow
     - subagents
-  ricq:
-    root: ricq
-    titles:
-      local/: ricq 约定
-    include:
-    - local/
-    - _discipline
-    - code-style
-    - rust-dev-perf
-    - build-verify
-    - sensitive-ops
-    - git-workflow
   sightline:
     root: sightline
     titles:
@@ -135,58 +123,6 @@ projects:
     - git-workflow
     - tools
     - subagents
-  claude-code:
-    root: claude-code
-    titles:
-      local/: claude-code 约定
-    include:
-    - local/
-    - _discipline
-    - code-style
-    - build-verify
-    - sensitive-ops
-    - investigation
-    - git-workflow
-    - tools
-    - subagents
-  ainotation:
-    root: ainotation
-    titles:
-      local/: ainotation 约定
-    include:
-    - local/
-    - _discipline
-    - code-style
-    - build-verify
-    - sensitive-ops
-    - git-workflow
-
-  gugu:
-    root: gugu
-    titles:
-      local/: gugu 约定
-    include:
-    - local/
-    - _discipline
-    - code-style
-    - rust-dev-perf
-    - build-verify
-    - sensitive-ops
-    - investigation
-    - git-workflow
-  deskctl:
-    root: deskctl
-    titles:
-      local/: deskctl 约定
-    include:
-    - local/
-    - _discipline
-    - code-style
-    - rust-dev-perf
-    - build-verify
-    - sensitive-ops
-    - investigation
-    - git-workflow
   algorchemy:
     root: algorchemy
     titles:
@@ -208,29 +144,6 @@ projects:
     - code-style
     - sensitive-ops
     - git-workflow
-  novel:
-    root: novel
-    titles:
-      local/: novel 约定
-    include:
-    - local/
-    - _discipline
-    - code-style
-    - git-workflow
-  ui-kit:
-    root: ui-kit
-    titles:
-      local/: ui-kit 约定
-    include:
-    - local/
-    - _discipline
-    - code-style
-    - rust-dev-perf
-    - build-verify
-    - sensitive-ops
-    - investigation
-    - git-workflow
-    - tools
   canon:
     root: canon
     titles:

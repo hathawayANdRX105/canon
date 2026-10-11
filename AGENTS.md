@@ -1,4 +1,4 @@
-<!-- managed by canon agents.yaml @ 2026-10-08 -->
+<!-- managed by canon agents.yaml @ 2026-10-12 -->
 ## canon 约定
 
 canon 是**规范与 agent 文档的正本仓**。别的项目想改规范、改 agent 约定，来这里改，再分发回去。
@@ -47,6 +47,23 @@ scripts/agents status      # 全项目漂移检查
 解析顺序：绝对路径原样用；`~/x` 展开 home；其余相对路径落到
 `CANON_PROJECTS_BASE`（缺省 `~/projects`）下。换机器或换 checkout 根目录只需改
 环境变量，不用动 `agents.yaml`。
+
+`agent-sync.yaml` 与 `scripts/canon-sync` 用**同一套解析规则**，同一个
+`CANON_PROJECTS_BASE` 环境变量生效。三处保持一致，改一处不要漏另两处。
+
+#### 项目增删：改一处不够
+
+停用一个项目要同时摘掉它在三份清单里的登记，外加一份共享片段：
+
+| 位置 | 作用 | 漏了会怎样 |
+|---|---|---|
+| `agents.yaml` | 组装项目 AGENTS.md | `scripts/agents` 仍往那仓推生成物 |
+| `agent-sync.yaml` | 分发任务书 / 规则文档 | 仍往那仓推文档 |
+| `Justfile` 的 `MEMBER_REPOS` | `canon-sync` 分发二进制 + specs | `just push` 对已停用仓报 not found |
+| `agent-pack/agents/local/<项目>.md` | 项目独有条目 | 变成无主文件，日后真遗漏时无从分辨 |
+
+判据：`scripts/agents list` 报「未被引用」的 fragment 就是无主的；
+`agent-sync status` 输出里不出现该项目即为已摘干净。
 
 ### 其他文档的分发
 
@@ -196,10 +213,10 @@ just review          # canon check 全套自检
 
 ### 占位符与未完成
 
-- 未实现的函数或 trait 用语言原生宏，并带可追溯标识（PR 号 / 分支名 / 模块名皆可）：
-  - Rust：`todo!("TODO(PR-12): 说明这里要做什么")` / `unimplemented!("…")`
-- TODO / FIXME 注释必须带可追溯标识：`// TODO(PR-12): …`。
-- 标识是信息位，不要求对应任何外部系统。
+- 未实现的函数或 trait 用语言原生宏，标识写在 `#` 信息位里（issue / PR 号皆可，不要求对应
+  任何外部系统；`#` 前缀与闸门例外词对齐，缺 `#` 会被 notes 闸门拦）：
+  - Rust：`todo!("TODO(#123): 说明这里要做什么")` / `unimplemented!("…")`
+- TODO / FIXME 注释必须带可追溯标识：`// TODO(#123): …`。
 - 不留空的 `todo!()` / `pass` / `NotImplemented` 桩而无说明。
 
 ### 复用与删除

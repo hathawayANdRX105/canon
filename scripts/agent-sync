@@ -79,6 +79,27 @@ def load_config(root):
     return data
 
 
+def projects_base():
+    """Relative `root:` entries in agent-sync.yaml resolve against this.
+
+    Override with CANON_PROJECTS_BASE (e.g. a second checkout root or a
+    container path) so the manifest never carries one machine's home dir."""
+    return os.environ.get("CANON_PROJECTS_BASE") or os.path.join(
+        os.path.expanduser("~"), "projects"
+    )
+
+
+def resolve_root(spec, project):
+    """Absolute `root:` wins as-is; `~/x` and `x` both land under projects_base."""
+    root = spec.get('root')
+    if not root:
+        die(f"agent-sync.yaml 的 {project} 未配置 root")
+    root = os.path.expanduser(root)
+    if not os.path.isabs(root):
+        root = os.path.join(projects_base(), root)
+    return root
+
+
 def load_manifest(root, project):
     """返回传统形状 {'root','dest','files':[(src,dst,pin)]}。
 
@@ -89,9 +110,7 @@ def load_manifest(root, project):
     p = projects.get(project)
     if p is None:
         die(f"agent-sync.yaml 无该项目: {project}（有: {', '.join(sorted(projects)) or '空'}）")
-    m = {'root': p.get('root'), 'dest': '', 'files': []}
-    if not m['root']:
-        die(f"{project} 缺 root:（安装根路径）")
+    m = {'root': resolve_root(p, project), 'dest': '', 'files': []}
     for entry in (p.get('files') or []):
         src, dst = entry.get('src'), entry.get('to')
         if not src or not dst:

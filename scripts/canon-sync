@@ -97,7 +97,11 @@ def project_root(project: str) -> str:
         if not os.path.isdir(p):
             sys.exit(f"worktree not found: {p}")
         return p
-    p = os.path.join("/home/hathaway/projects", project)
+    # 换 checkout 根目录只需改这个环境变量，不必改脚本里的 home 路径。
+    base = os.environ.get("CANON_PROJECTS_BASE") or os.path.join(
+        os.path.expanduser("~"), "projects"
+    )
+    p = os.path.join(base, project)
     if not os.path.isdir(p):
         sys.exit(f"project not found: {p}")
     return p

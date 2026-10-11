@@ -7,6 +7,11 @@
 default:
     @just --list
 
+# canon-sync 的成员仓清单（specs + 二进制分发目标）。
+# 单一来源：push 与 status 都读它，避免两份硬编码列表各自漂移。
+# 项目增删时改这一行；已停用的项目从 agents.yaml / agent-sync.yaml 一并摘掉。
+MEMBER_REPOS := "algorchemy ferrite kime kymido new-api silverq"
+
 # ── build / test ────────────────────────────────────────────────
 
 # 编译 release 二进制并落到 .githooks/canon（canon-sync 分发的是这个产物）
@@ -76,7 +81,7 @@ push project='':
 
 _push-all:
     #!/usr/bin/env bash
-    for p in algorchemy deskctl ferrite gugu kime new-api kymido silverq ui-kit; do
+    for p in {{MEMBER_REPOS}}; do
         python3 scripts/canon-sync push "$p" | tail -1
     done
 
@@ -86,7 +91,7 @@ status project='':
     if [ -n "{{project}}" ]; then
         python3 scripts/canon-sync status {{project}}
     else
-        for p in algorchemy deskctl ferrite gugu kime new-api kymido silverq ui-kit; do
+        for p in {{MEMBER_REPOS}}; do
             python3 scripts/canon-sync status "$p" | grep -E "^==|DRIFT|ONLY-CANON" | head -4
         done
     fi
