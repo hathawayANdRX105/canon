@@ -31,8 +31,8 @@ true through the question's own wording, so an interrogative flips the verdict
 gives fabricated 0.92 vs real 0.27). Thresholds from jev_questions_delivery.json
 (0.85 fail / 0.6 warn); p >= fail -> FAIL, p >= warn -> WARN, else INFO.
 
-Degradation (policy layer, DWJ contract): jev tier only — same env as
-review_chain (TYPESAFE_API_KEY / TYPESAFE_API_BASE / JEV_MODEL). Any
+Degradation (policy layer, DWJ contract): jev tier only — endpoint pair via
+review_chain/jev_env (JEV_API_* wins, TYPESAFE_* fallback). Any
 infrastructure failure (no key / network / unparseable answers) degrades to a
 single INFO finding; this layer never blocks on its own infrastructure.
 
