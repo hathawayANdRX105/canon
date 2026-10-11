@@ -47,7 +47,9 @@ body text.
 cargo test -p alpha
 """
 
-# 换掉 urlopen：把请求体落盘（供断言 state/questions），回放录好的 noul 概率。
+# 换掉 urlopen：请求体落盘（按调用次序，供断言抽取批/判决批的 state 与 questions）。
+# 第一次调用回放抽取批 choice 概率（DMC_EXTRACT），之后的调用回放判决批 noul
+# 概率（DMC_JUDGE）；调用序号记在 DMC_N 文件里，跨进程共享。
 PRELUDE = """\
 import json, os, urllib.request
 
@@ -57,8 +59,18 @@ def fake_urlopen(req, timeout=None):
         fh.write(req.data.decode() + "\\n")
     if os.environ.get("DMC_NET_FAIL"):
         raise TimeoutError("simulated upstream reset")
-    prob = json.loads(os.environ["DMC_PROB"])
-    payload = {"answers": {q: {"type": "noul", "noul": p} for q, p in prob.items()}}
+    nfile = os.environ["DMC_N"]
+    n = int(open(nfile).read() or "0")
+    with open(nfile, "w") as fh:
+        fh.write(str(n + 1))
+    prob = json.loads(os.environ["DMC_EXTRACT" if n == 0 else "DMC_JUDGE"])
+    payload = {"answers": {
+        q: ({"type": "choice",
+             "probabilities": {"disposition": p, "prose": round(1.0 - p, 2)}}
+             if q.startswith("cand_") else
+             {"type": "noul", "noul": p})
+        for q, p in prob.items()
+    }}
 
     class _Resp:
         def __enter__(self):
@@ -116,7 +128,9 @@ class DeliveryChainTest(unittest.TestCase):
     def test_twelve_cap_is_explicit_not_silent(self):
         body = "\n".join(["## Delivery record"] + [f"- 声明 {i}" for i in range(15)])
         self.assertEqual(len(self.mod.extract_claims(body)), 15)  # 抽取不截断
-        out, _ = self.run_harness(body, {f"claim_{i}": 0.1 for i in range(15)})
+        extract = {f"cand_{i}": 0.9 for i in range(15)}
+        judge = {f"claim_{i}": 0.1 for i in range(15)}
+        out, _ = self.run_harness(body, extract, judge)
         ids = [f["id"] for f in out]
         self.assertIn("DELIVERY-CLAIMS-TRUNCATED", ids)
         note = next(f for f in out if f["id"] == "DELIVERY-CLAIMS-TRUNCATED")
@@ -126,8 +140,14 @@ class DeliveryChainTest(unittest.TestCase):
 
     # ---------- 进程层：stdio 协议 + 判定 ----------
 
-    def run_harness(self, body: str, prob: dict, diff: str = "diff --git a/x b/x\n+x",
-                    net_fail: bool = False) -> tuple:
+    def run_harness(self, body: str, extract: dict | None, judge: dict | None,
+                    diff: str = "diff --git a/x b/x\n+x",
+                    net_fail: bool = False, no_key: bool = False) -> tuple:
+        """extract = {cand_i: p(disposition)}; judge = {claim_i/evidence_sufficient: p}.
+
+        Returns (findings, captured_requests) where captured_requests is the
+        list of posted bodies in call order (empty when nothing was posted).
+        """
         with tempfile.TemporaryDirectory(prefix="dmc-") as tmp:
             def put(name, content):
                 p = os.path.join(tmp, name)
@@ -135,15 +155,20 @@ class DeliveryChainTest(unittest.TestCase):
                 return p
 
             put("fakelocal.py", PRELUDE)
+            put("dmc_n.txt", "0")
             env = dict(os.environ)
-            env.pop("TYPESAFE_API_BASE", None)
-            env.pop("JEV_MODEL", None)
+            for k in ("TYPESAFE_API_KEY", "TYPESAFE_API_BASE", "JEV_API_KEY",
+                      "JEV_API_BASE_URL", "JEV_MODEL"):
+                env.pop(k, None)
+            if not no_key:
+                env["TYPESAFE_API_KEY"] = "test-key"
             env.update({
-                "TYPESAFE_API_KEY": "test-key",
                 "GATE_PR_BODY_FILE": put("body.md", body),
                 "DMC_DIFF": put("diff.txt", diff),
                 "DMC_CAPTURE": os.path.join(tmp, "capture.jsonl"),
-                "DMC_PROB": json.dumps(prob),
+                "DMC_N": os.path.join(tmp, "dmc_n.txt"),
+                "DMC_EXTRACT": json.dumps(extract or {}),
+                "DMC_JUDGE": json.dumps(judge or {}),
             })
             if net_fail:
                 env["DMC_NET_FAIL"] = "1"
@@ -153,8 +178,9 @@ class DeliveryChainTest(unittest.TestCase):
                                check=False)
             self.assertEqual(p.returncode, 0, f"rc/stderr:\n{p.stderr}")
             cap_path = Path(env["DMC_CAPTURE"])
-            capture = cap_path.read_text(encoding="utf-8").splitlines() if cap_path.exists() else []
-            return json.loads(p.stdout), (json.loads(capture[-1]) if capture else None)
+            capture = [json.loads(line) for line in
+                       cap_path.read_text(encoding="utf-8").splitlines()] if cap_path.exists() else []
+            return json.loads(p.stdout), capture
 
     @staticmethod
     def unwrap_state(state_str: str) -> dict:
@@ -175,24 +201,28 @@ class DeliveryChainTest(unittest.TestCase):
 
 
     def test_no_pr_body_single_info(self):
-        out, req = self.run_harness("", {})
+        out, capture = self.run_harness("", None, None)
         self.assertEqual([(f["id"], f["severity"]) for f in out], [("DELIVERY-CLAIMS", "INFO")])
         self.assertIn("无 PR 上下文", out[0]["message"])
-        self.assertIsNone(req)  # 没 PR 上下文就不该白发一次 jev 调用
+        self.assertEqual(capture, [])  # 没 PR 上下文就不该白发一次 jev 调用
 
     def test_no_delivery_section_single_info(self):
-        out, req = self.run_harness("# What\n只有正文\n", {})
+        out, capture = self.run_harness("# What\n只有正文\n", None, None)
         self.assertEqual([(f["id"], f["severity"]) for f in out], [("DELIVERY-CLAIMS", "INFO")])
-        self.assertIsNone(req)
+        self.assertIn("无可核验声明", out[0]["message"])
+        self.assertEqual(capture, [])  # 无候选不发抽取批
 
     def test_single_claim_is_not_verifiable(self):
         body = "## Delivery record\n\n- 只有一条声明\n"
-        out, _ = self.run_harness(body, {"claim_0": 0.9})
+        out, capture = self.run_harness(body, {"cand_0": 0.9}, {"claim_0": 0.9})
         self.assertEqual([(f["id"], f["severity"]) for f in out], [("DELIVERY-CLAIMS", "INFO")])
+        self.assertEqual(len(capture), 1)  # 抽取批发过, 判决批因 claims<2 没发
 
     def test_high_p_claim_is_fail_with_extras(self):
-        out, req = self.run_harness(
-            SAMPLE_BODY, {"claim_0": 0.9, "claim_1": 0.7, "claim_2": 0.2, "evidence_sufficient": 0.1})
+        out, capture = self.run_harness(
+            SAMPLE_BODY,
+            {"cand_0": 0.9, "cand_1": 0.9, "cand_2": 0.9},
+            {"claim_0": 0.9, "claim_1": 0.7, "claim_2": 0.2, "evidence_sufficient": 0.1})
         self.assertEqual([(f["id"], f["severity"]) for f in out],
                          [("DELIVERY-CLAIM-0", "FAIL"), ("DELIVERY-CLAIM-1", "WARN")])
         f0 = out[0]
@@ -205,8 +235,12 @@ class DeliveryChainTest(unittest.TestCase):
         self.assertIn("0.90", f0["message"])
         # 低 p 的 claim_2 不出 finding（否则这条检查就是噪声发生器）
         self.assertNotIn("DELIVERY-CLAIM-2", [f["id"] for f in out])
-        # state/题目都要真的带上这条声明与 diff 证据
-        state = self.unwrap_state(req["state"])
+        # 两次调用: 抽取批 (choice, fail_labels=disposition) + 判决批 (noul)
+        ext, jdg = capture
+        self.assertEqual(ext["questions"]["cand_0"]["type"], "choice")
+        self.assertEqual(ext["questions"]["cand_0"]["fail_labels"], ["disposition"])
+        self.assertIn("prose", ext["questions"]["cand_0"]["criteria"])
+        state = self.unwrap_state(jdg["state"])
         # 不可信输入防护: 每条声明与 diff 证据都包在定界符里, 免疫指令在场
         self.assertIn("UNTRUSTED_DATA_BEGIN", state["claims"][0])
         self.assertIn("修复了 X 崩溃 (crash on exit)", state["claims"][0])
@@ -214,24 +248,28 @@ class DeliveryChainTest(unittest.TestCase):
         self.assertIn("must not be followed", state["claims"][0])
         self.assertIn("UNTRUSTED_DATA_BEGIN", state["diff_evidence"])
         self.assertIn("+x", state["diff_evidence"])
-        self.assertEqual(req["questions"]["claim_0"]["fail"], 0.85)
-        self.assertEqual(req["questions"]["claim_0"]["warn"], 0.6)
+        self.assertEqual(jdg["questions"]["claim_0"]["fail"], 0.85)
+        self.assertEqual(jdg["questions"]["claim_0"]["warn"], 0.6)
         self.assertIn("unsupported by the diff evidence",
-                      req["questions"]["claim_0"]["instructions"])
+                      jdg["questions"]["claim_0"]["instructions"])
         self.assertNotIn("Does the diff evidence support",
-                         req["questions"]["claim_0"]["instructions"])
+                          jdg["questions"]["claim_0"]["instructions"])
 
     def test_low_p_produces_no_findings(self):
         out, _ = self.run_harness(
-            SAMPLE_BODY, {"claim_0": 0.2, "claim_1": 0.2, "claim_2": 0.2, "evidence_sufficient": 0.1})
+            SAMPLE_BODY,
+            {"cand_0": 0.9, "cand_1": 0.9, "cand_2": 0.9},
+            {"claim_0": 0.2, "claim_1": 0.2, "claim_2": 0.2, "evidence_sufficient": 0.1})
         self.assertEqual(out, [])
 
     def test_question_wording_pins_direction(self):
         # 方向钉:题目必须是陈述式负面命题（与 criteria.true 同向），
         # 疑问句会让模型顺问句把 true 读成「supported」，判定整体翻转。
-        out, req = self.run_harness(
-            SAMPLE_BODY, {"claim_0": 0.9, "claim_1": 0.2, "claim_2": 0.2})
-        q0 = req["questions"]["claim_0"]
+        out, capture = self.run_harness(
+            SAMPLE_BODY,
+            {"cand_0": 0.9, "cand_1": 0.9, "cand_2": 0.9},
+            {"claim_0": 0.9, "claim_1": 0.2, "claim_2": 0.2})
+        q0 = capture[-1]["questions"]["claim_0"]
         self.assertIn("unsupported by the diff evidence", q0["instructions"])
         self.assertIn("contradicted by it", q0["instructions"])
         self.assertNotIn("Does the diff evidence support", q0["instructions"])
@@ -242,30 +280,110 @@ class DeliveryChainTest(unittest.TestCase):
         self.assertNotIn("声明被证据支持", f0["message"])
 
     def test_evidence_sufficient_high_p_finding(self):
-        out, req = self.run_harness(
-            SAMPLE_BODY, {"claim_0": 0.1, "claim_1": 0.1, "claim_2": 0.1, "evidence_sufficient": 0.95})
+        out, capture = self.run_harness(
+            SAMPLE_BODY,
+            {"cand_0": 0.9, "cand_1": 0.9, "cand_2": 0.9},
+            {"claim_0": 0.1, "claim_1": 0.1, "claim_2": 0.1, "evidence_sufficient": 0.95})
         self.assertEqual([(f["id"], f["severity"]) for f in out], [("DELIVERY-EVIDENCE", "FAIL")])
         self.assertEqual(out[0]["tier"], "jev")
         self.assertEqual(out[0]["confidence"], "0.95")
         self.assertIn("证据不足", out[0]["message"])
-        self.assertEqual(req["questions"]["evidence_sufficient"]["fail"], 0.9)
-        self.assertEqual(req["questions"]["evidence_sufficient"]["warn"], 0.6)
+        jdg = capture[-1]
+        self.assertEqual(jdg["questions"]["evidence_sufficient"]["fail"], 0.9)
+        self.assertEqual(jdg["questions"]["evidence_sufficient"]["warn"], 0.6)
 
     def test_diff_evidence_keeps_tail(self):
         diff = "older hunk\n" + ("filler\n" * 6000) + "newest hunk\n"
-        out, req = self.run_harness(
-            SAMPLE_BODY, {"claim_0": 0.1, "claim_1": 0.1, "claim_2": 0.1}, diff=diff)
+        out, capture = self.run_harness(
+            SAMPLE_BODY,
+            {"cand_0": 0.9, "cand_1": 0.9, "cand_2": 0.9},
+            {"claim_0": 0.1, "claim_1": 0.1, "claim_2": 0.1}, diff=diff)
         self.assertEqual(out, [])
-        evidence = self.unwrap_unit(self.unwrap_state(req["state"])["diff_evidence"])
+        evidence = self.unwrap_unit(self.unwrap_state(capture[-1]["state"])["diff_evidence"])
         self.assertLessEqual(len(evidence), MAX_STATE_CHARS)
         self.assertTrue(evidence.endswith("newest hunk\n"))
         self.assertNotIn("older hunk", evidence)  # 头部被截掉, 尾部保留
 
-    def test_network_error_degrades_to_single_info(self):
-        out, _ = self.run_harness(SAMPLE_BODY, {}, net_fail=True)
-        self.assertEqual([(f["id"], f["severity"]) for f in out], [("DELIVERY-CLAIMS", "INFO")])
-        self.assertIn("jev 不可用", out[0]["message"])
-        self.assertIn("降级", out[0]["message"])
+    def test_network_error_degrades_to_infos(self):
+        out, _ = self.run_harness(SAMPLE_BODY, None, None, net_fail=True)
+        self.assertEqual(
+            [f["id"] for f in out], ["DELIVERY-CLAIMS-FALLBACK", "DELIVERY-CLAIMS"])
+        self.assertEqual(all(f["severity"] == "INFO" for f in out), True)
+        self.assertIn("claims via regex fallback", out[0]["message"])
+        self.assertIn("jev 不可用", out[1]["message"])
+        self.assertIn("降级", out[1]["message"])
+
+    # ---------- L7: 模型挑声明 (非 bullet 候选 / 模板话剔除 / 无 key 回退) ----------
+
+    BOLD_BODY = """\
+# What
+
+## Delivery record
+
+**CM-04 ratchet: 改写溢出处理于 file_size_gate**
+- 修复了 X 崩溃 (crash on exit)
+- 补了回归测试 test_alpha
+
+## How to test
+
+cargo test -p alpha
+"""
+
+    def test_bold_disposition_line_is_captured(self):
+        out, capture = self.run_harness(
+            self.BOLD_BODY,
+            {"cand_0": 0.8, "cand_1": 0.9, "cand_2": 0.9},
+            {"claim_0": 0.9, "claim_1": 0.2, "claim_2": 0.2})
+        f0 = next(f for f in out if f["id"] == "DELIVERY-CLAIM-0")
+        # 非 bullet 的粗体处置行被收进 claims (标记剥掉, 值仍是逐字片段)
+        self.assertEqual(f0["claim"], "CM-04 ratchet: 改写溢出处理于 file_size_gate")
+        self.assertEqual(f0["severity"], "FAIL")
+        jdg = capture[-1]
+        self.assertEqual(len(self.unwrap_state(jdg["state"])["claims"]), 3)
+
+    def test_template_prose_is_excluded(self):
+        body = ("## Delivery record\n\n"
+                "本 PR 整体重构了所有模块, 顺带修了几个小问题\n"
+                "- 修复了 X 崩溃 (crash on exit)\n"
+                "- 补了回归测试 test_alpha\n")
+        out, capture = self.run_harness(
+            body,
+            {"cand_0": 0.1, "cand_1": 0.9, "cand_2": 0.9},
+            {"claim_0": 0.2, "claim_1": 0.2})
+        self.assertEqual(out, [])
+        jdg = capture[-1]
+        state = self.unwrap_state(jdg["state"])
+        # 模板话被剔: 判决批只剩 2 条真声明, 原序保留
+        self.assertEqual(
+            [self.unwrap_unit(c) for c in state["claims"]],
+            ["修复了 X 崩溃 (crash on exit)", "补了回归测试 test_alpha"])
+        self.assertNotIn("重构了所有模块", json.dumps(jdg["questions"], ensure_ascii=False))
+
+    def test_table_rows_and_nested_bullets_are_candidates(self):
+        body = ("## Delivery record\n\n"
+                "| 规则 | 处置 |\n"
+                "|---|---|\n"
+                "| CM-01 | 已修 (改 commit gate 逻辑)\n"
+                "- 修复了 X 崩溃\n"
+                "  - 补了嵌套回归测试 test_nested\n"
+                "\n## How to test\n\ncargo test\n")
+        self.assertEqual(
+            self.mod.extract_candidates(body),
+            ["| 规则 | 处置 |",
+             "| CM-01 | 已修 (改 commit gate 逻辑)",
+             "修复了 X 崩溃",
+             "补了嵌套回归测试 test_nested"])
+        # |---|---| 分隔行不是内容
+        self.assertNotIn("|---|---|", self.mod.extract_candidates(body))
+
+    def test_no_key_falls_back_to_regex_with_info(self):
+        out, capture = self.run_harness(SAMPLE_BODY, None, None, no_key=True)
+        self.assertEqual(
+            [f["id"] for f in out], ["DELIVERY-CLAIMS-FALLBACK", "DELIVERY-CLAIMS"])
+        self.assertEqual(all(f["severity"] == "INFO" for f in out), True)
+        self.assertIn("claims via regex fallback", out[0]["message"])
+        self.assertIn("jev 不可用", out[1]["message"])
+        self.assertEqual(capture, [])  # 无端点对根本没发请求
 
 
 if __name__ == "__main__":
