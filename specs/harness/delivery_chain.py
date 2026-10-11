@@ -157,7 +157,10 @@ def build_state(claims: list, diff: str) -> dict:
     evidence = diff
     if len(evidence) > review_chain.MAX_STATE_CHARS:
         evidence = evidence[-review_chain.MAX_STATE_CHARS :]
-    return {"claims": claims, "diff_evidence": evidence}
+    return {
+        "claims": [review_chain.wrap_untrusted(c) for c in claims],
+        "diff_evidence": review_chain.wrap_untrusted(evidence),
+    }
 
 
 def judge(state: dict, questions: dict) -> tuple:
@@ -166,7 +169,8 @@ def judge(state: dict, questions: dict) -> tuple:
         return None, err
     by_id = {f["id"]: f for f in findings}
     out = []
-    for i, claim in enumerate(state["claims"]):
+    for i, raw_claim in enumerate(state["claims"]):
+        claim = review_chain.unwrap_untrusted(raw_claim)
         f = by_id.get(f"REVIEW-CLAIM_{i}")
         if not f or f["severity"] == "INFO":
             continue

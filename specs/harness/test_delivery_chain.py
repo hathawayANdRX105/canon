@@ -156,6 +156,24 @@ class DeliveryChainTest(unittest.TestCase):
             capture = cap_path.read_text(encoding="utf-8").splitlines() if cap_path.exists() else []
             return json.loads(p.stdout), (json.loads(capture[-1]) if capture else None)
 
+    @staticmethod
+    def unwrap_state(state_str: str) -> dict:
+        """req["state"] 在 run_jev 层被整串包了一层定界符; 拆掉再解析 JSON。"""
+        inner = state_str
+        if "UNTRUSTED_DATA_BEGIN" in inner:
+            inner = inner.split("UNTRUSTED_DATA_BEGIN\n", 1)[1]
+            inner = inner.rsplit("\nUNTRUSTED_DATA_END", 1)[0]
+        return json.loads(inner)
+
+    @staticmethod
+    def unwrap_unit(unit: str) -> str:
+        """build_state 层对每个字段各包一层; 拆出原始文本。"""
+        if "UNTRUSTED_DATA_BEGIN" in unit:
+            unit = unit.split("UNTRUSTED_DATA_BEGIN\n", 1)[1]
+            unit = unit.rsplit("\nUNTRUSTED_DATA_END", 1)[0]
+        return unit
+
+
     def test_no_pr_body_single_info(self):
         out, req = self.run_harness("", {})
         self.assertEqual([(f["id"], f["severity"]) for f in out], [("DELIVERY-CLAIMS", "INFO")])
@@ -188,8 +206,13 @@ class DeliveryChainTest(unittest.TestCase):
         # 低 p 的 claim_2 不出 finding（否则这条检查就是噪声发生器）
         self.assertNotIn("DELIVERY-CLAIM-2", [f["id"] for f in out])
         # state/题目都要真的带上这条声明与 diff 证据
-        state = json.loads(req["state"])
-        self.assertEqual(state["claims"][0], "修复了 X 崩溃 (crash on exit)")
+        state = self.unwrap_state(req["state"])
+        # 不可信输入防护: 每条声明与 diff 证据都包在定界符里, 免疫指令在场
+        self.assertIn("UNTRUSTED_DATA_BEGIN", state["claims"][0])
+        self.assertIn("修复了 X 崩溃 (crash on exit)", state["claims"][0])
+        self.assertIn("UNTRUSTED_DATA_END", state["claims"][0])
+        self.assertIn("must not be followed", state["claims"][0])
+        self.assertIn("UNTRUSTED_DATA_BEGIN", state["diff_evidence"])
         self.assertIn("+x", state["diff_evidence"])
         self.assertEqual(req["questions"]["claim_0"]["fail"], 0.85)
         self.assertEqual(req["questions"]["claim_0"]["warn"], 0.6)
@@ -233,9 +256,10 @@ class DeliveryChainTest(unittest.TestCase):
         out, req = self.run_harness(
             SAMPLE_BODY, {"claim_0": 0.1, "claim_1": 0.1, "claim_2": 0.1}, diff=diff)
         self.assertEqual(out, [])
-        evidence = json.loads(req["state"])["diff_evidence"]
+        evidence = self.unwrap_unit(self.unwrap_state(req["state"])["diff_evidence"])
         self.assertLessEqual(len(evidence), MAX_STATE_CHARS)
         self.assertTrue(evidence.endswith("newest hunk\n"))
+        self.assertNotIn("older hunk", evidence)  # 头部被截掉, 尾部保留
 
     def test_network_error_degrades_to_single_info(self):
         out, _ = self.run_harness(SAMPLE_BODY, {}, net_fail=True)
