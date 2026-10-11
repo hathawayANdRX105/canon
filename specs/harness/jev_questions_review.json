@@ -42,6 +42,7 @@
       "needs_review": "deserves human or agent attention",
       "problematic": "contains an apparent defect, duplication, or convention violation"
     },
+    "fail_labels": ["problematic"],
     "fail": 0.8,
     "warn": 0.5
   }
