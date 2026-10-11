@@ -182,6 +182,16 @@ def classify_quality(base: str, key: str, model: str, rule_id: str, items: list)
                              "boilerplate."),
             "labels": ["sound", "rubber_stamp"],
             "fail_labels": ["sound"],
+            # criteria 必填: wire 上缺 criteria 的 choice 题被拒(实测 400),
+            # 每条标签一句可观察证据(gate-spec 编写标准)。
+            "criteria": {
+                "sound": "the rejection cites a checkable technical reason for this "
+                         "change — a measured value, a cited issue, a structural fact "
+                         "visible in the diff",
+                "rubber_stamp": "generic prose — 'not applicable here', 'works for "
+                                "now', 'kept as is' — with nothing checkable for this "
+                                "specific change",
+            },
         }
     payload = post(f"{base}/v1/systemone",
                    {"Authorization": f"Bearer {key}", "x-api-key": key},
