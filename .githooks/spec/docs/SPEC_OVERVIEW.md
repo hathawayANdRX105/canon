@@ -35,7 +35,7 @@
 已退役：`code-review-graph`（CRG）与 `open-code-review` 两个外部二进制不再安装也不再调用。
 原由二者承担的语义层由 jev 驱动的 `semantic_rust` / `semantic_go` /
 `semantic_javascript` / `semantic_default` checklist 承接（yv8 与 open-code-review 的规则文档移植，非外部二进制）。
-- 任意 LLM CLI（`claude` / `codex` / `ollama` 等，被 checklist harness 调用；非必须，缺失按 `optional` 处理）
+- `tree-sitter` + `tree-sitter-rust`(Python 包):`ts_signals` 的解析器与 `semantic_rust` 的事实卡提取;软依赖,缺失按 `optional` 静默跳过
 - `cargo-machete`：未使用依赖检测（`dep_hygiene` 的执行器）
 - `upx`：二进制压缩（canon 部署产物，构建期使用）
 - 缺失的工具按 yaml 的 `optional` 处理（默认 WARN 跳过）
@@ -153,7 +153,10 @@
 `canon review` 命令与 CRG、open-code-review 两个外部二进制已退役。语义层改由 L2 checklist 承接，
 在 merge 钩子里自动跑：
 
-1. `semantic_rust` / `semantic_go` / `semantic_javascript` / `semantic_default`：移植 open-code-review 的规则文档，
+1. `semantic_rust` / `semantic_go` / `semantic_javascript` / `semantic_default`：移植 open-code-review 的规则文档
+   （Rust 侧 14 类目：上游 10 类 + canon 自有 `name_behavior` 名字-行为一致、
+   `comment_rubric` 注释信息层、`placement` 位置适配、`cleanliness_semantics`
+   整洁语义——后四类对着 tree-sitter 事实卡判决，`state.facts: true`），
    判决由 `jev_rule.py` 给（意图 + 各类缺陷 noul + 总分 + 反误报 guardrail）
 2. `review_chain`：jev → 小模型 → 无模型三档降级
 3. 本地按需触发：`canon check <name> --sla l2`
@@ -257,9 +260,11 @@ ferrite 是两层布局（`crates/<domain>/<crate>/src`），而规则原先写�
 | `rust_todo_needs_issue` | l1 | pre-commit, pre-push, merge | WARN | 注释里 TODO/FIXME 必须关联 issue 号（例 `// TODO(#123):`；不扫字符串/测试） |
 | `rust_test_no_assert` | l1 | pre-commit, pre-push, merge | WARN | 测试函数必须含 assert |
 | `rust_no_cfg_test_in_tests_dir` | l1 | pre-commit, pre-push, merge | WARN | tests/ 目录里不要 #[cfg(test)] |
-| `clippy` | l1 | merge | FAIL/WARN | rustc 错误 + unused/dead_code → FAIL；collapsible_if 等风格 → WARN |
+| `clippy` | l1 | merge | FAIL/WARN | rustc 错误 + unused/dead_code → FAIL；collapsible_if 等默认风格 → WARN；显式启用 12 条 pedantic/restriction/nursery（too_many_lines / semicolon_if_nothing_returned / wildcard_imports / needless_pass_by_value / struct_excessive_bools / explicit_iter_loop / explicit_into_iter_loop / cloned_instead_of_copied / redundant_clone / collapsible_else_if / redundant_else / single_match_else，经 `cargo clippy … -- -W` 传 clippy-driver）→ WARN；不启用 cognitive_complexity（与 CK-CCN 冗余）、many_single_char_names（FP 高）、unwrap_used（与 error_panic 重复） |
+| `ts_signals` | l1 | pre-commit, merge | FAIL/WARN | tree-sitter 确定性语法信号:unsafe 块缺安全不变量 → FAIL;if/else-if 链 ≥3 臂或嵌套 ≥3 层、`0..len()` 索引循环、owned 参数 clone → WARN,均带 category+suggestion;软依赖 tree_sitter+tree_sitter_rust,缺失静默跳过 |
 | `dep_hygiene` | l1 | merge | WARN | `cargo-machete` 未使用依赖 |
 | `duplication` | l2 | merge | WARN | 跨文件 4+ 连续行重复块（sh+awk, 零依赖） |
+| `module_drawer` | l2 | merge | WARN | 杂物抽屉启发：通用名文件（util/helper/common/misc…）顶层 pub 项跨 ≥3 类且 ≥5 项 → 拆内聚模块；模块内聚语义归 `semantic_rust` 的 module_structure 类目 |
 | `crg_impact` | l2 | merge | WARN | diff 跨 3+ crate 改动 → 警告耦合 |
 | `ferrite_oversize` | l3 | merge | INFO | 大文件/大函数参考分（wildtoken `fast-l`；score/confidence，不阻断） |
 | `review_chain` | l3 | pre-push, merge | INFO（harness 透传） | 模型审查三档降级：jev（端点对 `JEV_API_*` 优先，回落 `TYPESAFE_API_*`，见 `harness/jev_env.py`）→ 小模型（`REVIEW_LLM_*`）→ 无（INFO）；per-question 阈值，p≥fail FAIL；choice 问题的坏答案由 `fail_labels` 声明（无声明退回 `_bad`/`problematic` 后缀）；`context_limit` 弃权题标记 diff 内证据不足以判断的情形（advisory）；`embedded_instruction` 免疫题抓「针对判决 AI 的注入文本」（warn0.65/fail0.9）；送判 state 经 `wrap_untrusted` 定界（不可信输入只当数据）；`tier`/`confidence`/`distribution` extra |
