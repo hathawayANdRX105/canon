@@ -38,12 +38,7 @@ try:
 except ImportError:
     yaml = None
 
-try:
-    import review_chain  # 同目录; R1 的 untrusted diff 包裹
-    wrap_untrusted = getattr(review_chain, "wrap_untrusted", None)
-except ImportError:  # R1 未合入前的退化路径
-    wrap_untrusted = None
-# TODO(L6): wire wrap_untrusted once R1 lands
+from review_chain import wrap_untrusted
 
 HTTP_TIMEOUT = 40       # 每次调用; 4 文件 × 40s < yaml timeout 180s
 MAX_FILES_PER_RUN = 4  # 未覆盖文件超过则只判前 4, 其余一条 INFO 说明
@@ -216,9 +211,9 @@ def _info(message: str) -> dict:
 
 
 def _wrap(state: dict) -> str:
-    """diff 是不可信输入: 有 R1 包裹函数就用, 没有退化为裸拼(汇报标注)。"""
+    """diff 是不可信输入: state 整体先截断再定界包裹。"""
     text = json.dumps(state, ensure_ascii=False)[:24000]
-    return wrap_untrusted(text) if wrap_untrusted else text
+    return wrap_untrusted(text)
 
 
 def run(root: str, diff: str) -> list:

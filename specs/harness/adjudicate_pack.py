@@ -36,13 +36,7 @@ import urllib.request
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import delivery_chain  # 同族复用 Delivery record 抽取
 import jev_env
-
-try:
-    import review_chain  # 同目录; R1 的 untrusted text 包裹
-    wrap_untrusted = getattr(review_chain, "wrap_untrusted", None)
-except ImportError:  # R1 未合入前的退化路径
-    wrap_untrusted = None
-# TODO(L6): wire wrap_untrusted once R1 lands
+from review_chain import wrap_untrusted
 
 VERDICT_LABELS = ("accept_reject", "demand_fix", "revise_rule", "insufficient_evidence")
 MARKER_PAT = re.compile(r"待裁决|pending\s+adjudication|规则缺陷", re.IGNORECASE)
@@ -103,8 +97,7 @@ def judge_item(base: str, key: str, model: str, item: dict, evidence: str) -> di
     """一次 jev 调用: 四选项 verdict + confidence。"""
     state = json.dumps({"item": item, "evidence": (evidence or "")[:4000]},
                        ensure_ascii=False)[:20000]
-    if wrap_untrusted:
-        state = wrap_untrusted(state)
+    state = wrap_untrusted(state)
     qs = {
         "verdict": {
             "type": "choice",

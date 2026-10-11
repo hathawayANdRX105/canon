@@ -19,6 +19,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import review_chain
 import rule_selector as rs
 
 ENV_KEYS = {"JEV_API_KEY": "k", "JEV_API_BASE_URL": "https://jev.example/v1"}
@@ -123,7 +124,9 @@ class RuleSelectorTest(unittest.TestCase):
         out = self._run(root, base_diff(), self._post(captured))
         # a.py / b.rs 被 glob 命中 → 只有 deploy.env 发问(一次调用)
         self.assertEqual(len(captured), 1)
-        self.assertEqual(json.loads(captured[0]["state"])["file"], "deploy.env")
+        # state 经 wrap_untrusted 定界包裹,解包后断言内层 JSON
+        inner = review_chain.unwrap_untrusted(captured[0]["state"])
+        self.assertEqual(json.loads(inner)["file"], "deploy.env")
         self.assertEqual(out, [])
 
     def test_low_probability_no_finding(self):
