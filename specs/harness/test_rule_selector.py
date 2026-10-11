@@ -114,6 +114,23 @@ class RuleSelectorTest(unittest.TestCase):
         # catch-all(l3)与停用规则不进目录
         self.assertEqual(ids, ["CHECKLIST-ALPHA", "CHECKLIST-BETA", "CHECKLIST-SLOP-COMMENT"])
 
+    def test_member_repo_mirror_layout_loads(self):
+        # 成员仓没有 specs/, 规则只在 .githooks/spec 镜像——读不到镜像
+        # 就会把整个成员仓判成「无规则可建议」的假绿。
+        root = Path(tempfile.mkdtemp(prefix="rs_mir_"))
+        q = root / ".githooks" / "spec" / "quality"
+        q.mkdir(parents=True)
+        (q / "checklist_alpha.yaml").write_text(ALPHA, encoding="utf-8")
+        cat = rs.load_catalog(str(root))
+        self.assertEqual([r["id"] for r in cat], ["CHECKLIST-ALPHA"])
+
+    def test_missing_catalog_root_is_loud(self):
+        # 两个布局根都不存在 = 基建失败, 必须出 INFO, 禁止静默 [] 假绿。
+        root = Path(tempfile.mkdtemp(prefix="rs_empty_"))
+        out = self._run(root, base_diff(), self._post([]))
+        self.assertEqual([f["severity"] for f in out], ["INFO"])
+        self.assertIn("unreadable", out[0]["message"])
+
     def test_globs_covered_files_not_asked(self):
         root = make_catalog({
             "checklist_alpha.yaml": ALPHA,

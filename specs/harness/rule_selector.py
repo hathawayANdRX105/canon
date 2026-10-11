@@ -54,8 +54,10 @@ SELF_ID = "RULE-SELECTOR"
 SELF_EXCLUDE_PREFIX = (".githooks/", "specs/ledger/")
 SELF_EXCLUDE_SUFFIX = (".md", ".mdx")
 
-CATALOG_DIRS = ("specs/quality", "specs/dioxus", "specs/code", "specs/cleanup",
-                "specs/github", "specs/workspace")
+# 规则目录根: canon 正本仓是 specs/, 成员仓只有 canon-sync 分发的 .githooks/spec
+# 镜像——两种布局都在; 正本存在时优先, 避免与镜像重复计目录。
+CATALOG_ROOTS = ("specs", os.path.join(".githooks", "spec"))
+CATALOG_SUBDIRS = ("quality", "dioxus", "code", "cleanup", "github", "workspace")
 EXCLUDE_NAMES = {"severity_overrides.yaml", "dispatch.yaml"}
 # 粗筛后保留集为空时的兜底: 语言无关的通用域规则(文件类型恰好没被任何
 # 规则 glob 覆盖时, 这些通用规则仍可能被 jev 判「该管」——正是漏网场景)。
@@ -113,41 +115,47 @@ def _intent_of(text: str, fallback: str) -> str:
 
 
 def load_catalog(root: str) -> list:
-    """读正本 specs/ 下的规则 yaml(镜像 .githooks/spec 不读——同步归主控);
+    """读规则 yaml: 正本仓 specs/, 成员仓 .githooks/spec 镜像, 两种布局都认;
+    两个根都不存在 = 基建失败, 抛错(降级为可见 INFO), 禁止静默空目录假绿。
     返回域规则 [{id, intent, sla, paths_include, ...}]。"""
     if yaml is None:
         raise RuntimeError("pyyaml unavailable")
+    bases = [os.path.join(root, c) for c in CATALOG_ROOTS
+             if os.path.isdir(os.path.join(root, c))]
+    if not bases:
+        raise RuntimeError(f"no rule catalog under {'/'.join(CATALOG_ROOTS)} of {root}")
     rules = []
-    for d in CATALOG_DIRS:
-        dpath = os.path.join(root, d)
-        if not os.path.isdir(dpath):
-            continue
-        for name in sorted(os.listdir(dpath)):
-            if not name.endswith(".yaml") or name in EXCLUDE_NAMES:
+    for base in bases[:1]:
+        for sub in CATALOG_SUBDIRS:
+            dpath = os.path.join(base, sub)
+            if not os.path.isdir(dpath):
                 continue
-            path = os.path.join(dpath, name)
-            try:
-                with open(path, encoding="utf-8") as fh:
-                    text = fh.read()
-                doc = yaml.safe_load(text) or {}
-            except Exception as e:  # noqa: BLE001 - 读不了的规则 yaml 按跳过降级
-                print(f"rule_selector: skipping {name} ({e})", file=sys.stderr)
-                continue
-            if not isinstance(doc, dict) or doc.get("enabled") is False:
-                continue
-            rid = re.sub(r"[^a-z0-9]", "-", os.path.splitext(name)[0]).upper()
-            if rid == SELF_ID:
-                continue
-            m = doc.get("match") if isinstance(doc.get("match"), dict) else doc
-            rule = {
-                "id": rid,
-                "intent": _intent_of(text, name),
-                "sla": str(doc.get("sla", "l2")),
-                "paths_include": [str(p) for p in (m.get("paths_include") or [])],
-                "paths_exclude": [str(p) for p in (m.get("paths_exclude") or [])],
-            }
-            if _domain_scoped(rule):
-                rules.append(rule)
+            for name in sorted(os.listdir(dpath)):
+                if not name.endswith(".yaml") or name in EXCLUDE_NAMES:
+                    continue
+                path = os.path.join(dpath, name)
+                try:
+                    with open(path, encoding="utf-8") as fh:
+                        text = fh.read()
+                    doc = yaml.safe_load(text) or {}
+                except Exception as e:  # noqa: BLE001 - 读不了的规则 yaml 按跳过降级
+                    print(f"rule_selector: skipping {name} ({e})", file=sys.stderr)
+                    continue
+                if not isinstance(doc, dict) or doc.get("enabled") is False:
+                    continue
+                rid = re.sub(r"[^a-z0-9]", "-", os.path.splitext(name)[0]).upper()
+                if rid == SELF_ID:
+                    continue
+                m = doc.get("match") if isinstance(doc.get("match"), dict) else doc
+                rule = {
+                    "id": rid,
+                    "intent": _intent_of(text, name),
+                    "sla": str(doc.get("sla", "l2")),
+                    "paths_include": [str(p) for p in (m.get("paths_include") or [])],
+                    "paths_exclude": [str(p) for p in (m.get("paths_exclude") or [])],
+                }
+                if _domain_scoped(rule):
+                    rules.append(rule)
     return rules
 
 
