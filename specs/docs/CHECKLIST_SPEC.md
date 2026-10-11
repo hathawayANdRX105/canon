@@ -318,3 +318,12 @@ timeout: 30
 - ❌ 并行多 harness — rayon 已经够，复杂度不在这
 - ❌ Web UI 配 checklist — yaml 就是 UI
 - ❌ 自动生成 harness — 不同 LLM CLI 协议差太多
+
+## delivery_claims（CK-DELIVERY-CLAIMS，L3 模型层）
+
+`checklist_delivery_claims.yaml`（`mode: diff`，`sla: l3`，仅 `merge` 钩子，`optional: true`，`fail_severity: WARN`）：
+把 PR 的 `## Delivery record` 从「结构检查」升级为「声明 vs 证据」语义检查——分支 diff 当证据，
+逐条声明（上限 12 条，超出显式截断 INFO）判「diff 不支持/矛盾该声明」（true=BAD，0.85 FAIL / 0.6 WARN），
+外加 `evidence_sufficient` 总判（true=证据空/仅声明，0.9 / 0.6）。
+PR body 来源：`GATE_PR_BODY_FILE` 文件钩子优先，否则 `gh pr view`；无 body / 无声明 / 任何基础设施
+失败 → 单条 INFO 降级，永不阻断（policy layer，DWJ 契约）。手动跑：`canon check delivery_claims`。

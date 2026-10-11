@@ -1,0 +1,28 @@
+# CK-DELIVERY-CLAIMS: L3 模型层 — 拿分支 diff 当证据, 逐条验证 PR
+# `## Delivery record` 声明是否被支持 (jev_verify 语义: claims vs evidence,
+# 此前全仓未用的形态——Delivery record 从装饰变成可门禁的语义检查)
+#
+# 方向语义: 每条声明是一题 noul, true = 「证据（diff）不支持或矛盾该声明」
+#   (HIGH=BAD, 与 severity 同向); p>=0.85 FAIL, p>=0.6 WARN, 否则 INFO 参照。
+#   外加 evidence_sufficient 总判 (true=证据为空/仅声明, fail 0.9/warn 0.6,
+#   对齐 done_when 的方向)。
+#
+# 降级契约 (policy layer): 只走 jev 档, 无 key / 网络 / 解析失败 → 单条 INFO
+#   降级, 永不阻断; 无 PR body / 无 gh 也 → 单条 INFO。findings 带
+#   {tier: "jev", confidence, claim} extra。
+# 手动跑法: canon check delivery_claims
+# 凭据: TYPESAFE_API_KEY / TYPESAFE_API_BASE / JEV_MODEL (同 review_chain)
+enabled: true
+hooks: [merge]
+sla: l3
+fail_severity: WARN
+mode: diff
+match:
+  paths_include: ["**/*"]
+  paths_exclude: ["target/", ".wt/"]
+harness:
+  command: "python3"
+  args:
+    - ".githooks/spec/harness/delivery_chain.py"
+optional: true
+timeout: 120
