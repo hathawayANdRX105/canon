@@ -1,6 +1,6 @@
 {
   "semantic_rust_review": {
-    "message": "语义审查（Rust）判定本次改动有缺陷；overall_severity 分数越高问题越重（warn>=1 / fail>=2），具体类目判定见 finding 的 extra 字段。按 14 类目核对 diff（事实卡驱动：name_behavior / comment_rubric / placement / cleanliness_semantics 对着每项的 FACT CARD 判决）：typos / name_behavior / comment_rubric / placement / cleanliness_semantics / ownership_lifetime / error_panic / unsafe_boundaries / concurrency / async_cancellation / collections_perf / type_api_design / macros / security；确认无问题后书面驳回。",
+    "message": "语义审查（Rust）判定本次改动有缺陷；overall_severity 分数越高问题越重（warn>=1 / fail>=2），具体类目判定见 finding 的 extra 字段。按 15 类目核对 diff（事实卡驱动：name_behavior / comment_rubric / placement / clone_necessity / cleanliness_semantics 对着每项的 FACT CARD 判决）：typos / name_behavior / comment_rubric / placement / clone_necessity / cleanliness_semantics / ownership_lifetime / error_panic / unsafe_boundaries / concurrency / async_cancellation / collections_perf / type_api_design / macros / security；确认无问题后书面驳回。",
     "intent": "Rust code review against the OpenCodeReview semantic rubric (internal/config/rules/rule_docs/rust.md). Judge the CHANGED Rust code (not the whole file) against each category; a finding is one of the listed conditions actually present in the diff, not a style preference. Favor precision over recall: report only defects likely real; correctness/security findings are blocking, style-only are advisory. Use file_read/code_search context to establish call sites, ownership, and boundaries before claiming a non-local defect; do not infer defects from a function name alone. Before reporting any non-local claim, establish the call site, ownership, synchronization, and trust boundary from the diff and provided context; report a finding only on concrete evidence actually present in the change; prefer a false negative over a false positive; do not turn formatter/linter-enforced style into blocking findings. The overall_severity score counts only defects that survive this guard.",
     "paths_include": [
       "**/*.rs"
@@ -146,11 +146,21 @@
         "fail": 0.85,
         "warn": 0.65
       },
+      "clone_necessity": {
+        "type": "noul",
+        "instructions": "Clone-necessity defects in the changed Rust code: a clone() whose value never needs ownership — the receiver is only read, only borrowed, or immediately dropped — where taking &recv (with a lifetime if it must outlive the call), an iterator, Cow, or an ownership transfer expresses the same intent without the copy. Judge from the FACT CARD plus the surrounding code: the clone is justified when the value is stored, moved into a callee that takes ownership, returned as owned, or crosses a thread boundary. Covers the shapes the deterministic layer deliberately does not flag: clone of a struct field (self.field.clone()), clone of a local binding (let s = ...; s.clone()), clone feeding a value only read afterwards. Do not re-report what is already covered: TS-CLONE-OWNED flags clone of an owned function parameter, and clippy's clone_on_copy / cloned_instead_of_copied / redundant_clone own Copy types and provably dead clones. Cite the receiver and line as evidence; only judge clones the change itself introduces.",
+        "criteria": {
+          "true": "The change introduces a clone() whose ownership is never required, where a borrow, iterator, Cow, or ownership transfer expresses the same intent without the copy",
+          "false": "Clones in the changed code are justified by a real ownership, storage, or thread requirement"
+        },
+        "fail": 0.85,
+        "warn": 0.65
+      },
       "cleanliness_semantics": {
         "type": "noul",
-        "instructions": "Cleanliness defects needing semantic judgment in the changed Rust code: (1) recursion where a loop is semantically equivalent — no depth bound, no tree/graph traversal, no early-exit justification; (2) clone() where a borrow, iterator, Cow, or ownership transfer is semantically clearer, beyond trivially copyable types and beyond clone of owned parameters (clippy's clone_on_copy and ts_signals' TS-CLONE-OWNED cover those — do not re-report); (3) if/else dispatch clearer as a match or lookup table beyond ts_signals' chain detection; (4) concurrency optimization — locking granularity, unnecessary Arc/Mutex, blocking calls in async context; (5) struct field cohesion. Only judge patterns the change itself introduces; cite line evidence; do not report patterns clippy already flags — the clippy gate owns those.",
+        "instructions": "Cleanliness defects needing semantic judgment in the changed Rust code, excluding clone (the clone_necessity category owns it): (1) recursion where a loop is semantically equivalent — no depth bound, no tree/graph traversal, no early-exit justification; (2) if/else dispatch clearer as a match or lookup table beyond ts_signals' chain detection; (3) concurrency optimization — locking granularity, unnecessary Arc/Mutex, blocking calls in async context; (4) struct field cohesion. Only judge patterns the change itself introduces; cite line evidence; do not report patterns clippy already flags — the clippy gate owns those.",
         "criteria": {
-          "true": "The change introduces a semantically unjustified recursion, redundant clone, unclear dispatch, suboptimal concurrency, or weak field cohesion",
+          "true": "The change introduces a semantically unjustified recursion, unclear dispatch, suboptimal concurrency, or weak field cohesion",
           "false": "Cleanliness of the changed code is sound"
         },
         "fail": 0.85,
