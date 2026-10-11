@@ -89,6 +89,14 @@ ROOT_STAY = {"dispatch.yaml", "severity_overrides.yaml"}
 
 
 def project_root(project: str) -> str:
+    # CANON_TARGET_ROOT: 分发到 .wt 工作树而非主工作树(主树常挂他人改动)。
+    # 与 agents.yaml 的 CANON_PROJECTS_BASE 同源思路,单独命名避免混淆。
+    override = os.environ.get("CANON_TARGET_ROOT")
+    if override:
+        p = os.path.join(override, project)
+        if not os.path.isdir(p):
+            sys.exit(f"worktree not found: {p}")
+        return p
     p = os.path.join("/home/hathaway/projects", project)
     if not os.path.isdir(p):
         sys.exit(f"project not found: {p}")
