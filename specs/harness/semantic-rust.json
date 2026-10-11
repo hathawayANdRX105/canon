@@ -1,6 +1,6 @@
 {
   "semantic_rust_review": {
-    "message": "语义审查（Rust）判定本次改动有缺陷；overall_severity 分数越高问题越重（warn>=1 / fail>=2），具体类目判定见 finding 的 extra 字段。按 12 类目核对 diff：typos / naming_semantics / module_structure / ownership_lifetime / error_panic / unsafe_boundaries / concurrency / async_cancellation / collections_perf / type_api_design / macros / security；确认无问题后书面驳回。",
+    "message": "语义审查（Rust）判定本次改动有缺陷；overall_severity 分数越高问题越重（warn>=1 / fail>=2），具体类目判定见 finding 的 extra 字段。按 13 类目核对 diff：typos / naming_semantics / module_structure / comment_clarity / ownership_lifetime / error_panic / unsafe_boundaries / concurrency / async_cancellation / collections_perf / type_api_design / macros / security；确认无问题后书面驳回。",
     "intent": "Rust code review against the OpenCodeReview semantic rubric (internal/config/rules/rule_docs/rust.md). Judge the CHANGED Rust code (not the whole file) against each category; a finding is one of the listed conditions actually present in the diff, not a style preference. Favor precision over recall: report only defects likely real; correctness/security findings are blocking, style-only are advisory. Use file_read/code_search context to establish call sites, ownership, and boundaries before claiming a non-local defect; do not infer defects from a function name alone. Before reporting any non-local claim, establish the call site, ownership, synchronization, and trust boundary from the diff and provided context; report a finding only on concrete evidence actually present in the change; prefer a false negative over a false positive; do not turn formatter/linter-enforced style into blocking findings. The overall_severity score counts only defects that survive this guard.",
     "paths_include": [
       "**/*.rs"
@@ -131,6 +131,16 @@
         "criteria": {
           "true": "The changed code declares an identifier or method whose name misleads or violates the C-CONV/C-GETTER/C-ITER/C-WORD-ORDER conventions",
           "false": "Declaration-site naming in the changed code is sound"
+        },
+        "fail": 0.85,
+        "warn": 0.65
+      },
+      "comment_clarity": {
+        "type": "noul",
+        "instructions": "Comment quality defects introduced or left behind by the changed Rust code: (1) stale comments — a comment adjacent to changed code that no longer describes what the code does after the change; (2) misleading comments — a comment asserting behavior the code does not have; (3) public functions that can fail or panic without the # Errors / # Panics / # Safety doc sections when the code path actually can (C-FAILURE); (4) doc comments that exist only to satisfy missing_docs without describing why the item exists (Effective Rust Item 27). Judge the changed lines and their attached comments; a comment that merely restates the code is not a defect unless it misleads; cite line evidence. Do not report AI-boilerplate phrasing — the slop_comment rule owns that.",
+        "criteria": {
+          "true": "The changed code carries a stale, misleading, or structurally missing comment/doc section",
+          "false": "Comments and doc sections in the changed code are accurate and adequate"
         },
         "fail": 0.85,
         "warn": 0.65
