@@ -262,9 +262,16 @@ ferrite 是两层布局（`crates/<domain>/<crate>/src`），而规则原先写�
 | `duplication` | l2 | merge | WARN | 跨文件 4+ 连续行重复块（sh+awk, 零依赖） |
 | `crg_impact` | l2 | merge | WARN | diff 跨 3+ crate 改动 → 警告耦合 |
 | `ferrite_oversize` | l3 | merge | INFO | 大文件/大函数参考分（wildtoken `fast-l`；score/confidence，不阻断） |
-| `review_chain` | l3 | pre-push, merge | INFO（harness 透传） | 模型审查三档降级：jev（端点对 `JEV_API_*` 优先，回落 `TYPESAFE_API_*`，见 `harness/jev_env.py`）→ 小模型（`REVIEW_LLM_*`）→ 无（INFO）；per-question 阈值，p≥fail FAIL；choice 问题的坏答案由 `fail_labels` 声明（无声明退回 `_bad`/`problematic` 后缀）；`tier`/`confidence`/`distribution` extra |
+| `review_chain` | l3 | pre-push, merge | INFO（harness 透传） | 模型审查三档降级：jev（端点对 `JEV_API_*` 优先，回落 `TYPESAFE_API_*`，见 `harness/jev_env.py`）→ 小模型（`REVIEW_LLM_*`）→ 无（INFO）；per-question 阈值，p≥fail FAIL；choice 问题的坏答案由 `fail_labels` 声明（无声明退回 `_bad`/`problematic` 后缀）；`context_limit` 弃权题标记 diff 内证据不足以判断的情形（advisory）；`embedded_instruction` 免疫题抓「针对判决 AI 的注入文本」（warn0.65/fail0.9）；送判 state 经 `wrap_untrusted` 定界（不可信输入只当数据）；`tier`/`confidence`/`distribution` extra |
+| `delivery_claims` | l3 | merge | WARN | PR `## Delivery record` 每条处置声明对真实 diff 逐条核验（陈述式负面命题；p≥0.85 FAIL / ≥0.6 WARN）；声明抽取 = 正则候选 + jev choice 批挑（`fail_labels: [disposition]`，无端点退回正则 + INFO）；12 条上限显式截断；基建失败单条 INFO 不阻断 |
+| `pr_consistency` | l3 | merge | WARN | PR 标题/正文 vs diff 实际改动语义一致性（`title_diff_chain.py`）；失配 p≥0.6 出 WARN——语义判断层封顶 WARN，不硬拦 |
+| `rule_selector` | l3 | merge | WARN | 弃权式规则选择 advisory：glob 未命中的文件问 jev「哪条既有规则应管辖」（p(governs)≥0.85 出 `RULE-SELECTOR-<ID>`，建议补 match 或书面驳回）；确定性 glob 仍是权威，jev 只兜漏 |
 
 close 路径另有 `done_when_judge`（`github_issues.yaml`）：GT-04 机械门过后，Done when 每条过同一套三档模型评审（问题集 `harness/jev_questions_done_when.json`，`default_fail: 0.85`），p(未达标)≥0.85 FAIL 硬拦；任何基础设施失败降 `DWJ-SKIPPED` INFO 不阻断。
+
+verify 家族（l2 级联）的 `slop_comment`/`antislop`/`duplication` 三个题集带可选 `domain_gate` 越域门：候选正则命中但 jev 判定"不是本规则管的对象"（p≥0.8）直接丢弃并汇总 `VERIFY-DOMAIN-GATE: dropped N/M` INFO——域门只减 FP，未配域门的题集与无端点降级路径逐字不变。
+
+离线工具（不挂钩子，手动/周期跑）：`harness/tune_ledger.py`（collect 从 merged PR 抽处置进 `specs/ledger/findings.jsonl`，只存 sha256 摘要；propose 聚合"屡被有实质依据的书面驳回"的规则出**人批**阈值复核提案，永不改配置）；`harness/adjudicate_pack.py`（把待裁决发现打包成四选项证据简报供维护者裁决，零副作用）。
 
 ### dioxus 家族（canon `specs/dioxus/`，只发给有 dioxus 证据的仓）
 
