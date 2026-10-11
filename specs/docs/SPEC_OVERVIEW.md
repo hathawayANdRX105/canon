@@ -262,7 +262,7 @@ ferrite 是两层布局（`crates/<domain>/<crate>/src`），而规则原先写�
 | `duplication` | l2 | merge | WARN | 跨文件 4+ 连续行重复块（sh+awk, 零依赖） |
 | `crg_impact` | l2 | merge | WARN | diff 跨 3+ crate 改动 → 警告耦合 |
 | `ferrite_oversize` | l3 | merge | INFO | 大文件/大函数参考分（wildtoken `fast-l`；score/confidence，不阻断） |
-| `review_chain` | l3 | pre-push, merge | INFO（harness 透传） | 模型审查三档降级：jev（`TYPESAFE_API_KEY`）→ 小模型（`REVIEW_LLM_*`）→ 无（INFO）；per-question 阈值，p≥fail FAIL；`tier`/`confidence` extra |
+| `review_chain` | l3 | pre-push, merge | INFO（harness 透传） | 模型审查三档降级：jev（端点对 `JEV_API_*` 优先，回落 `TYPESAFE_API_*`，见 `harness/jev_env.py`）→ 小模型（`REVIEW_LLM_*`）→ 无（INFO）；per-question 阈值，p≥fail FAIL；choice 问题的坏答案由 `fail_labels` 声明（无声明退回 `_bad`/`problematic` 后缀）；`tier`/`confidence`/`distribution` extra |
 
 close 路径另有 `done_when_judge`（`github_issues.yaml`）：GT-04 机械门过后，Done when 每条过同一套三档模型评审（问题集 `harness/jev_questions_done_when.json`，`default_fail: 0.85`），p(未达标)≥0.85 FAIL 硬拦；任何基础设施失败降 `DWJ-SKIPPED` INFO 不阻断。
 

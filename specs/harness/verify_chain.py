@@ -39,6 +39,9 @@ import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CONFIG = os.path.join(HERE, "jev_questions_verify.json")
+sys.path.insert(0, HERE)
+import jev_env  # endpoint pair resolution (JEV_* wins over legacy TYPESAFE_*)
+
 # per-jev-call HTTP budget; must stay under the invoking checklist yaml `timeout:`
 # (45s) so pool=8 waves finish before the engine kills the harness (rc=2 = check skipped)
 TIMEOUT_HTTP = 20
@@ -208,9 +211,7 @@ def post(url, headers, body, timeout):
 def judge_one(rule_cfg, cand):
     state = {"rule_intent": rule_cfg.get("intent", ""), **cand}
     state = {k: (v[:CAP_STATE] if isinstance(v, str) else v) for k, v in state.items()}
-    key = os.environ.get("TYPESAFE_API_KEY")
-    base = os.environ.get("TYPESAFE_API_BASE", "https://api.typesafe.ai").rstrip("/")
-    model = os.environ.get("JEV_MODEL", "jev-latest")
+    base, key, model = jev_env.resolve()
     payload = post(f"{base}/v1/systemone",
                    {"Authorization": f"Bearer {key}", "x-api-key": key},
                    {"state": state, "model": model, "questions": rule_cfg["questions"]},
@@ -224,7 +225,13 @@ def judge_one(rule_cfg, cand):
             out[qid] = float(ans.get("score", 0.0))   # 0-indexed, continuous
         elif t == "choice":
             probs = ans.get("probabilities", {}) or {}
-            out[qid] = max(probs.values()) if probs else 0.0
+            # fail_labels = canonical "bad" answers (same contract as jev_rule.py);
+            # without a declaration, the old max-prob reading stands.
+            bad = set(rule_cfg["questions"].get(qid, {}).get("fail_labels", []))
+            if bad:
+                out[qid] = min(sum(v for k, v in probs.items() if k in bad), 1.0)
+            else:
+                out[qid] = max(probs.values()) if probs else 0.0
     return out
 
 
@@ -251,7 +258,7 @@ def main():
         print(json.dumps([])); return
 
     judged, notes = {}, {}
-    key = os.environ.get("TYPESAFE_API_KEY")
+    _, key, _ = jev_env.resolve()
     if key:
         with concurrent.futures.ThreadPoolExecutor(max_workers=POOL) as ex:
             futs = {i: ex.submit(judge_one, rule_cfg, c) for i, c in enumerate(cands)}
@@ -262,7 +269,7 @@ def main():
                     judged[i], notes[i] = None, f"{type(e).__name__}: {e}"[:120]
     else:
         for i in range(len(cands)):
-            judged[i], notes[i] = None, "TYPESAFE_API_KEY not set"
+            judged[i], notes[i] = None, "no jev endpoint pair configured"
 
     findings = []
     for i, c in enumerate(cands):

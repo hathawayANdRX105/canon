@@ -1,0 +1,127 @@
+#!/usr/bin/env python3
+"""choice 判决语义（fail_labels 契约）回归测试。
+
+钉住审计发现：review_chain 旧实现按标签后缀（_bad/problematic）猜「坏答案」，
+done-when 的 verdict 标签 all_done/some_pending/not_started 一个都命中不了，
+p 恒为 0 —— verdict 问题静默失效。修复后：问题声明 fail_labels 即为规范语义
+（与 jev_rule.py 同一契约），无声明才退回后缀猜测。
+verify_chain 同理：choice 无声明时保持旧 max-prob 读法，有声明按坏标签求和。
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import sys
+import unittest
+from pathlib import Path
+from typing import ClassVar
+from unittest import mock
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import jev_env
+import review_chain as rc
+import verify_chain as vc
+
+HERE = Path(__file__).resolve().parent
+
+
+class JevEnvResolveTest(unittest.TestCase):
+    BASE: ClassVar[dict[str, str]] = {
+        "TYPESAFE_API_KEY": "", "TYPESAFE_API_BASE": "",
+        "JEV_API_KEY": "", "JEV_API_BASE_URL": "", "JEV_MODEL": "",
+    }
+
+    def _resolve(self, env):
+        with mock.patch.dict(os.environ, self.BASE, clear=False), \
+             mock.patch.dict(os.environ, env):
+            return jev_env.resolve()
+
+    def test_mcp_pair_wins_over_legacy(self):
+        base, key, _ = self._resolve({
+            "JEV_API_KEY": "jk", "JEV_API_BASE_URL": "https://x.example/v1",
+            "TYPESAFE_API_KEY": "tk", "TYPESAFE_API_BASE": "https://dead.example"})
+        self.assertEqual((base, key), ("https://x.example", "jk"))
+
+    def test_legacy_pair_used_without_mcp_key(self):
+        base, key, _ = self._resolve({"TYPESAFE_API_KEY": "tk",
+                                      "TYPESAFE_API_BASE": "https://t.example/"})
+        self.assertEqual((base, key), ("https://t.example", "tk"))
+
+    def test_full_systemone_path_normalized_to_base(self):
+        # mcp.json ships JEV_API_BASE_URL with the endpoint path baked in.
+        base, _, _ = self._resolve({"JEV_API_KEY": "jk",
+                                    "JEV_API_BASE_URL": "https://p.example/v1/systemone"})
+        self.assertEqual(base, "https://p.example")
+
+    def test_no_pair_returns_none_key(self):
+        _, key, _ = self._resolve({})
+        self.assertIsNone(key)
+
+
+class ReviewChainChoiceTest(unittest.TestCase):
+    def _run(self, answers, questions):
+        with mock.patch.dict(os.environ, {"TYPESAFE_API_KEY": "k"}), \
+             mock.patch.object(rc, "post", return_value={"answers": answers}):
+            out, err = rc.run_jev("diff", questions, 0.8, 0.5)
+        self.assertIsNone(err)
+        return {f["id"]: f for f in out}
+
+    def test_fail_labels_sum_bad_answers(self):
+        questions = {"verdict": {"type": "choice", "instructions": "x",
+                                 "fail_labels": ["bad_a", "bad_c"],
+                                 "fail": 0.8, "warn": 0.5}}
+        answers = {"verdict": {"type": "choice", "probabilities":
+                               {"bad_a": 0.5, "bad_c": 0.4, "good": 0.1}}}
+        f = self._run(answers, questions)["REVIEW-VERDICT"]
+        self.assertEqual(f["severity"], "FAIL")  # p=0.9 >= 0.8
+        self.assertEqual(json.loads(f["distribution"])["good"], 0.1)
+
+    def test_done_when_verdict_now_fires(self):
+        # The shipped question file is the regression target: these labels used
+        # to match no suffix heuristic, leaving the verdict permanently silent.
+        qfile = json.loads((HERE / "jev_questions_done_when.json").read_text())
+        questions = {"verdict": qfile["verdict"]}
+        answers = {"verdict": {"type": "choice", "probabilities":
+                               {"all_done": 0.1, "some_pending": 0.6, "not_started": 0.3}}}
+        f = self._run(answers, questions)["REVIEW-VERDICT"]
+        self.assertEqual(f["severity"], "FAIL")  # 0.9 >= fail 0.85
+
+    def test_legacy_suffix_fallback_still_works(self):
+        questions = {"verdict": {"type": "choice", "instructions": "x",
+                                 "fail": 0.8, "warn": 0.5}}
+        answers = {"verdict": {"type": "choice", "probabilities":
+                               {"problematic": 0.85, "clean": 0.15}}}
+        f = self._run(answers, questions)["REVIEW-VERDICT"]
+        self.assertEqual(f["severity"], "FAIL")
+
+    def test_noul_unaffected_and_no_distribution_key(self):
+        questions = {"risk": {"type": "noul", "instructions": "x", "fail": 0.8, "warn": 0.5}}
+        answers = {"risk": {"type": "noul", "noul": 0.55}}
+        f = self._run(answers, questions)["REVIEW-RISK"]
+        self.assertEqual(f["severity"], "WARN")
+        self.assertNotIn("distribution", f)
+
+
+class VerifyChainChoiceTest(unittest.TestCase):
+    def _judge(self, rule_cfg, probs):
+        answers = {qid: {"type": "choice", "probabilities": probs}
+                   for qid in rule_cfg["questions"]}
+        with mock.patch.dict(os.environ, {"TYPESAFE_API_KEY": "k"}), \
+             mock.patch.object(vc, "post", return_value={"answers": answers}):
+            return vc.judge_one(rule_cfg, {"path": "a.rs", "line": 1, "excerpt": "x"})
+
+    def test_choice_fail_labels_sum(self):
+        cfg = {"questions": {"kind": {"type": "choice", "fail_labels": ["bad"]}}}
+        out = self._judge(cfg, {"bad": 0.7, "fine": 0.3})
+        self.assertAlmostEqual(out["kind"], 0.7)
+
+    def test_choice_without_labels_keeps_max_prob(self):
+        cfg = {"questions": {"kind": {"type": "choice"}}}
+        out = self._judge(cfg, {"a": 0.6, "b": 0.4})
+        self.assertAlmostEqual(out["kind"], 0.6)
+
+
+if __name__ == "__main__":
+    unittest.main()
