@@ -1,6 +1,6 @@
 {
   "semantic_rust_review": {
-    "message": "语义审查（Rust）判定本次改动有缺陷；overall_severity 分数越高问题越重（warn>=1 / fail>=2），具体类目判定见 finding 的 extra 字段。按 10 类目核对 diff：typos / ownership_lifetime / error_panic / unsafe_boundaries / concurrency / async_cancellation / collections_perf / type_api_design / macros / security；确认无问题后书面驳回。",
+    "message": "语义审查（Rust）判定本次改动有缺陷；overall_severity 分数越高问题越重（warn>=1 / fail>=2），具体类目判定见 finding 的 extra 字段。按 11 类目核对 diff：typos / module_structure / ownership_lifetime / error_panic / unsafe_boundaries / concurrency / async_cancellation / collections_perf / type_api_design / macros / security；确认无问题后书面驳回。",
     "intent": "Rust code review against the OpenCodeReview semantic rubric (internal/config/rules/rule_docs/rust.md). Judge the CHANGED Rust code (not the whole file) against each category; a finding is one of the listed conditions actually present in the diff, not a style preference. Favor precision over recall: report only defects likely real; correctness/security findings are blocking, style-only are advisory. Use file_read/code_search context to establish call sites, ownership, and boundaries before claiming a non-local defect; do not infer defects from a function name alone. Before reporting any non-local claim, establish the call site, ownership, synchronization, and trust boundary from the diff and provided context; report a finding only on concrete evidence actually present in the change; prefer a false negative over a false positive; do not turn formatter/linter-enforced style into blocking findings. The overall_severity score counts only defects that survive this guard.",
     "paths_include": [
       "**/*.rs"
@@ -114,6 +114,16 @@
         },
         "fail": 0.85,
         "warn": 0.6
+      },
+      "module_structure": {
+        "type": "noul",
+        "instructions": "Module/file splitting and aggregation defects in the changed Rust code: (1) a module that does not cohere around one responsibility — its pub surface mixes unrelated concerns (The Rust Book ch7.5); (2) impl blocks or trait implementations scattered across files that belong with the type's core definition (Effective Rust Item 22); (3) god-modules — a single file owning many distinct responsibilities; (4) 'misc drawer' aggregation — new unrelated items added to util.rs/helpers.rs/common.rs-style catch-all files instead of a cohesive module. Judge from the changed code with file-level context; cite file and line evidence; do not report file length (the file_size gate owns that), and do not report the mere existence of a util module — only aggregation of NEW unrelated items into it.",
+        "criteria": {
+          "true": "The changed code introduces or worsens a module splitting/aggregation defect (incohesion, scattered impls, god-module, misc-drawer aggregation)",
+          "false": "Module boundaries and file organization in the changed code are sound"
+        },
+        "fail": 0.85,
+        "warn": 0.65
       },
       "overall_severity": {
         "type": "score",
