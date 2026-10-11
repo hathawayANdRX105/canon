@@ -25,9 +25,10 @@
 
 - 交互元素都要加 `data-testid`，值用元素的 `name` 属性值。
 - 容器元素要加 `role` 和 `aria-label`。
-- 每个页面写一份契约文件，位置是**该页面所在 crate 里的** `specs/ui/<页面名>.yaml`
-  （例如 `crates/web/admin/specs/ui/aliases.yaml`），列出 role、name、testid、action。
-  现成的例子：`crates/web/admin/specs/ui/` 下有 4 份，照着写。
+- 每个页面写一份契约文件，集中在 `.githooks/spec/custom/ui-specs/<app>-<页面名>.yaml`
+  （例如 `admin-aliases.yaml`、`console-usage.yaml`、`harness-ui-chat.yaml`），列出 role、name、testid、action。
+  `custom/` 是 canon-sync 保护的项目侧资产目录（push 永不触碰），文件名不带
+  `checklist_` 前缀——引擎不会把它当规则加载。现成例子：`.githooks/spec/custom/ui-specs/` 下有 7 份，照着写。
 - PR 的冒烟验证用 `tab.ariaSnapshot()` 检查 role、name、testid 是否正确。
   这是 Playwright 的 API：`tab` 是会话工具 `browser` 打开的页签对象，
 - 截图只作为辅助手段（看视觉风格和品牌效果），失败的时候附上截图。
@@ -58,7 +59,7 @@
 
 | 你要做的事 | 该怎么做 |
 |---|---|
-| 新增或改动交互元素 | 加 `data-testid`，并更新该页面的 `specs/ui/<页面名>.yaml` |
+| 新增或改动交互元素 | 加 `data-testid`，并更新该页面的 `.githooks/spec/custom/ui-specs/<app>-<页面名>.yaml` |
 | 改动整个页面 | 跑 `ariaSnapshot` 断言，不要只靠截图 |
 | 检查视觉回归（配色、布局） | 截图辅助对比 |
 | 新增公共函数或类型 | 先写 rust doc 再写实现 |
