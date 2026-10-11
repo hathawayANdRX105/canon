@@ -6,14 +6,16 @@
 #
 # 文件名映射约定：
 #   默认映射  to = <dest 前缀>/<src 的 basename>，即保留源文件名、按安装前缀归位
-#   （当前所有项目 dest 前缀都是 .agent/tasks）；需要改名时显式写 to 覆盖。
+#   （各项目按自身 .agent/ 布局显式指定 to）；需要改名时显式写 to 覆盖。
 #   本清单就是「哪份文档装到哪里」的唯一留存记录：agent-sync status/push/
 #   backport 全部以它为准，新增分发文档 = 加一行。
 #
 # canon 源布局, 互不重复:
 #   specs/   默认spec与工具使用(rules / skills / templates, 见 specs/README.md)
 # 任务书(closeout / feature-dev-handbook / version-stats)已全部转成 dotfiles
-# skill, 走 omp 的 skill 通道, 不再经本清单分发。
+# skill, 走 omp 的 skill 通道, 不再经本清单分发; ferrite 的任务书模板
+# (template / dev / dev-web-lane / webfix-lane / closeout-pr)已按其 2026-10-05
+# 决策移除, 仓内不再维护 .agent/tasks/, 工单由 task-brief / pr-orchestration 生成。
 # 安装路径沿用项目侧 .agent/ 布局; 分叉文档以 <名>.<项目>.md 命名按项目分发。
 #
 # 可选字段：
@@ -45,16 +47,6 @@ projects:
         to: .agent/skills/scaffold-dsh/SKILL.md
       - src: agent-pack/skills/ainotation-web.md
         to: .agent/skills/ainotation-web/SKILL.md
-      - src: agent-pack/templates/template.md
-        to: .agent/tasks/TEMPLATE.md
-      - src: agent-pack/templates/dev.md
-        to: .agent/tasks/dev.md
-      - src: agent-pack/templates/dev-web-lane.md
-        to: .agent/tasks/dev-web-lane.md
-      - src: agent-pack/templates/webfix-lane.md
-        to: .agent/tasks/webfix-lane.md
-      - src: agent-pack/templates/closeout-pr.md
-        to: .agent/tasks/closeout-pr.md
       - src: agent-pack/rules/workflow-state.md
         to: .agent/rules/workflow-state.md
   kime:

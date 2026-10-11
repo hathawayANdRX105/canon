@@ -1,13 +1,11 @@
 # Web 双车道流程（web-dev / webfix 角色）
 
-**什么时候用**：改动只落在 web 域（`crates/web/*`、`apps/web`、`apps/kit-demo`）的
+**什么时候用**：改动只落在 web 域（`crates/web/*`、`apps/admin-web`、`apps/tavern-web`）的
 快速开发。其他域（gateway / harness / api / contract）不受影响，PR 照旧直提 `main`。
 
 本文件是 `todo/web-dev-and-web-fix.md`（维护者原始策略）的修订版，补了四个洞：
 main→web-dev 同步干线、main 接受的域限定、web-fix 是角色不是分支、squash 机制说明。
 **两份冲突时以本文件为准。**
-
-任务书：开发用 `.agent/tasks/dev-web-lane.md`；审查修复用 `.agent/tasks/webfix-lane.md`。
 
 ---
 
@@ -40,7 +38,7 @@ git worktree list                            # 自检：新条目路径必须是
 两个 web worktree **共享一个编译目录**（避免每开一个 worktree 付一次冷 wasm target）：
 
 ```bash
-export CARGO_TARGET_DIR=/home/hathaway/projects/ferrite/target-web   # 两个车道的会话各自 export
+export CARGO_TARGET_DIR=/home/hathaway/projects/mono/target   # 两个车道共用主检出 target/（原 target-web 已废弃）
 ```
 
 cargo 用文件锁串行化并发构建；registry 依赖（dioxus 等）只编一次。
@@ -101,8 +99,8 @@ git push origin web-dev
 
 ## Gate 门禁交互（已核对，不挡快速开发）
 
-本地 commit/push 跑 `pre-commit`/`pre-push`（workspace + code + checklist + code_doc），
-merge 期跑 `github/pr_gates` + clippy 等。结论：
+本地 commit/push 跑 `pre-commit`/`pre-push`（code + checklist：shared_components / structure /
+copy_constants / code_doc 等），merge 期跑 `github/pr_gates` + clippy 等。结论：
 
 | 时机 | 门禁 | 对本流程的影响 |
 |---|---|---|
