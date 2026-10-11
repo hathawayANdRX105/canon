@@ -154,7 +154,9 @@
 在 merge 钩子里自动跑：
 
 1. `semantic_rust` / `semantic_go` / `semantic_javascript` / `semantic_default`：移植 open-code-review 的规则文档
-   （Rust 侧已扩到 14 类目：上游 10 类 + canon 自有 `naming_semantics` 命名语义、`comment_clarity` 注释清晰度、`module_structure` 模块拆分/聚合与 `cleanliness_semantics` 整洁语义），
+   （Rust 侧 14 类目：上游 10 类 + canon 自有 `name_behavior` 名字-行为一致、
+   `comment_rubric` 注释信息层、`placement` 位置适配、`cleanliness_semantics`
+   整洁语义——后四类对着 tree-sitter 事实卡判决，`state.facts: true`），
    判决由 `jev_rule.py` 给（意图 + 各类缺陷 noul + 总分 + 反误报 guardrail）
 2. `review_chain`：jev → 小模型 → 无模型三档降级
 3. 本地按需触发：`canon check <name> --sla l2`
