@@ -1,6 +1,8 @@
 todo/
 target/
 __pycache__/
+# Python 字节码：目录形式已挡，这里再挡散落在目录外的 *.pyc（pre-commit hook 也在 workspace 跑 python3）
+*.pyc
 .testless/
 
 # /wf-scope 的 living scope：会话内工作文档，不进版本库
