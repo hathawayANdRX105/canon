@@ -1,1 +1,0 @@
-../../../agent-pack/skills/gate-checklist.md

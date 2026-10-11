@@ -156,7 +156,25 @@ canon/
 | `event_note` | 往任务时间线写自由决策/备注 |
 | `ping` | 健康检查 |
 
-配置：MCP server 以 stdio 传输标准 JSON-RPC 2.0，在 MCP 客户端配置里以 `canon` 可执行文件 + MCP 环境变量注册即可（客户端侧配置示例见 dotfiles 的 `mcp.json`）。
+配置：在 MCP 客户端里以 `canon mcp` 子命令注册，走 stdio 传输：
+
+```json
+{
+  "mcpServers": {
+    "canon": {
+      "command": "/home/<user>/.local/bin/canon",
+      "args": ["mcp"],
+      "timeout": 300000
+    }
+  }
+}
+```
+
+`canon init` 把二进制装到 `~/.local/bin/`，所以路径通常直接写 `canon` 即可。超时设大是因为 `spec_run` / `preflight` 会真跑检查，模型判决加上规则执行可能到分钟级。
+
+**为什么配 MCP 而不是让 agent 猜命令**：规范会变（新增规则、改阈值、换 harness），agent 凭记忆写的检查命令迟早对不上。走 MCP 时 agent 每次现查 `spec_catalog` / `spec_explain` 拿到当次的真实规则，规则变了不用重训。
+
+**配套 skill**：`.agent/skills/canon-check` 是规则消费侧手册——怎么查规范、commit 被拦了怎么处置、以及规范本身有缺陷时怎么改正本（走 `agent-sync backport`）。新增规则、写 checklist、自定义 spec 走 `gate-spec` skill。
 
 ## 门禁怎么配
 
@@ -179,14 +197,33 @@ canon/
 
 ## 命令
 
+门禁命令（钩子自动调用，一般不手动跑）：
+
 ```bash
-canon pre-commit                    # staged diff（钩子自动调）
-canon pre-push                      # HEAD 全量 diff（钩子自动调）
+canon pre-commit                    # staged diff
+canon pre-push                      # HEAD 全量 diff
 canon merge / gate pre-merge        # merge-base 检查（GATE_BASE=origin/develop 换基线）
 canon check                         # 列出全部规则
 canon check clippy --sla l2         # 手动跑指定规则（merge scope，不受 hooks 过滤）
 canon check hardcoded_secret --json # 机器可读输出
 ```
+
+开发与分发命令：
+
+```bash
+just build         # cargo build --release，产物落 .githooks/canon
+just test          # 全量测试
+just spec-sync     # specs/ → .githooks/spec/ 部署镜像
+just agents-push   # 重新组装本仓 AGENTS.md
+just review        # canon check 全套自检
+just precommit     # fmt-check + test + build + spec-sync
+scripts/canon-sync # 推成员仓
+scripts/agent-sync # agent 文档分发到各项目
+```
+
+测试与构建走 GitHub CI（`fmt --check` + `cargo build --locked` + `cargo test --locked`）。
+
+## 配置变量
 
 模型审查层（`review_chain` 与 `done_when_judge` 共用）的环境配置：
 
@@ -200,9 +237,7 @@ export REVIEW_LLM_API_KEY=...
 export REVIEW_LLM_MODEL=qwen-plus
 ```
 
-测试与构建走 GitHub CI（`fmt --check` + `cargo build --locked` + `cargo test --locked`）。
-
-## 深入
+## 其他
 
 - `specs/docs/SPEC_OVERVIEW.md` —— 全部规则的逐条总览（判什么、严重度、触发钩子）
 - `specs/docs/CHECKLIST_SPEC.md` —— checklist yaml schema 与 harness 协议
@@ -212,15 +247,3 @@ export REVIEW_LLM_MODEL=qwen-plus
 **文档分发**：`agent-sync` 把 `agent-pack/` 下的文档分发到各项目，一个主题要么纯通用（放 canon）要么纯项目特有（留项目）。`agent-sync status` 看漂移、`agent-sync push <项目>` 下发、`agent-sync backport <项目> <src>` 把项目本地修正回流 canon。本地有改动的文件绝不自动覆盖。
 
 **AGENTS.md 组装**：各项目的 `AGENTS.md` 是生成物，不走 `agent-sync`，由 `scripts/agents` 组装——共享章节在 `agent-pack/agents/fragments/`，项目独有在 `agent-pack/agents/local/<项目>/`，`agents.yaml` 决定谁包含哪些章节。`scripts/agents status` 看全项目漂移。
-
-## 手工命令
-
-```bash
-just build         # cargo build --release，产物落 .githooks/canon
-just test          # 全量测试
-just spec-sync     # specs/ → .githooks/spec/ 部署镜像
-just agents-push   # 重新组装本仓 AGENTS.md
-just review        # canon check 全套自检
-just precommit     # fmt-check + test + build + spec-sync
-scripts/canon-sync # 推成员仓
-```

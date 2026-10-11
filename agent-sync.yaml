@@ -43,8 +43,6 @@ projects:
         to: .agent/skills/refactor-workflow/SKILL.md
       - src: agent-pack/skills/scaffold-dsh.md
         to: .agent/skills/scaffold-dsh/SKILL.md
-      - src: agent-pack/skills/gate-checklist.md
-        to: .agent/skills/gate-checklist/SKILL.md
       - src: agent-pack/skills/ainotation-web.md
         to: .agent/skills/ainotation-web/SKILL.md
       - src: agent-pack/templates/template.md
