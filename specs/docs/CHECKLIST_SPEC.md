@@ -21,6 +21,28 @@
 
 启动时 `crates/gate/src/catalog.rs` 的 `catalog::load()` 扫 `.githooks/spec/{quality,code,cleanup,workspace,github}/` 下的 yaml（spec 根层与 `custom/` 不在扫描范围），**顺序按文件名字典序**（用户想让谁先跑就改名加前缀，如 `00_`、`10_`）。
 
+## `custom/` 覆盖层（每仓本地覆盖）
+
+`canon-sync push` 无条件覆盖所有 canon-owned spec 文件（OWNED_DIRS 家族 yaml +
+`dispatch.yaml` / `severity_overrides.yaml`），每仓的本地调优写在
+`.githooks/spec/custom/` 下（PROTECTED 列表，push / status / remove_retired 都不碰）：
+
+- **severity 覆盖**：引擎先应用根 `severity_overrides.yaml`，再应用
+  `custom/severity_overrides.yaml`（同名规则 custom 层最后定音——它是唯一能
+  活过 canon-sync 的降级通道）。custom 缺省 = 静默 no-op；存在但 yaml 解析坏
+  = 一条 `canon.setup` WARN finding（no-silent，只报一次）。INFO finding
+  任何层都不改级（确认项恒绿）。
+- **家族 yaml 深合并**：引擎加载 `spec/<file>`（如 `github_pull_requests.yaml`、
+  `dispatch.yaml`）时，若存在 `custom/<同名文件>` 则深合并覆盖在 canon 文件之上：
+  mapping 逐 key 递归合并，scalar / list 按 key 整体替换（如 `type_labels_cfg`
+  要改就写全量）。`custom/` 只作 overlay 不作 base 源：同名副本不会 shadow
+  canon 文件，文件发现（`find_spec_file`）跳过 `custom/` 目录；canon 侧没有
+  该文件时，custom 单文件可以顶替整份 cfg。
+- **坏 yaml 的处置不对称**：坏 `custom/severity_overrides.yaml` 报 WARN
+  finding；坏 `custom/<家族文件>` 静默保留 canon base（项目本地糖不能拉垮正本），
+  行为与 `merge_custom_overlay` 的文档一致。
+
+
 ## YAML Schema
 
 ```yaml

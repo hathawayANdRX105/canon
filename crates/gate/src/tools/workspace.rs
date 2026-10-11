@@ -19,9 +19,11 @@ fn repo_root() -> PathBuf {
 }
 
 fn spec(name: &str) -> YamlValue {
-    let path = crate::shared::find_spec_file(&repo_root().join(".githooks/spec"), name)
-        .unwrap_or_else(|| repo_root().join(".githooks/spec").join(name));
-    load_yaml(path.to_str().unwrap_or("")).unwrap_or(YamlValue::Null)
+    let spec_dir = repo_root().join(".githooks/spec");
+    let path =
+        crate::shared::find_spec_file(&spec_dir, name).unwrap_or_else(|| spec_dir.join(name));
+    let cfg = load_yaml(path.to_str().unwrap_or("")).unwrap_or(YamlValue::Null);
+    crate::shared::merge_custom_overlay(&cfg, &spec_dir, name)
 }
 
 fn strings(cfg: &YamlValue, key: &str, default: &[&str]) -> Vec<String> {

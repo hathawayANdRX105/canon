@@ -149,7 +149,11 @@ pub fn run(dry_run: bool) -> Vec<Finding> {
         crate::shared::find_spec_file(&githooks.join("spec"), "cleanup_branch_cleanup.yaml")
             .unwrap_or_else(|| githooks.join("spec/cleanup_branch_cleanup.yaml"));
     let yaml = match load_yaml(spec_path.to_str().unwrap_or("")) {
-        Ok(value) => value,
+        Ok(value) => crate::shared::merge_custom_overlay(
+            &value,
+            &githooks.join("spec"),
+            "cleanup_branch_cleanup.yaml",
+        ),
         Err(error) => {
             return vec![Finding::new(
                 "CL-01",

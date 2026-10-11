@@ -13,7 +13,9 @@ pub fn run() -> i32 {
         git::find_githooks_dir().unwrap_or_else(|| std::path::PathBuf::from(".githooks"));
     let spec_dir = githooks_root.join("spec");
     let dispatch_path = spec_dir.join("dispatch.yaml");
-    let cfg = crate::shared::load_yaml(dispatch_path.to_str().unwrap_or("")).ok();
+    let cfg = crate::shared::load_yaml(dispatch_path.to_str().unwrap_or(""))
+        .ok()
+        .map(|cfg| crate::shared::merge_custom_overlay(&cfg, &spec_dir, "dispatch.yaml"));
 
     let mut findings = Vec::new();
     // No silent defaults: a missing dispatch means the repo's hook setup is
