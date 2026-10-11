@@ -155,6 +155,28 @@ class RuleSelectorTest(unittest.TestCase):
         self.assertEqual(warns[0]["path"], "deploy.env")
         self.assertIn("书面驳回", warns[0]["message"])
 
+    def test_generated_mirror_and_docs_never_asked(self):
+        # .githooks/ 生成镜像与 .md 散文按设计不被 code 规则 glob 管辖;
+        # 若被问, advisory 会对每次 spec-sync 的镜像变更反复误报。
+        root = make_catalog({
+            "checklist_slop_comment.yaml": SLOP,
+            "checklist_alpha.yaml": ALPHA,
+        })
+        diff = base_diff() + (
+            "\ndiff --git a/.githooks/spec/docs/x.md b/.githooks/spec/docs/x.md\n"
+            "--- a/.githooks/spec/docs/x.md\n+++ b/.githooks/spec/docs/x.md\n@@\n+hi\n"
+            "diff --git a/specs/docs/SPEC.md b/specs/docs/SPEC.md\n"
+            "--- a/specs/docs/SPEC.md\n+++ b/specs/docs/SPEC.md\n@@\n+hi\n"
+            "diff --git a/specs/ledger/findings.jsonl b/specs/ledger/findings.jsonl\n"
+            "--- a/specs/ledger/findings.jsonl\n+++ b/specs/ledger/findings.jsonl\n@@\n+{}\n")
+        captured = []
+        out = self._run(root, diff, self._post_high(captured, {}))
+        asked = [json.loads(review_chain.unwrap_untrusted(b["state"]))["file"] for b in captured]
+        for banned in (".githooks/spec/docs/x.md", "specs/docs/SPEC.md",
+                       "specs/ledger/findings.jsonl"):
+            self.assertNotIn(banned, asked)
+        self.assertEqual([f for f in out if f["severity"] == "WARN"], [])
+
     @staticmethod
     def _post_high(captured, per_q):
         def impl(url, headers, body, timeout):

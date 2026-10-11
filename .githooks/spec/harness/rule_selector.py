@@ -48,6 +48,11 @@ MAX_QUESTIONS = 12     # 单次调用题数上限
 COARSE_THRESHOLD = 25  # 候选规则 > 该数时按文件类型粗筛再入题
 GOVERNS_P = 0.85       # p(governs) ≥ 0.85 才出 WARN
 SELF_ID = "RULE-SELECTOR"
+# 设计内未覆盖 = 不问: .githooks/ 是 canon-sync 生成镜像(正本 specs/ 才是输入);
+# 散文文档与 ledger 数据按设计不被任何 code 规则 glob 管辖——引擎 paths_exclude
+# 只管触发, 到不了这里, 必须在 harness 侧钉死, 否则 advisory 会对生成物反复误报。
+SELF_EXCLUDE_PREFIX = (".githooks/", "specs/ledger/")
+SELF_EXCLUDE_SUFFIX = (".md", ".mdx")
 
 CATALOG_DIRS = ("specs/quality", "specs/dioxus", "specs/code", "specs/cleanup",
                 "specs/github", "specs/workspace")
@@ -223,7 +228,9 @@ def run(root: str, diff: str) -> list:
         out.append(_info("rule_selector: no jev endpoint pair configured "
                          "(JEV_API_* / TYPESAFE_API_*); 弃权式 advisory 跳过"))
         return out
-    files = parse_diff(diff)
+    files = {p: d for p, d in parse_diff(diff).items()
+             if not (p.startswith(SELF_EXCLUDE_PREFIX)
+                     or p.endswith(SELF_EXCLUDE_SUFFIX))}
     if not files:
         return out
     try:

@@ -25,7 +25,7 @@ fail_severity: WARN
 mode: diff
 match:
   paths_include: ["**/*"]
-  paths_exclude: ["target/", ".wt/", "node_modules/"]
+  paths_exclude: ["target/", ".wt/", "node_modules/", ".githooks/"]
 harness:
   command: "python3"
   args:
