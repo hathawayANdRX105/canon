@@ -127,7 +127,9 @@ pub fn run() -> i32 {
         git::find_githooks_dir().unwrap_or_else(|| std::path::PathBuf::from(".githooks"));
     let spec_dir = githooks_root.join("spec");
     let dispatch_path = spec_dir.join("dispatch.yaml");
-    let cfg = crate::shared::load_yaml(dispatch_path.to_str().unwrap_or("")).ok();
+    let cfg = crate::shared::load_yaml(dispatch_path.to_str().unwrap_or(""))
+        .ok()
+        .map(|cfg| crate::shared::merge_custom_overlay(&cfg, &spec_dir, "dispatch.yaml"));
 
     let mut findings = Vec::new();
 
@@ -177,8 +179,11 @@ pub fn run() -> i32 {
 pub fn run_commit_msg(path: &str) -> i32 {
     let githooks_root =
         git::find_githooks_dir().unwrap_or_else(|| std::path::PathBuf::from(".githooks"));
-    let dispatch_path = githooks_root.join("spec").join("dispatch.yaml");
-    let cfg = crate::shared::load_yaml(dispatch_path.to_str().unwrap_or("")).ok();
+    let spec_dir = githooks_root.join("spec");
+    let dispatch_path = spec_dir.join("dispatch.yaml");
+    let cfg = crate::shared::load_yaml(dispatch_path.to_str().unwrap_or(""))
+        .ok()
+        .map(|cfg| crate::shared::merge_custom_overlay(&cfg, &spec_dir, "dispatch.yaml"));
 
     let title = match std::fs::read_to_string(path) {
         Ok(msg) => msg.lines().next().unwrap_or("").trim().to_string(),

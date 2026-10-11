@@ -118,16 +118,14 @@ fn matches_include(rel: &str, include: &str) -> bool {
 
 pub fn run_lang(lang: &str, target: &str, changed: &[String]) -> Vec<Finding> {
     let root = repo_root();
-    let cfg_path = crate::shared::find_spec_file(
-        &git::find_githooks_dir()
-            .unwrap_or_else(|| root.join(".githooks"))
-            .join("spec"),
-        &format!("code_{lang}.yaml"),
-    )
-    .unwrap_or_else(|| {
-        root.join(".githooks/spec")
-            .join(format!("code_{lang}.yaml"))
-    });
+    let spec_dir = git::find_githooks_dir()
+        .unwrap_or_else(|| root.join(".githooks"))
+        .join("spec");
+    let cfg_path = crate::shared::find_spec_file(&spec_dir, &format!("code_{lang}.yaml"))
+        .unwrap_or_else(|| {
+            root.join(".githooks/spec")
+                .join(format!("code_{lang}.yaml"))
+        });
     if !cfg_path.exists() {
         return vec![Finding::new(
             &format!("code-{lang}"),
@@ -136,6 +134,7 @@ pub fn run_lang(lang: &str, target: &str, changed: &[String]) -> Vec<Finding> {
         )];
     }
     let cfg = load_yaml(cfg_path.to_str().unwrap_or("")).unwrap_or(YamlValue::Null);
+    let cfg = crate::shared::merge_custom_overlay(&cfg, &spec_dir, &format!("code_{lang}.yaml"));
     if !cfg.get("enabled").and_then(|v| v.as_bool()).unwrap_or(true) {
         return vec![Finding::new(
             &format!("code-{lang}"),

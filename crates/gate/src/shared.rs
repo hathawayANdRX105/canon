@@ -155,38 +155,56 @@ pub fn exit_code(findings: &[Finding]) -> i32 {
     if aggregate_result(findings) { 1 } else { 0 }
 }
 
-/// Apply user-provided severity overrides to a list of findings.
-/// Loads overrides from `.githooks/spec/severity_overrides.yaml` in the repo root.
-pub fn apply_global_overrides(findings: &mut [Finding]) {
-    let overrides = match load_severity_overrides() {
-        Some(cfg) => cfg,
-        None => return,
-    };
+/// Apply user-provided severity overrides to a list of findings, in two
+/// layers; for a same-named rule the custom layer is the last word:
+///
+/// 1. `.githooks/spec/severity_overrides.yaml` — canon-owned: `canon-sync push`
+///    overwrites it on every deploy, so per-repo values written here vanish.
+/// 2. `.githooks/spec/custom/severity_overrides.yaml` — project-local:
+///    canon-sync never touches `custom/`, so this is the only demotion
+///    channel that survives a sync.
+///
+/// Missing custom layer is a silent no-op; a broken one adds a single loud
+/// `canon.setup` WARN finding (no-silent). INFO findings are never modified
+/// by either layer.
+pub fn apply_global_overrides(findings: &mut Vec<Finding>) {
+    if let Some(spec_dir) = crate::tools::git::find_githooks_dir().map(|g| g.join("spec")) {
+        apply_global_overrides_in(findings, &spec_dir);
+    }
+}
 
-    let map = match overrides
-        .get("severity_overrides")
-        .and_then(|c| c.as_mapping())
-    {
-        Some(m) => m,
-        None => return,
-    };
-    for finding in findings.iter_mut() {
-        if let Some(sev_val) = map.get(YamlValue::String(finding.rule_id.to_string()))
-            && let Some(sev_str) = sev_val.as_str()
-        {
-            let new_sev = match sev_str.to_uppercase().as_str() {
-                "FAIL" => Severity::Fail,
-                "WARN" => Severity::Warn,
-                "INFO" => Severity::Info,
-                _ => continue,
-            };
-            if finding.severity != Severity::Info {
-                finding.severity = new_sev;
-            }
+/// Explicit spec-dir variant of [`apply_global_overrides`] — for entrypoints
+/// that already resolved `.githooks/` and for tests.
+pub fn apply_global_overrides_in(findings: &mut Vec<Finding>, spec_dir: &Path) {
+    let root_cfg = load_yaml(
+        spec_dir
+            .join("severity_overrides.yaml")
+            .to_str()
+            .unwrap_or(""),
+    )
+    .ok()
+    .filter(|v| !v.is_null());
+    apply_override_cfg(findings, root_cfg.as_ref());
+
+    let custom_path = spec_dir.join("custom").join("severity_overrides.yaml");
+    if custom_path.is_file() {
+        match load_yaml(custom_path.to_str().unwrap_or("")) {
+            Ok(cfg) => apply_override_cfg(findings, Some(&cfg)),
+            Err(e) => findings.push(Finding::new(
+                "canon.setup",
+                Severity::Warn,
+                &format!("broken .githooks/spec/custom/severity_overrides.yaml ignored: {e}"),
+            )),
         }
     }
 }
-pub fn apply_severity_overrides(findings: &mut [Finding], cfg: Option<&YamlValue>) {
+
+/// Shared core of [`apply_global_overrides_in`] and
+/// [`apply_severity_overrides`]: replace the severity of every finding whose
+/// rule id is listed in `cfg.severity_overrides`. INFO findings are never
+/// touched (the one-way rule: overrides may move a finding, but a check that
+/// already passed green stays green).
+fn apply_override_cfg(findings: &mut [Finding], cfg: Option<&YamlValue>) {
     let map = match cfg
         .and_then(|c| c.get("severity_overrides"))
         .and_then(|c| c.as_mapping())
@@ -211,24 +229,12 @@ pub fn apply_severity_overrides(findings: &mut [Finding], cfg: Option<&YamlValue
     }
 }
 
-/// Load severity_overrides from `.githooks/spec/severity_overrides.yaml`.
-fn load_severity_overrides() -> Option<YamlValue> {
-    let mut dir = std::env::current_dir().ok()?;
-    loop {
-        let candidate = dir.join(".githooks");
-        if candidate.is_dir() {
-            let path = candidate.join("spec/severity_overrides.yaml");
-            if let Ok(text) = fs::read_to_string(&path)
-                && let Ok(cfg) = serde_yaml::from_str(&text)
-            {
-                return Some(cfg);
-            }
-            return None;
-        }
-        if !dir.pop() {
-            return None;
-        }
-    }
+/// Apply the `severity_overrides:` section of a family/dispatch yaml (e.g.
+/// dispatch.yaml, github_pull_requests.yaml). The global + custom layers of
+/// [`apply_global_overrides`] win where both name the same rule id, because
+/// callers apply this one first.
+pub fn apply_severity_overrides(findings: &mut [Finding], cfg: Option<&YamlValue>) {
+    apply_override_cfg(findings, cfg);
 }
 
 /// Print FAIL/WARN findings, plus INFO that carries extra (score/confidence).
@@ -406,6 +412,9 @@ pub fn load_yaml(path: &str) -> Result<YamlValue, serde_yaml::Error> {
 /// Resolve a spec file by name, searching `spec_dir` recursively (depth ≤ 3).
 /// Yaml files may live flat or grouped in theme subdirs (`quality/`, `code/`,
 /// `github/`, …) — the layout is free and the loaders never hardcode it.
+/// `custom/` is skipped: it is the project-local overlay namespace (see
+/// [`merge_custom_overlay`]), so a same-named copy there must never be the
+/// base hit — the non-custom copy is the only base source.
 pub fn find_spec_file(spec_dir: &Path, filename: &str) -> Option<PathBuf> {
     fn walk(dir: &Path, filename: &str, depth: u8, out: &mut Vec<PathBuf>) {
         if depth > 3 {
@@ -414,6 +423,9 @@ pub fn find_spec_file(spec_dir: &Path, filename: &str) -> Option<PathBuf> {
         for entry in fs::read_dir(dir).into_iter().flatten().flatten() {
             let path = entry.path();
             if path.is_dir() {
+                if path.file_name().is_some_and(|n| n == "custom") {
+                    continue;
+                }
                 walk(&path, filename, depth + 1, out);
             } else if path.file_name().is_some_and(|n| n == filename) {
                 out.push(path);
@@ -429,18 +441,57 @@ pub fn find_spec_file(spec_dir: &Path, filename: &str) -> Option<PathBuf> {
 /// Load `<repo>/.githooks/spec/<file>` walking up from cwd. `None` when the
 /// file is missing — rule entries turn that into a loud `canon.setup` finding
 /// (no silent defaults: a repo without its spec must not pass green).
+/// The project-local `custom/` overlay is deep-merged on top when present.
 pub fn load_spec_yaml(file: &str) -> Option<YamlValue> {
-    let mut dir = std::env::current_dir().ok()?;
-    loop {
-        if dir.join(".githooks").is_dir() {
-            let spec_dir = dir.join(".githooks/spec");
-            return find_spec_file(&spec_dir, file)
-                .and_then(|path| load_yaml(path.to_str()?).ok())
-                .filter(|v| !v.is_null());
+    let spec_dir = crate::tools::git::find_githooks_dir()?.join("spec");
+    load_spec_yaml_in(&spec_dir, file)
+}
+
+/// [`load_spec_yaml`] at an explicit spec dir — for callers that already
+/// resolved `.githooks/` (and for tests).
+pub fn load_spec_yaml_in(spec_dir: &Path, file: &str) -> Option<YamlValue> {
+    let base = find_spec_file(spec_dir, file)
+        .and_then(|path| load_yaml(path.to_str()?).ok())
+        .unwrap_or(YamlValue::Null);
+    // The overlay can stand in for a whole cfg the canon side hasn't shipped
+    // yet, so merge before the no-silent-null check, not after.
+    Some(merge_custom_overlay(&base, spec_dir, file)).filter(|v| !v.is_null())
+}
+
+/// Deep-merge the project-local `spec/custom/<file>` overlay onto a loaded
+/// base cfg. `custom/` is canon-sync-protected, so this is the per-repo knob
+/// for family yamls (e.g. `github_pull_requests.yaml` / `dispatch.yaml`):
+/// mappings merge recursively, scalar/list values replace wholesale per key.
+/// Missing or empty overlay leaves the base unchanged; a broken overlay also
+/// keeps the base — project-local sugar must never take down the canon base.
+pub fn merge_custom_overlay(base: &YamlValue, spec_dir: &Path, file: &str) -> YamlValue {
+    let Ok(overlay) = load_yaml(spec_dir.join("custom").join(file).to_str().unwrap_or("")) else {
+        return base.clone();
+    };
+    if overlay.is_null() {
+        return base.clone();
+    }
+    deep_merge(base, &overlay)
+}
+
+/// Recursive merge of two yaml values: mappings merge key by key; anything
+/// else (list, scalar, type mismatch) the overlay replaces wholesale.
+fn deep_merge(base: &YamlValue, overlay: &YamlValue) -> YamlValue {
+    match (base, overlay) {
+        (YamlValue::Mapping(_), YamlValue::Mapping(_)) => {
+            let mut merged = base.clone();
+            let merged_map = merged.as_mapping_mut().expect("both are mappings");
+            for (k, v) in overlay.as_mapping().expect("overlay is a mapping") {
+                match merged_map.get_mut(k) {
+                    Some(existing) => *existing = deep_merge(existing, v),
+                    None => {
+                        merged_map.insert(k.clone(), v.clone());
+                    }
+                }
+            }
+            merged
         }
-        if !dir.pop() {
-            return None;
-        }
+        _ => overlay.clone(),
     }
 }
 
@@ -593,3 +644,186 @@ pub fn truncate_utf8(s: &str, max: usize) -> &str {
 // ===========================================================================
 // Tests
 // ===========================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn yaml(text: &str) -> YamlValue {
+        serde_yaml::from_str(text).unwrap()
+    }
+
+    #[test]
+    fn deep_merge_mappings_recurse_scalars_and_lists_replace() {
+        let base = yaml("a: {x: 1, y: 2}\nb: [1, 2]\nc: old\nd: keep\n");
+        let overlay = yaml("a: {y: 3, z: 4}\nb: [9]\nc: new\n");
+        let merged = deep_merge(&base, &overlay);
+
+        // nested mapping merges key by key
+        let a = merged.get("a").unwrap();
+        assert_eq!(a.get("x").unwrap().as_u64(), Some(1));
+        // overlay value wins for a shared key
+        assert_eq!(a.get("y").unwrap().as_u64(), Some(3));
+        assert_eq!(a.get("z").unwrap().as_u64(), Some(4));
+        // list replaces wholesale
+        assert_eq!(merged.get("b").unwrap().as_sequence().unwrap().len(), 1);
+        // scalar replaces
+        assert_eq!(merged.get("c").unwrap().as_str(), Some("new"));
+        // base-only keys survive
+        assert_eq!(merged.get("d").unwrap().as_str(), Some("keep"));
+    }
+
+    #[test]
+    fn deep_merge_type_mismatch_overlay_wins() {
+        let merged = deep_merge(&yaml("a: 1"), &yaml("a: {x: 1}"));
+        assert!(merged.get("a").unwrap().is_mapping());
+        let merged = deep_merge(&yaml("a: {x: 1}"), &yaml("a: 2"));
+        assert_eq!(merged.get("a").unwrap().as_u64(), Some(2));
+    }
+
+    #[test]
+    fn find_spec_file_ignores_custom_namespace() {
+        let dir = tempfile::tempdir().unwrap();
+        let spec = dir.path().join("spec");
+        fs::create_dir_all(spec.join("custom")).unwrap();
+        fs::create_dir_all(spec.join("github")).unwrap();
+        fs::write(spec.join("github/x.yaml"), "a: 1").unwrap();
+        fs::write(spec.join("custom/x.yaml"), "a: 2").unwrap();
+        // the non-custom copy is the base hit even though `custom/…` would
+        // sort before `github/…`
+        let hit = find_spec_file(&spec, "x.yaml").unwrap();
+        assert!(hit.starts_with(spec.join("github").as_path()));
+        // a custom-only file is not a base source at all
+        fs::write(spec.join("custom/only.yaml"), "a: 2").unwrap();
+        assert_eq!(find_spec_file(&spec, "only.yaml"), None);
+    }
+
+    #[test]
+    fn custom_overlay_missing_is_noop() {
+        let dir = tempfile::tempdir().unwrap();
+        let spec = dir.path().join("spec");
+        fs::create_dir_all(&spec).unwrap();
+        fs::write(spec.join("fam.yaml"), "a: 1\nb: [1, 2]\n").unwrap();
+        let base = load_yaml(spec.join("fam.yaml").to_str().unwrap()).unwrap();
+        assert_eq!(merge_custom_overlay(&base, &spec, "fam.yaml"), base);
+    }
+
+    #[test]
+    fn custom_overlay_empty_or_broken_keeps_base() {
+        let dir = tempfile::tempdir().unwrap();
+        let spec = dir.path().join("spec");
+        fs::create_dir_all(spec.join("custom")).unwrap();
+        fs::write(spec.join("fam.yaml"), "a: {x: 1}\nb: [1, 2]\nc: keep\n").unwrap();
+        let base = load_yaml(spec.join("fam.yaml").to_str().unwrap()).unwrap();
+
+        // empty overlay = no-op
+        fs::write(spec.join("custom/fam.yaml"), "").unwrap();
+        assert_eq!(merge_custom_overlay(&base, &spec, "fam.yaml"), base);
+
+        // broken overlay = canon base kept
+        fs::write(spec.join("custom/fam.yaml"), "a: [unterminated\n").unwrap();
+        assert_eq!(merge_custom_overlay(&base, &spec, "fam.yaml"), base);
+    }
+
+    #[test]
+    fn custom_severity_layer_wins_over_root_layer() {
+        let dir = tempfile::tempdir().unwrap();
+        let spec = dir.path().join("spec");
+        fs::create_dir_all(spec.join("custom")).unwrap();
+        fs::write(
+            spec.join("severity_overrides.yaml"),
+            "severity_overrides:\n  CM-01: WARN\n  PR-06: INFO\n",
+        )
+        .unwrap();
+        fs::write(
+            spec.join("custom/severity_overrides.yaml"),
+            "severity_overrides:\n  CM-01: FAIL\n",
+        )
+        .unwrap();
+
+        let mut findings = vec![
+            Finding::new("CM-01", Severity::Fail, "x"),
+            Finding::new("PR-06", Severity::Fail, "x"),
+            Finding::new("IS-14", Severity::Warn, "x"),
+        ];
+        apply_global_overrides_in(&mut findings, &spec);
+        // custom layer is the last word: the root WARN is overridden back
+        assert_eq!(findings[0].severity, Severity::Fail);
+        // rules absent from custom keep the root value
+        assert_eq!(findings[1].severity, Severity::Info);
+        // rules in neither layer stay put
+        assert_eq!(findings[2].severity, Severity::Warn);
+    }
+
+    #[test]
+    fn custom_severity_layer_missing_is_silent_noop() {
+        let dir = tempfile::tempdir().unwrap();
+        let spec = dir.path().join("spec");
+        fs::create_dir_all(&spec).unwrap();
+        fs::write(
+            spec.join("severity_overrides.yaml"),
+            "severity_overrides:\n  PR-06: INFO\n",
+        )
+        .unwrap();
+
+        let mut findings = vec![Finding::new("PR-06", Severity::Fail, "x")];
+        apply_global_overrides_in(&mut findings, &spec);
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].severity, Severity::Info);
+    }
+
+    #[test]
+    fn broken_custom_severity_layer_adds_loud_warn_finding() {
+        let dir = tempfile::tempdir().unwrap();
+        let spec = dir.path().join("spec");
+        fs::create_dir_all(spec.join("custom")).unwrap();
+        fs::write(
+            spec.join("severity_overrides.yaml"),
+            "severity_overrides:\n  PR-06: INFO\n",
+        )
+        .unwrap();
+        fs::write(
+            spec.join("custom/severity_overrides.yaml"),
+            "severity_overrides: [oops\n",
+        )
+        .unwrap();
+
+        let mut findings = vec![Finding::new("PR-06", Severity::Fail, "x")];
+        apply_global_overrides_in(&mut findings, &spec);
+        // root layer still applied; broken custom layer ignored but reported
+        assert_eq!(findings[0].severity, Severity::Info);
+        assert_eq!(findings.len(), 2);
+        let loud = &findings[1];
+        assert_eq!(loud.rule_id, "canon.setup");
+        assert_eq!(loud.severity, Severity::Warn);
+        assert!(
+            loud.msg.contains("custom/severity_overrides.yaml"),
+            "{}",
+            loud.msg
+        );
+    }
+
+    #[test]
+    fn no_override_files_at_all_is_silent_noop() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut findings = vec![Finding::new("CM-01", Severity::Fail, "x")];
+        apply_global_overrides_in(&mut findings, dir.path());
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].severity, Severity::Fail);
+    }
+
+    #[test]
+    fn severity_overrides_never_touch_info_findings() {
+        let mut findings = vec![
+            Finding::new("PR-05", Severity::Info, "x"),
+            Finding::new("PR-06", Severity::Warn, "x"),
+        ];
+        apply_severity_overrides(
+            &mut findings,
+            Some(&yaml("severity_overrides:\n  PR-05: FAIL\n  PR-06: INFO\n")),
+        );
+        // one-way rule: a passing check stays passing
+        assert_eq!(findings[0].severity, Severity::Info);
+        assert_eq!(findings[1].severity, Severity::Info);
+    }
+}

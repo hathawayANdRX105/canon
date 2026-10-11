@@ -30,16 +30,16 @@ fn run_in(base: &Path) -> Vec<Finding> {
     collect_all_files(base, &mut repo_files);
 
     for lang in languages {
-        let config_path = crate::shared::find_spec_file(
-            &base.join(".githooks/spec"),
-            &format!("cleanup_tests_{}.yaml", lang),
-        )
-        .unwrap_or_else(|| {
-            base.join(".githooks/spec")
-                .join(format!("cleanup_tests_{}.yaml", lang))
-        });
+        let spec_dir = base.join(".githooks/spec");
+        let config_path =
+            crate::shared::find_spec_file(&spec_dir, &format!("cleanup_tests_{}.yaml", lang))
+                .unwrap_or_else(|| spec_dir.join(format!("cleanup_tests_{}.yaml", lang)));
         let cfg = match load_yaml(config_path.to_str().unwrap_or("")) {
-            Ok(v) => v,
+            Ok(v) => crate::shared::merge_custom_overlay(
+                &v,
+                &spec_dir,
+                &format!("cleanup_tests_{}.yaml", lang),
+            ),
             Err(_) => {
                 all_findings.push(Finding::new(
                     "CL-02",

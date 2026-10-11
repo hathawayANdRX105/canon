@@ -223,7 +223,7 @@ pub fn run_in(base: &Path) -> Vec<Finding> {
     let config_path = crate::shared::find_spec_file(&spec_dir, "cleanup_docs_hygiene.yaml")
         .unwrap_or_else(|| spec_dir.join("cleanup_docs_hygiene.yaml"));
     let cfg = match load_yaml(config_path.to_str().unwrap_or("")) {
-        Ok(v) => v,
+        Ok(v) => crate::shared::merge_custom_overlay(&v, &spec_dir, "cleanup_docs_hygiene.yaml"),
         Err(_) => {
             findings.push(Finding::new(
                 "CL-03",

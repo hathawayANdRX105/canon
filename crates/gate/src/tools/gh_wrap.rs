@@ -494,10 +494,12 @@ pub fn intercept_issue_create(args: &[String]) -> i32 {
 
 /// Load `dispatch.yaml` for gate-block severity overrides.
 fn load_dispatch_cfg() -> Option<YamlValue> {
-    crate::tools::git::find_githooks_dir()
-        .map(|d| d.join("spec/dispatch.yaml"))
-        .and_then(|p| crate::shared::load_yaml(p.to_str().unwrap_or("")).ok())
-        .filter(|v| !v.is_null())
+    let hooks = crate::tools::git::find_githooks_dir()?;
+    let spec_dir = hooks.join("spec");
+    let cfg = crate::shared::load_yaml(spec_dir.join("dispatch.yaml").to_str().unwrap_or(""))
+        .ok()
+        .map(|cfg| crate::shared::merge_custom_overlay(&cfg, &spec_dir, "dispatch.yaml"));
+    cfg.filter(|v| !v.is_null())
 }
 
 /// Policy switch: `cfg.<key>` defaults to enabled (true) when absent.
