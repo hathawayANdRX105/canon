@@ -38,7 +38,7 @@ pub struct Rule {
 
 /// Leading `#` comment lines, up to the first non-comment line. Comment
 /// markers and surrounding blank padding come off; the prose stays verbatim.
-fn why_from_head(raw: &str) -> String {
+pub fn why_from_head(raw: &str) -> String {
     let mut lines: Vec<&str> = Vec::new();
     for line in raw.lines() {
         let t = line.trim_start();
@@ -60,7 +60,7 @@ fn why_from_head(raw: &str) -> String {
     lines.join("\n")
 }
 
-fn checklist_id(path: &Path) -> String {
+pub fn checklist_id(path: &Path) -> String {
     let name = path.file_name().unwrap_or_default().to_string_lossy();
     name.trim_start_matches("checklist_")
         .trim_end_matches(".yaml")
@@ -356,29 +356,4 @@ fn root_overrides(spec_dir: &Path) -> Vec<Rule> {
             })
         })
         .collect()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn why_strips_markers_and_keeps_prose() {
-        let raw = "# 为什么: 防烂注释\n# 检测: 匹配 AI 味\n\n# 另一段\nenabled: true\n";
-        assert_eq!(why_from_head(raw), "为什么: 防烂注释\n检测: 匹配 AI 味");
-    }
-
-    #[test]
-    fn why_empty_when_file_starts_with_key() {
-        assert_eq!(why_from_head("enabled: true\n# 尾部注释\n"), "");
-    }
-
-    #[test]
-    fn checklist_id_strips_affixes() {
-        assert_eq!(checklist_id(Path::new("checklist_ccn.yaml")), "ccn");
-        assert_eq!(
-            checklist_id(Path::new("rust_no_dead_code_allow.yaml")),
-            "rust_no_dead_code_allow"
-        );
-    }
 }

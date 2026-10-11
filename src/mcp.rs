@@ -1,14 +1,14 @@
 //! MCP server surface: JSON-RPC 2.0 over stdio, newline-delimited.
 //!
 //! Hand-rolled rather than pulled from the Rust SDK on purpose — the wire
-//! layer stays dep-free even with the flow tool family; the flow tools
-//! themselves live in `crate::flow::tools`.
+//! layer stays dep-free; every tool is a thin shell over `gate`.
 //!
 //! Wire shapes match what `kymido`'s own MCP client speaks
 //! (protocol revision 2025-06-18), so both consumers are covered.
 //!
-//! Spec tools are shells over the engine; flow tools are shells over the
-//! flow Store. No rule/task logic lives here.
+//! Three tools, all reading the deployed spec tree: `spec_catalog` lists rules,
+//! `spec_explain` gives one rule's rationale, `preflight` runs the checks. No
+//! rule logic lives here.
 //!
 //! `preflight` runs the same `checklist_*.yaml` set the git hook would run and
 //! reports FAIL only by default, so an agent learns about a violation while it
@@ -55,7 +55,7 @@ fn dispatch(method: &str, params: &Value) -> RpcResult {
 }
 
 fn tool_defs() -> Vec<Value> {
-    let mut tools: Vec<Value> = vec![
+    vec![
         json!({
             "name": "spec_catalog",
             "description": "List every rule this repo enforces: id, effective severity, sla, hooks, and why it exists. Call this before writing code to learn what will be checked.",
@@ -111,9 +111,7 @@ fn tool_defs() -> Vec<Value> {
                 "required": []
             }
         }),
-    ];
-    tools.extend(crate::flow::tools::tool_defs());
-    tools
+    ]
 }
 
 fn arg_str(params: &Value, key: &str) -> Option<String> {
@@ -139,17 +137,14 @@ fn call_tool(params: &Value) -> RpcResult {
         "spec_catalog" => catalog_tool(&args)?,
         "spec_explain" => explain_tool(&args)?,
         "preflight" => preflight_tool(&args)?,
-        "board_view" | "task_get" | "project_list" | "journal" | "project_create"
-        | "project_update" | "task_create" | "task_claim" | "task_transition" | "step_add"
-        | "step_mark" | "event_note" | "spec_list" | "spec_run" | "spec_bind" | "template_list" => {
-            crate::flow::tools::call(&name, &args)?
-        }
         other => return Err((-32602, format!("unknown tool: {other}"))),
     };
     Ok(json!({"content": [{"type": "text", "text": text}], "isError": false}))
 }
 
-fn rule_json(r: &Rule) -> Value {
+/// 一条规则在 tools/call 响应里的形状。`why` 只带首行——完整散文由
+/// `spec_explain` 返回，catalog 行要的是可扫读的一行摘要。
+pub fn rule_json(r: &Rule) -> Value {
     json!({
         "rule_id": r.id,
         "severity": r.severity.as_str(),
@@ -169,8 +164,8 @@ fn sla_rank(s: &str) -> u8 {
     }
 }
 
-fn pretty(v: Value) -> String {
-    serde_json::to_string_pretty(&v).unwrap_or_default()
+fn pretty(v: &Value) -> String {
+    serde_json::to_string_pretty(v).unwrap_or_default()
 }
 
 fn catalog_tool(args: &Value) -> Result<String, (i64, String)> {
@@ -187,7 +182,7 @@ fn catalog_tool(args: &Value) -> Result<String, (i64, String)> {
         })
         .map(|r| rule_json(&r))
         .collect();
-    Ok(pretty(json!({
+    Ok(pretty(&json!({
         "spec_dir": dir.display().to_string(),
         "count": rules.len(),
         "rules": rules,
@@ -204,7 +199,7 @@ fn explain_tool(args: &Value) -> Result<String, (i64, String)> {
             -32602,
             format!("no rule named {id}; call spec_catalog first"),
         ))?;
-    Ok(pretty(json!({
+    Ok(pretty(&json!({
         "rule_id": rule.id,
         "severity": rule.severity.as_str(),
         "sla": rule.sla,
@@ -307,7 +302,7 @@ fn preflight_tool(args: &Value) -> Result<String, (i64, String)> {
         .map(|r| r.id.clone())
         .collect();
     if names.is_empty() {
-        return Ok(pretty(json!({
+        return Ok(pretty(&json!({
             "sla": sla,
             "focus": focus,
             "would_block": false,
@@ -317,7 +312,7 @@ fn preflight_tool(args: &Value) -> Result<String, (i64, String)> {
         })));
     }
     let target = resolve_target(args)?;
-    let mut findings = engine::run_targeted(target.clone(), &names, SlaLevel::parse(&sla));
+    let mut findings = engine::run_targeted(&target, &names, SlaLevel::parse(&sla));
     shared::apply_global_overrides(&mut findings);
 
     let kept: Vec<Value> = findings
@@ -341,7 +336,7 @@ fn preflight_tool(args: &Value) -> Result<String, (i64, String)> {
         .filter(|f| f.get("severity").and_then(Value::as_str) == Some("FAIL"))
         .count();
     let scoped = !matches!(target, engine::Target::Hook(_));
-    Ok(pretty(json!({
+    Ok(pretty(&json!({
         "sla": sla,
         "focus": focus,
         "target": target.describe(),
@@ -355,55 +350,4 @@ fn preflight_tool(args: &Value) -> Result<String, (i64, String)> {
             "Runs every declared rule at this tier, merge-only ones included. WARN is hidden unless include_warn."
         }
     })))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn notification_gets_no_reply() {
-        assert!(handle_line(r#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#).is_none());
-    }
-
-    #[test]
-    fn initialize_reports_protocol_and_tools() {
-        let out = handle_line(
-            r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18"}}"#,
-        )
-        .expect("initialize must reply");
-        let v: Value = serde_json::from_str(&out).unwrap();
-        assert_eq!(v["result"]["protocolVersion"], PROTOCOL_VERSION);
-        assert!(v["result"]["capabilities"]["tools"].is_object());
-    }
-
-    #[test]
-    fn tools_list_exposes_all_tools_with_schemas() {
-        let out = handle_line(r#"{"jsonrpc":"2.0","id":2,"method":"tools/list"}"#).unwrap();
-        let v: Value = serde_json::from_str(&out).unwrap();
-        let tools = v["result"]["tools"].as_array().unwrap();
-        assert_eq!(tools.len(), 19);
-        assert!(tools.iter().all(|t| t["inputSchema"]["type"] == "object"));
-    }
-
-    #[test]
-    fn unknown_method_is_json_rpc_error_not_a_crash() {
-        let out = handle_line(r#"{"jsonrpc":"2.0","id":3,"method":"nope"}"#).unwrap();
-        let v: Value = serde_json::from_str(&out).unwrap();
-        assert_eq!(v["error"]["code"], -32601);
-    }
-
-    #[test]
-    fn why_is_only_the_first_line_in_catalog_rows() {
-        let r = Rule {
-            id: "x".into(),
-            source: "s".into(),
-            severity: Severity::Fail,
-            sla: Some("l1".into()),
-            hooks: vec!["merge".into()],
-            mode: Some("grep".into()),
-            why: "第一行\n第二行".into(),
-        };
-        assert_eq!(rule_json(&r)["why"], "第一行");
-    }
 }

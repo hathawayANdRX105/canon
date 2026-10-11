@@ -1,16 +1,15 @@
-//! canon — spec-driven quality gate + MCP spec server + flow workflow
-//! recorder，一个二进制。
+//! canon — spec-driven quality gate + MCP spec server，一个二进制。
 //!
-//! 三个顶层模块对应原来的三个 crate，依赖单向、无环：
+//! 两个模块：
 //!
-//! - [`gate`]：门禁核心。`engine` 是唯一执行面（零检测逻辑，每条规则都是
-//!   `checklist_*.yaml` + 外部 harness 命令），`catalog` 收 spec 树上的规则
-//!   清单，`shared` 放 Finding 契约与 gh api client，`rules` / `tools` 是
-//!   gh-workflow 政策层（issue/PR/review 合规、merge 编排、gh 命令拦截）。
-//! - [`flow`]：Project → Task(state) → Step + journal，含 SQLite store 与
-//!   `canon serve` 的 HTTP/WebSocket 面板。
-//! - [`mcp`]：JSON-RPC 2.0 over stdio，把 spec 工具族与 flow 工具族暴露给 agent。
+//! - [`gate`]：全部实现，占 `src/gate/`。`engine` 是唯一执行面（零检测逻辑，
+//!   每条规则都是 `checklist_*.yaml` + 外部 harness 命令），`catalog` 收 spec
+//!   树上的规则清单，`shared` 放 Finding 契约与 gh api client，`rules` /
+//!   `tools` 是 gh-workflow 政策层（issue/PR/review 合规、merge 编排、gh 拦截）。
+//! - [`mcp`]：JSON-RPC 2.0 over stdio 单文件，把 `spec_catalog` /
+//!   `spec_explain` / `preflight` 三个工具暴露给 agent。
+//! - [`cli`]：clap 命令行定义，bin 只做路由。
 
-pub mod flow;
+pub mod cli;
 pub mod gate;
 pub mod mcp;

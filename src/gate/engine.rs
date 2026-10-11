@@ -92,22 +92,22 @@ struct HarnessSpec {
 
 #[derive(Debug)]
 pub struct ChecklistSpec {
-    name: String,
-    enabled: bool,
-    hooks: Vec<String>,
-    include: Vec<String>,
-    exclude: Vec<String>,
-    mode: Mode,
-    command: String,
-    args: Vec<String>,
-    timeout_secs: u64,
-    optional: bool,
-    base_severity: Severity,
-    sla: SlaLevel,
+    pub name: String,
+    pub enabled: bool,
+    pub hooks: Vec<String>,
+    pub include: Vec<String>,
+    pub exclude: Vec<String>,
+    pub mode: Mode,
+    pub command: String,
+    pub args: Vec<String>,
+    pub timeout_secs: u64,
+    pub optional: bool,
+    pub base_severity: Severity,
+    pub sla: SlaLevel,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Mode {
+pub enum Mode {
     Diff,
     File,
     /// Static check: harness receives empty stdin and runs whatever
@@ -142,7 +142,7 @@ struct FindingJson {
 // Spec loading
 // ---------------------------------------------------------------------------
 
-fn load_spec(path: &std::path::Path) -> Result<ChecklistSpec, String> {
+pub fn load_spec(path: &std::path::Path) -> Result<ChecklistSpec, String> {
     let v = match load_yaml(path.to_str().unwrap_or("")) {
         Ok(v) => v,
         Err(e) => {
@@ -320,7 +320,7 @@ fn diff_args(target: &Target) -> Vec<String> {
         // from being read as one.
         Target::Files { paths, base } => {
             let mut v = vec!["diff".into()];
-            v.extend(base.clone().into_iter());
+            v.extend(base.clone());
             v.extend(["--unified=3".into(), "--no-color".into(), "--".into()]);
             v.extend(paths.iter().cloned());
             v
@@ -432,7 +432,7 @@ fn has_match(spec: &ChecklistSpec, target: &Target) -> bool {
 // Harness invocation
 // ---------------------------------------------------------------------------
 
-fn run_harness(spec: &ChecklistSpec, stdin_payload: &[u8]) -> (i32, String) {
+pub fn run_harness(spec: &ChecklistSpec, stdin_payload: &[u8]) -> (i32, String) {
     // Capture stdout/stderr into temp files, not pipes. A full-repo audit
     // harness emits far more than a pipe buffer holds (measured: 87 KB vs the
     // 64 KB default) and the engine only drains stdout after the child exits —
@@ -542,7 +542,7 @@ fn merge_severity(base: Severity, reported: Severity) -> Severity {
     std::cmp::min(base, reported)
 }
 
-fn findings_from_stdout(spec: &ChecklistSpec, stdout: &str) -> Vec<Finding> {
+pub fn findings_from_stdout(spec: &ChecklistSpec, stdout: &str) -> Vec<Finding> {
     let trimmed = stdout.trim();
     if trimmed.is_empty() || trimmed == "[]" {
         return vec![];
@@ -716,9 +716,9 @@ pub fn spec_dir() -> Option<PathBuf> {
 /// parallel turns the serial wall-clock sum into roughly the slowest single
 /// rule. `CANON_CHECK_PARALLELISM` overrides; `1` restores the serial path.
 const DEFAULT_CHECK_PARALLELISM: usize = 4;
-const MAX_CHECK_PARALLELISM: usize = 16;
+pub const MAX_CHECK_PARALLELISM: usize = 16;
 
-fn check_parallelism(jobs: usize) -> usize {
+pub fn check_parallelism(jobs: usize) -> usize {
     let requested = std::env::var("CANON_CHECK_PARALLELISM")
         .ok()
         .and_then(|v| v.trim().parse::<usize>().ok())
@@ -729,7 +729,7 @@ fn check_parallelism(jobs: usize) -> usize {
 /// Map `f` over `jobs` with at most [`check_parallelism`] workers, returning
 /// per-job output **in input order** — findings stay byte-identical to the
 /// serial run no matter which worker finishes first.
-fn parallel_map<T, F>(jobs: &[T], f: F) -> Vec<Vec<Finding>>
+pub fn parallel_map<T, F>(jobs: &[T], f: F) -> Vec<Vec<Finding>>
 where
     T: Sync,
     F: Fn(&T) -> Vec<Finding> + Sync,
@@ -834,7 +834,7 @@ pub fn run_all(scope: HookScope) -> Vec<Finding> {
 /// of paths — instead of the working tree. Same broken-spec and empty-pack
 /// fail-closed handling as [`run_all`], so a scoped run can never pass green by
 /// scanning nothing.
-pub fn run_targeted(target: Target, names: &[String], max_sla: SlaLevel) -> Vec<Finding> {
+pub fn run_targeted(target: &Target, names: &[String], max_sla: SlaLevel) -> Vec<Finding> {
     let Some(dir) = spec_dir() else {
         return vec![Finding::new(
             "canon.setup",
@@ -861,14 +861,14 @@ pub fn run_targeted(target: Target, names: &[String], max_sla: SlaLevel) -> Vec<
             // fail-closed beats quiet.
             Err(_) => true,
         },
-        &target,
+        target,
         true,
     )
 }
 
 /// Display name of a checklist spec from its file stem
 /// (`checklist_ccn.yaml` → `ccn`); `None` for non-conforming names.
-fn spec_stem_name(path: &PathBuf) -> Option<String> {
+fn spec_stem_name(path: &std::path::Path) -> Option<String> {
     path.file_stem()
         .and_then(|s| s.to_str())
         .and_then(|s| s.strip_prefix("checklist_"))
@@ -969,144 +969,3 @@ pub fn run_named_in(
 // ===========================================================================
 // Tests
 // ===========================================================================
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn parallel_map_preserves_input_order_under_completion_skew() {
-        // Reversed input + descending sleeps: a naive unordered collect would
-        // emit the fastest job first. Findings must stay in input order.
-        let jobs: Vec<usize> = (0..12).rev().collect();
-        let out = parallel_map(&jobs, |i| {
-            std::thread::sleep(Duration::from_millis((12 - i) as u64 * 4));
-            vec![Finding::new(&format!("job-{i}"), Severity::Info, "")]
-        });
-        let got: Vec<String> = out.into_iter().flatten().map(|f| f.rule_id).collect();
-        let want: Vec<String> = jobs.iter().map(|i| format!("job-{i}")).collect();
-        assert_eq!(
-            got, want,
-            "findings must stay in input order regardless of completion order"
-        );
-    }
-
-    #[test]
-    fn parallel_map_observes_more_than_one_worker() {
-        use std::sync::atomic::{AtomicUsize, Ordering};
-        let live = AtomicUsize::new(0);
-        let peak = AtomicUsize::new(0);
-        let jobs: Vec<usize> = (0..8).collect();
-        parallel_map(&jobs, |_| {
-            let now_live = live.fetch_add(1, Ordering::SeqCst) + 1;
-            peak.fetch_max(now_live, Ordering::SeqCst);
-            std::thread::sleep(Duration::from_millis(80));
-            live.fetch_sub(1, Ordering::SeqCst);
-            vec![]
-        });
-        assert!(
-            peak.load(Ordering::SeqCst) > 1,
-            "checklist harnesses must overlap when parallelism > 1"
-        );
-    }
-
-    #[test]
-    fn check_parallelism_stays_bounded() {
-        assert_eq!(check_parallelism(0), 1);
-        assert_eq!(check_parallelism(1), 1);
-        // Env is not mutated in tests (edition 2024 set_var is unsafe), so
-        // this asserts the invariants rather than a specific default.
-        for jobs in [2usize, 3, 9, 64] {
-            let n = check_parallelism(jobs);
-            assert!(
-                (1..=jobs).contains(&n) && n <= MAX_CHECK_PARALLELISM,
-                "parallelism {n} out of bounds for {jobs} jobs"
-            );
-        }
-    }
-
-    #[test]
-    fn run_harness_captures_output_larger_than_pipe_buffer() {
-        // 70 KB > the 64 KiB pipe buffer. With piped stdout that the engine
-        // only drains after exit, this deadlocked until the harness timeout
-        // (the 15-minute merge runs); with file capture it must exit cleanly
-        // and keep every byte.
-        let s = spec(
-            "harness: {command: python3, args: [\"-c\", \"import sys; sys.stdout.write('a'*70000)\"]}\ntimeout: 20",
-        );
-        let (rc, out) = run_harness(&s, b"");
-        assert_eq!(rc, 0, "harness should exit cleanly, rc={rc}, out={out:?}");
-        assert!(
-            out.len() >= 70_000,
-            "harness output must not be truncated: {} bytes",
-            out.len()
-        );
-    }
-
-    fn spec(yaml: &str) -> ChecklistSpec {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("checklist_t.yaml");
-        std::fs::write(&path, yaml).unwrap();
-        load_spec(&path).unwrap()
-    }
-
-    #[test]
-    fn spec_parses_defaults() {
-        let s = spec("harness: {command: sh, args: []}");
-
-        assert_eq!(s.mode, Mode::Diff);
-        assert_eq!(s.base_severity, Severity::Warn);
-        assert_eq!(s.sla, SlaLevel::L1);
-        assert!(s.optional);
-        assert!(
-            s.hooks.is_empty(),
-            "no implicit hooks — yaml is the only router"
-        );
-    }
-    #[test]
-    fn broken_spec_is_loud_not_silent() {
-        // A typo'd key used to drop the whole spec silently (fail-open).
-        // It must now surface as an Err so run_all can hard-block on it.
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("checklist_bad.yaml");
-        std::fs::write(&path, "harness: {command: sh}\nbad_key: 1\n").unwrap();
-        let specs = find_specs(dir.path());
-        assert_eq!(specs.len(), 1);
-        assert!(
-            specs[0].1.is_err(),
-            "typo'd key must fail loudly, not silently skip"
-        );
-        assert!(specs[0].1.as_ref().unwrap_err().contains("deserialize"));
-    }
-
-    #[test]
-    fn spec_parses_overrides() {
-        let s = spec(
-            "mode: grep\nfail_severity: FAIL\nsla: l3\noptional: false\nhooks: [merge]\ntimeout: 5",
-        );
-        assert_eq!(s.mode, Mode::Grep);
-        assert_eq!(s.base_severity, Severity::Fail);
-        assert_eq!(s.sla, SlaLevel::L3);
-        assert!(!s.optional);
-        assert_eq!(s.hooks, vec!["merge".to_string()]);
-        assert_eq!(s.timeout_secs, 5);
-    }
-
-    #[test]
-    fn finding_json_roundtrip() {
-        let spec = spec("harness: {command: sh, args: []}\nfail_severity: FAIL");
-        let out = findings_from_stdout(
-            &spec,
-            r#"[{"id":"HS-01","severity":"WARN","path":"a.py","line":3,"message":"secret","confidence":0.9}]"#,
-        );
-        assert_eq!(out.len(), 1);
-        assert_eq!(out[0].rule_id, "checklist.t.HS-01");
-        // max(yaml base, harness report): FAIL base + WARN report → FAIL blocks
-        assert_eq!(out[0].severity, Severity::Fail);
-        assert_eq!(out[0].line_hint, Some(3));
-        assert_eq!(
-            out[0].extra.get("confidence").map(String::as_str),
-            Some("0.9")
-        );
-    }
-}

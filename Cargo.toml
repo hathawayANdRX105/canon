@@ -2,11 +2,11 @@
 name = "canon"
 version = "0.5.17"
 edition = "2024"
-description = "Spec-driven quality gate + MCP spec server + flow workflow recorder: one native binary"
+description = "Spec-driven quality gate + MCP spec server: one native binary"
 publish = false
 
-# lib 目标承载 gate / flow / mcp 三个模块（src/{gate,flow,mcp}/），
-# bin 只做 clap 路由。tests/ 下的集成测试需要 lib 才能 import。
+# lib 目标承载 gate 模块（src/gate/）+ mcp 单文件，bin 只做 clap 路由。
+# tests/ 下的集成测试需要 lib 才能 import。
 [lib]
 name = "canon"
 path = "src/lib.rs"
@@ -30,7 +30,6 @@ serde_json = "1"
 serde_yaml = "0.9"
 regex = "1"
 anyhow = "1"
-rusqlite = { version = "0.40.2", features = ["bundled"] }
 
 [dev-dependencies]
 tempfile = "3"

@@ -135,7 +135,7 @@ fn run_pr_rules(repo: &str, pr_num: u32) -> Vec<Finding> {
 }
 
 fn run_review_rules(repo: &str, pr_num: u32, spec_dir: &std::path::Path) -> Vec<Finding> {
-    let review_cfg = crate::gate::shared::find_spec_file(&spec_dir, "github_reviews.yaml")
+    let review_cfg = crate::gate::shared::find_spec_file(spec_dir, "github_reviews.yaml")
         .and_then(|path| load_yaml(path.to_str().unwrap_or("")).ok())
         .map(|cfg| {
             crate::gate::shared::merge_custom_overlay(&cfg, spec_dir, "github_reviews.yaml")

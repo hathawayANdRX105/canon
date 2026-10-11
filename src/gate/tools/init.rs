@@ -7,7 +7,7 @@ use super::git;
 
 /// Hook scripts try PATH first, then the repo-local `.githooks/canon` copy —
 /// fresh clones / CI machines may not have canon installed system-wide.
-const HOOK_PRE_COMMIT: &str = "\
+pub const HOOK_PRE_COMMIT: &str = "\
 #!/usr/bin/env bash
 # canon-managed hook — delegates to the canon binary
 # 找二进制: 先 PATH 里的 canon (系统安装), 否则用仓库内 .githooks/canon
@@ -22,7 +22,7 @@ echo \"canon binary not found (need: canon on PATH, or .githooks/canon)\" >&2
 exit 1
 ";
 
-const HOOK_COMMIT_MSG: &str = "\
+pub const HOOK_COMMIT_MSG: &str = "\
 #!/usr/bin/env bash
 # canon-managed hook — delegates to the canon binary
 # 找二进制: 先 PATH 里的 canon (系统安装), 否则用仓库内 .githooks/canon
@@ -36,7 +36,7 @@ echo \"canon binary not found (need: canon on PATH, or .githooks/canon)\" >&2
 exit 1
 ";
 
-const HOOK_PRE_PUSH: &str = "\
+pub const HOOK_PRE_PUSH: &str = "\
 #!/usr/bin/env bash
 # canon-managed hook — delegates to the canon binary
 # 找二进制: 先 PATH 里的 canon (系统安装), 否则用仓库内 .githooks/canon
@@ -51,7 +51,7 @@ echo \"canon binary not found (need: canon on PATH, or .githooks/canon)\" >&2
 exit 1
 ";
 
-const HOOK_MERGE: &str = "\
+pub const HOOK_MERGE: &str = "\
 #!/usr/bin/env bash
 # canon-managed hook — delegates to the canon binary
 # 找二进制: 先 PATH 里的 canon (系统安装), 否则用仓库内 .githooks/canon
@@ -286,36 +286,5 @@ fn chmod_755(path: &Path) {
     {
         use std::os::unix::fs::PermissionsExt;
         let _ = fs::set_permissions(path, fs::Permissions::from_mode(0o755));
-    }
-}
-
-// ===========================================================================
-// Tests
-// ===========================================================================
-
-/// 每个包装脚本必须把调用方参数原样转给 canon 子命令
-/// （`canon merge <owner/repo> <pr> --dry-run` 走的就是包装层）。
-#[test]
-fn hook_templates_forward_caller_args() {
-    for (name, tmpl, subcmd) in [
-        ("pre-commit", HOOK_PRE_COMMIT, "pre-commit"),
-        ("commit-msg", HOOK_COMMIT_MSG, "commit-msg"),
-        ("pre-push", HOOK_PRE_PUSH, "pre-push"),
-        ("merge", HOOK_MERGE, "merge"),
-    ] {
-        // PATH 分支与 repo-local 分支都要转发
-        assert!(
-            tmpl.contains(&format!("exec canon {subcmd} \"$@\"\n")),
-            "{name}: PATH 分支未转发 \"$@\""
-        );
-        assert!(
-            tmpl.contains(&format!("exec \"$REPO/.githooks/canon\" {subcmd} \"$@\"\n")),
-            "{name}: repo-local 分支未转发 \"$@\""
-        );
-        // 不允许残留不带参数的裸 exec（历史 bug：调用方参数被整段丢弃）
-        assert!(
-            !tmpl.contains(&format!("exec canon {subcmd}\n")),
-            "{name}: 仍有丢弃参数的裸 exec canon {subcmd}"
-        );
     }
 }

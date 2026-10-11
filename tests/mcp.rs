@@ -115,7 +115,7 @@ fn preflight_hides_warn_by_default() {
         "WARN must be hidden unless include_warn: {sevs:?}"
     );
     assert!(
-        d["would_block"].as_bool().unwrap() == !d["findings"].as_array().unwrap().is_empty(),
+        d["would_block"].as_bool().unwrap() != d["findings"].as_array().unwrap().is_empty(),
         "would_block must agree with the finding list"
     );
 }
