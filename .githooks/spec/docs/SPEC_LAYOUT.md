@@ -28,7 +28,7 @@
    拿不到 topic → 没有 `hooks:` 的规则**永远不执行**（`github_*` / `workspace_*` /
    `code_*` / `cleanup_*` 的根层副本就是死的）。
 2. **目录即路由**：`catalog::topic_of()` 里 `checklist_*.yaml` 一律归 `checklist`
-   这个跨目录 topic（`crates/gate/src/catalog.rs`），所以 checklist 住在哪个子目录都会被
+   这个跨目录 topic（`src/gate/catalog.rs`），所以 checklist 住在哪个子目录都会被
    `canon check` 与 hooks 收上来；根层文件因为算不出 topic → 对目录与 hooks 都不可见。
    `custom/` 不参与加载（项目自留地，放样张与私有配置不会被跑）。
 3. **重复层**：`engine::find_specs()` 递归收集 `checklist_*.yaml` 且**不去重**，同一

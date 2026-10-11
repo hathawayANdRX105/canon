@@ -1,19 +1,18 @@
 //! canon — spec-driven quality gate + MCP spec server, one binary.
 //!
-//! The engine (`engine` module) contains zero detection logic: every rule
-//! lives in `checklist_*.yaml` under `<repo>/.githooks/spec/` and runs an
-//! external harness command. `specs/` is the source of truth for the default
-//! rules pack; `canon init` seeds a repo with it. The `tools`/`rules` modules
-//! carry the gh-workflow policy layer (issue/PR compliance, merge
-//! orchestration, gh command interception), and `mcp` exposes the rule
-//! catalog plus a pre-commit preflight over MCP stdio.
+//! Thin clap front end over the `canon` lib: `gate::engine` contains zero
+//! detection logic (every rule lives in `checklist_*.yaml` under
+//! `<repo>/.githooks/spec/` and runs an external harness command), `gate::tools`
+//! / `gate::rules` carry the gh-workflow policy layer, `flow` the task store
+//! and serve panel, `mcp` the JSON-RPC stdio surface. `specs/` is the source of
+//! truth for the default rules pack; `canon init` seeds a repo with it.
 
 use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
 
-use gate::{engine, shared, tools};
+use canon::gate::{engine, shared, tools};
 
 #[derive(Parser)]
 #[command(
@@ -174,7 +173,7 @@ fn main() -> ExitCode {
             }
             ExitCode::from(shared::exit_code(&findings) as u8)
         }
-        Commands::Serve { port } => match flow::serve::run(port) {
+        Commands::Serve { port } => match canon::flow::serve::run(port) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
                 eprintln!("canon serve: {e}");
@@ -207,7 +206,7 @@ fn run_mcp_stdio() -> std::io::Result<()> {
         if line.trim().is_empty() {
             continue;
         }
-        if let Some(reply) = mcp::handle_line(&line) {
+        if let Some(reply) = canon::mcp::handle_line(&line) {
             writeln!(out, "{reply}")?;
             out.flush()?;
         }
@@ -241,8 +240,8 @@ fn build_audit_args(args: &AuditArgs) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use crate::{Cli, Commands};
+    use canon::gate::shared::load_yaml;
     use clap::Parser;
-    use gate::shared::load_yaml;
     use std::path::Path;
 
     #[test]

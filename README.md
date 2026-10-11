@@ -33,10 +33,13 @@ dioxus_css_semantic
 
 ```
 canon/
-├── crates/gate/       # 门禁引擎：checklist 分发 + gh 工作流策略 → canon 二进制
-├── crates/mcp/        # MCP server：让 agent 直接查规范、跑检查、管任务
-├── crates/flow/       # 任务流：项目/任务/步骤 + 工作日志
-├── crates/web/        # flow 的本地看板（Dioxus wasm）
+├── src/
+│   ├── gate/          # 门禁引擎：checklist 分发 + gh 工作流策略
+│   ├── mcp/           # MCP server：让 agent 直接查规范、跑检查、管任务
+│   ├── flow/          # 任务流：项目/任务/步骤 + 工作日志 + serve 面板
+│   ├── lib.rs         # 模块根（gate / flow / mcp）
+│   └── main.rs        # clap 路由 → canon 二进制
+├── tests/             # 集成测试（对应 lib 目标）
 ├── specs/             # 规范正本
 │   ├── quality/ code/ cleanup/ workspace/ github/ dioxus/   ← 规则 yaml
 │   ├── harness/       ← 规则执行器（Python）+ 模型问题集（JSON）
@@ -129,7 +132,7 @@ canon/
 
 ## MCP server
 
-`crates/mcp` 是 JSON-RPC 2.0 over stdio 的 MCP server，装在 `canon init` 之后即可被 MCP 客户端（如 omp、Claude Code）调用。22 个工具分两组：
+`src/mcp` 是 JSON-RPC 2.0 over stdio 的 MCP server，装在 `canon init` 之后即可被 MCP 客户端（如 omp、Claude Code）调用。22 个工具分两组：
 
 **规范组**——让 agent 直接读规范、跑检查，不必猜命令：
 
