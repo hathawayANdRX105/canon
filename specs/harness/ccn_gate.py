@@ -87,10 +87,10 @@ def collect_over(root: Path, rel: str, ceiling: int) -> list[tuple[str, Entry]]:
         if ccn <= ceiling:
             continue
         bh = (
-            function_body_hash(lines, fn.name, fn.start_line_number, fn.end_line_number)
+            function_body_hash(lines, fn.name, fn.start_line, fn.end_line)
             if lines else None
         )
-        out.append((f"{rel}::{fn.name}", Entry(ccn, bh, fn.start_line_number)))
+        out.append((f"{rel}::{fn.name}", Entry(ccn, bh, fn.start_line)))
     return out
 
 

@@ -110,12 +110,12 @@ fn old_name(x: i32) -> i32 {
     @unittest.skipUnless(_lizard_available(), "lizard not installed")
     def test_pure_rename_is_silent_end_to_end(self):
         tmp = Path(tempfile.mkdtemp(prefix="ccn-subprocess-"))
-        for cmd in (["git", "init", "-q"],
-                    ["git", "-c", "user.email=t@t", "-c", "user.name=t", "add", "-A"],
+        subprocess.run(["git", "init", "-q"], cwd=tmp, check=True, capture_output=True)
+        (tmp / "src.rs").write_text(self.RUST)
+        # commit only after src.rs exists: an empty-repo commit exits 1
+        for cmd in (["git", "-c", "user.email=t@t", "-c", "user.name=t", "add", "-A"],
                     ["git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "f"]):
             subprocess.run(cmd, cwd=tmp, check=True, capture_output=True)
-        (tmp / "src.rs").write_text(self.RUST)
-        subprocess.run(["git", "-C", str(tmp), "add", "-A"], check=True, capture_output=True)
 
         # seed books old_name; then rename it and judge — a pure rename must stay silent.
         subprocess.run([sys.executable, str(self.CCN), "seed", "--root", str(tmp),
