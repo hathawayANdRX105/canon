@@ -96,6 +96,11 @@ class TitleDiffChainTest(unittest.TestCase):
                     bf = Path(tmp, "body.md")
                     bf.write_text(body, encoding="utf-8")
                     env["GATE_PR_BODY_FILE"] = str(bf)
+            else:
+                # gh 分支隔离:本仓可能有 open PR(如开发中的 PR),
+                # 会让 gh pr view 真成功而破坏「无 PR」断言。
+                # 把 PATH 指向空目录,gh 查不到 → OSError → INFO。
+                env["PATH"] = str(Path(tmp, "nopath"))
             df = Path(tmp, "diff.txt")
             df.write_text(diff, encoding="utf-8")
             Path(tmp, "fakelocal.py").write_text(PRELUDE, encoding="utf-8")
