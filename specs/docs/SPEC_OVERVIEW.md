@@ -154,7 +154,7 @@
 在 merge 钩子里自动跑：
 
 1. `semantic_rust` / `semantic_go` / `semantic_javascript` / `semantic_default`：移植 open-code-review 的规则文档
-   （Rust 侧已扩到 13 类目：上游 10 类 + canon 自有 `naming_semantics` 命名语义、`comment_clarity` 注释清晰度与 `module_structure` 模块拆分/聚合），
+   （Rust 侧已扩到 14 类目：上游 10 类 + canon 自有 `naming_semantics` 命名语义、`comment_clarity` 注释清晰度、`module_structure` 模块拆分/聚合与 `cleanliness_semantics` 整洁语义），
    判决由 `jev_rule.py` 给（意图 + 各类缺陷 noul + 总分 + 反误报 guardrail）
 2. `review_chain`：jev → 小模型 → 无模型三档降级
 3. 本地按需触发：`canon check <name> --sla l2`
@@ -258,7 +258,7 @@ ferrite 是两层布局（`crates/<domain>/<crate>/src`），而规则原先写�
 | `rust_todo_needs_issue` | l1 | pre-commit, pre-push, merge | WARN | 注释里 TODO/FIXME 必须关联 issue 号（例 `// TODO(#123):`；不扫字符串/测试） |
 | `rust_test_no_assert` | l1 | pre-commit, pre-push, merge | WARN | 测试函数必须含 assert |
 | `rust_no_cfg_test_in_tests_dir` | l1 | pre-commit, pre-push, merge | WARN | tests/ 目录里不要 #[cfg(test)] |
-| `clippy` | l1 | merge | FAIL/WARN | rustc 错误 + unused/dead_code → FAIL；collapsible_if 等风格 → WARN |
+| `clippy` | l1 | merge | FAIL/WARN | rustc 错误 + unused/dead_code → FAIL；collapsible_if 等默认风格 → WARN；显式启用 12 条 pedantic/restriction/nursery（too_many_lines / semicolon_if_nothing_returned / wildcard_imports / needless_pass_by_value / struct_excessive_bools / explicit_iter_loop / explicit_into_iter_loop / cloned_instead_of_copied / redundant_clone / collapsible_else_if / redundant_else / single_match_else，经 `cargo clippy … -- -W` 传 clippy-driver）→ WARN；不启用 cognitive_complexity（与 CK-CCN 冗余）、many_single_char_names（FP 高）、unwrap_used（与 error_panic 重复） |
 | `dep_hygiene` | l1 | merge | WARN | `cargo-machete` 未使用依赖 |
 | `duplication` | l2 | merge | WARN | 跨文件 4+ 连续行重复块（sh+awk, 零依赖） |
 | `module_drawer` | l2 | merge | WARN | 杂物抽屉启发：通用名文件（util/helper/common/misc…）顶层 pub 项跨 ≥3 类且 ≥5 项 → 拆内聚模块；模块内聚语义归 `semantic_rust` 的 module_structure 类目 |

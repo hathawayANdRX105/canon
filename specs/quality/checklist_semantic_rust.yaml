@@ -1,6 +1,7 @@
 # 语义层审查（Rust）：L2 语义 checklist，判决由 jev 驱动。
 # 忠实移植 alibaba/open-code-review 的 internal/config/rules/rule_docs/rust.md
-# 并扩展 canon 自有类目（naming_semantics / comment_clarity / module_structure 等）：13 类缺陷判定（noul）+ 总分（score），
+# 并扩展 canon 自有类目（naming_semantics / comment_clarity / module_structure /
+# cleanliness_semantics）：14 类缺陷判定（noul）+ 总分（score），
 # instructions 移植自上游原文子规则 + canon 增补，非综合改写。
 enabled: true
 hooks: [merge]
