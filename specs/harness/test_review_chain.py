@@ -60,6 +60,36 @@ class JevEnvResolveTest(unittest.TestCase):
         self.assertIsNone(key)
 
 
+class ReviewQuestionsFileTest(unittest.TestCase):
+    """jev_questions_review.json 静态契约(题目方向与阈值), 不依赖网络。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.qfile = json.loads((HERE / "jev_questions_review.json").read_text())
+
+    def test_context_limit_present_with_fail_095(self):
+        q = self.qfile["context_limit"]
+        self.assertEqual(q["type"], "noul")
+        self.assertEqual(q["fail"], 0.95)  # 弃权是 advisory, 几乎不该 FAIL
+        self.assertEqual(q["warn"], 0.6)
+
+    def test_context_limit_direction_is_declarative(self):
+        q = self.qfile["context_limit"]
+        ins = q["instructions"]
+        # 陈述式铁律: 负面命题必须陈述句, true 与陈述句同向(疑问句会把判定翻转)。
+        self.assertNotIn("?", ins)
+        self.assertTrue(ins.startswith("The diff alone lacks"))
+        self.assertIn("outside the diff", q["criteria"]["true"])
+        self.assertIn("enough to judge", q["criteria"]["false"])
+
+    def test_context_limit_loaded_into_review_questions(self):
+        # load_questions 自动取 json 里全部静态问题, 无需固定清单。
+        questions = rc.load_questions(str(HERE / "jev_questions_review.json"), 0.8, 0.5, "diff")
+        self.assertIn("context_limit", questions)
+        f, w = rc.thresholds(questions["context_limit"], 0.8, 0.5)
+        self.assertEqual((f, w), (0.95, 0.6))
+
+
 class ReviewChainChoiceTest(unittest.TestCase):
     def _run(self, answers, questions):
         with mock.patch.dict(os.environ, {"TYPESAFE_API_KEY": "k"}), \
