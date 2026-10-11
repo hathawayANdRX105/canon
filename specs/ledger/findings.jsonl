@@ -1,0 +1,2 @@
+{"ts": "2026-10-11T09:30:02+00:00", "pr": 42, "rule_id": "file-size", "action": "repair", "reason_sha": "458f883909e8", "has_evidence": false}
+{"ts": "2026-10-11T09:30:02+00:00", "pr": 40, "rule_id": "rust-todo-needs-issue", "action": "repair", "reason_sha": "b8130bc61924", "has_evidence": true}

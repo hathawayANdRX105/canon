@@ -49,6 +49,12 @@ MAX_CANDIDATES = 30
 CAP_STATE = 6000
 POOL = 8
 
+# 域门问题键: 题集可选配置 `domain_gate` noul 题(陈述式, true=越域)。
+# p ≥ fail → 该候选判为越域假阳性直接丢弃; warn ≤ p < fail → 判决照常但
+# finding extra 记门概率; 其余照常。未配 domain_gate 的题集行为逐字不变。
+GATE_QID = "domain_gate"
+
+
 SECRET_PAT = re.compile(
     r"(password|passwd|secret|api_key|apikey|token|auth_token|access_token"
     r"|private_key|connection_string)\s*[:=]\s*[\"'][^\"'\s]{8,}[\"']", re.IGNORECASE)
@@ -208,6 +214,44 @@ def post(url, headers, body, timeout):
         return json.loads(r.read().decode())
 
 
+def gate_verdict(rule_cfg, r):
+    """域门裁定: ("drop", p) / ("note", p) / (None, p)。未配域门或域门题
+    缺失 → (None, None) —— 调用方必须走与改造前完全一致的路径。"""
+    gate = rule_cfg["questions"].get(GATE_QID)
+    if gate is None or GATE_QID not in r:
+        return None, None
+    p = r[GATE_QID]
+    if p >= float(gate.get("fail", 1.1)):
+        return "drop", p
+    if p >= float(gate.get("warn", 1.1)):
+        return "note", p
+    return None, p
+
+
+def decide_candidate(rule, rule_cfg, c, r):
+    """单候选判决: 域门先判——越域(p ≥ 域门 fail)直接丢弃(返回 (None, True));
+    域门 warn~fail 之间判决照常但 extra 记门概率; 其余与无域门时完全一致。"""
+    verdict, p_g = gate_verdict(rule_cfg, r)
+    if verdict == "drop":
+        return None, True
+    worst, extra = "INFO", {"tier": "jev"}
+    if verdict == "note":
+        extra[GATE_QID] = f"{p_g:.2f}"
+    for qid, q in rule_cfg["questions"].items():
+        if qid == GATE_QID or qid not in r:
+            continue
+        p = r[qid]
+        fail, warn = float(q.get("fail", 1.1)), float(q.get("warn", 1.1))
+        if p >= fail:
+            worst = "FAIL"
+            extra[qid] = f"{p:.2f}"
+        elif p >= warn and worst != "FAIL":
+            worst = "WARN"
+            extra[qid] = f"{p:.2f}"
+    if worst == "INFO":
+        return None, False
+    return finding(rule, c, worst, extra), False
+
 def judge_one(rule_cfg, cand):
     state = {"rule_intent": rule_cfg.get("intent", ""), **cand}
     state = {k: (v[:CAP_STATE] if isinstance(v, str) else v) for k, v in state.items()}
@@ -271,6 +315,8 @@ def main():
         for i in range(len(cands)):
             judged[i], notes[i] = None, "no jev endpoint pair configured"
 
+    gated = GATE_QID in rule_cfg["questions"]
+    dropped = 0
     findings = []
     for i, c in enumerate(cands):
         r = judged.get(i)
@@ -279,21 +325,18 @@ def main():
                 "tier": "candidates-raw",
                 "note": f"unverified ({notes.get(i, '')}) - candidate from deterministic scan"}))
             continue
-        worst, extra = "INFO", {"tier": "jev"}
-        for qid, q in rule_cfg["questions"].items():
-            if qid not in r:
-                continue
-            p = r[qid]
-            fail, warn = float(q.get("fail", 1.1)), float(q.get("warn", 1.1))
-            if p >= fail:
-                worst = "FAIL"
-                extra[qid] = f"{p:.2f}"
-            elif p >= warn and worst != "FAIL":
-                worst = "WARN"
-                extra[qid] = f"{p:.2f}"
-        if worst == "INFO":
-            continue          # below warn threshold - the false-positive filter
-        findings.append(finding(rule, c, worst, extra))
+        f, drop = decide_candidate(rule, rule_cfg, c, r)
+        if drop:
+            dropped += 1
+            continue
+        if f:
+            findings.append(f)
+    judged_n = sum(1 for i in range(len(cands)) if judged.get(i) is not None)
+    if gated and judged_n and dropped:
+        findings.append({"id": "VERIFY-DOMAIN-GATE", "severity": "INFO",
+                         "path": files[0][0] if files else ".", "line": 0,
+                         "message": (f"domain_gate: dropped {dropped}/{judged_n} "
+                                     "out-of-domain candidates")})
     if len(all_cands) > len(cands):
         findings.append({"id": f"{rule.upper().replace('_','-')}-TRUNCATED",
                          "severity": "INFO", "path": files[0][0] if files else ".",
