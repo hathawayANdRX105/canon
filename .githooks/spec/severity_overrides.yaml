@@ -2,6 +2,9 @@
 # 格式: "规则ID": "FAIL" | "WARN" | "INFO"
 #
 # 适用于所有 hook (pre-commit / pre-push / merge / gh create)
+# 注意：本文件随 canon 分发，canon-sync push 会无条件覆盖 —— 每仓本地调优
+# 写到 `.githooks/spec/custom/severity_overrides.yaml`（受保护不被覆盖；
+# 同名规则 custom 层是最后定音）。INFO finding 任何层都不改级。
 # 只有非 INFO 的 finding 会被覆盖 (确认项不受影响)
 #
 # 完整规则列表:
