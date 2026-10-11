@@ -39,7 +39,9 @@ import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CONFIG = os.path.join(HERE, "jev_questions_verify.json")
-TIMEOUT_HTTP = 30
+# per-jev-call HTTP budget; must stay under the invoking checklist yaml `timeout:`
+# (45s) so pool=8 waves finish before the engine kills the harness (rc=2 = check skipped)
+TIMEOUT_HTTP = 20
 MAX_CANDIDATES = 30
 CAP_STATE = 6000
 POOL = 8
@@ -243,7 +245,8 @@ def main():
         print(json.dumps([])); return
     rule_cfg = cfg[rule]
     files = parse_files(sys.stdin.read())
-    cands = EXTRACTORS[rule](files)[:MAX_CANDIDATES]
+    all_cands = EXTRACTORS[rule](files)
+    cands = all_cands[:MAX_CANDIDATES]
     if not cands:
         print(json.dumps([])); return
 
@@ -284,6 +287,12 @@ def main():
         if worst == "INFO":
             continue          # below warn threshold - the false-positive filter
         findings.append(finding(rule, c, worst, extra))
+    if len(all_cands) > len(cands):
+        findings.append({"id": f"{rule.upper().replace('_','-')}-TRUNCATED",
+                         "severity": "INFO", "path": files[0][0] if files else ".",
+                         "line": 0,
+                         "message": f"{len(all_cands)} candidates exceed cap {MAX_CANDIDATES}; "
+                                    f"{len(all_cands) - len(cands)} not judged this run"})
     print(json.dumps(findings))
 
 

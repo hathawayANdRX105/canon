@@ -183,6 +183,23 @@ harness 一律扫仓库根加 `--exclude-dir`，**不假设 crate 嵌套深度**
 
 ferrite 是两层布局（`crates/<domain>/<crate>/src`），而规则原先写死一层的 `crates/*/src/`，导致 45 个 crate 里只有 1 个被扫到——其余 44 个的代码从未被检查，gate 却报 `ALL PASS`。静默失效比直接报错更危险，所以新增规则不得再写死目录层级。
 
+## `custom/` 覆盖层（每仓本地覆盖）
+
+`canon-sync push` 无条件覆盖 canon-owned 文件（OWNED_DIRS 各家族 yaml + 根层
+`dispatch.yaml` / `severity_overrides.yaml`）。每仓的本地调优住在
+`.githooks/spec/custom/`（PROTECTED，push / status / remove_retired 都不碰）：
+
+- **severity 覆盖**：引擎先应用根 `severity_overrides.yaml`，再应用
+  `custom/severity_overrides.yaml`——同名规则 custom 层最后定音，是唯一活过
+  canon-sync 的降级通道。custom 缺省 = no-op；坏 yaml = 一条 `canon.setup`
+  WARN finding（no-silent）。INFO finding 任何层都不改级。
+- **家族 yaml 深合并**：引擎加载 `spec/<file>` 时，若存在 `custom/<同名文件>`
+  则深合并覆盖在 canon 文件之上（mapping 递归合并；scalar/list 按 key 整体
+  替换，如 `type_labels_cfg` 改 list 要写全量）。`custom/` 只作 overlay 不作
+  base 源（文件发现跳过该目录，同名副本不 shadow canon 文件）。
+- 详见 [CHECKLIST_SPEC.md](./CHECKLIST_SPEC.md)「custom/ 覆盖层」一节。
+
+
 ## 明确不做的（项目侧约定：不写规范、不检查）
 
 > 项目侧规则（ferrite / gugu / silverq / mono 根层 SPEC_OVERVIEW「明确不做的」小节，Dioxus 前端仓约定）。
