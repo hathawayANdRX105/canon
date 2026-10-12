@@ -11,11 +11,11 @@
 - `cargo check`（类型检查）
 - `grep` / `ls` / 文件读写等只读命令
 
-**如果实在要本地跑重命令**（`cargo build`、`cargo test`、`cargo bench`、`cargo clippy` 等），**必须套 `systemd-run --user --scope -p CPUQuota=70% --` 限制 CPU 到 65%**：
+**如果实在要本地跑重命令**（`cargo build`、`cargo test`、`cargo bench`、`cargo clippy` 等），**必须套 `.githooks/heavy`**（`heavy` 按 `nproc` 的一半现算 CPUQuota；注意该百分比是**单核**百分比，不是整机——写死 70% 在 8 核上只有 0.7 核，理由见 `.githooks/heavy` 头注）：
 
 ```bash
-systemd-run --user --scope -p CPUQuota=70% -- cargo test
-systemd-run --user --scope -p CPUQuota=70% -- cargo bench
+.githooks/heavy cargo test
+.githooks/heavy cargo bench
 ```
 
 `git`、`grep`、`ls` 等轻量命令不需要套。

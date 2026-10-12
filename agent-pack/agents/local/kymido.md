@@ -30,10 +30,10 @@ gate 自动做创建前校验(规则在 `.githooks/spec/`)+ 创建后现实校�
 
 验证节奏：本地 `fmt --check` + 单 crate `cargo check` → push → **CI 出结果才算验证过**。CI 红了看日志改，不要在本地复现。
 
-**唯一例外**是 web UI 需要肉眼确认时的 `cargo build --bin oi-web`（见下文启动序列），必须套 `systemd-run --user --scope -p CPUQuota=70% --`：
+**唯一例外**是 web UI 需要肉眼确认时的 `cargo build --bin oi-web`（见下文启动序列），必须套 `.githooks/heavy`（CPUQuota 百分比是**单核**百分比，不是整机——写死 70% 在 8 核上只有 0.7 核；`heavy` 按 `nproc` 的一半现算，理由见 `.githooks/heavy` 头注）：
 
 ```bash
-systemd-run --user --scope -p CPUQuota=70% -- cargo build --bin oi-web
+.githooks/heavy cargo build --bin oi-web
 ```
 
 ## 禁改区

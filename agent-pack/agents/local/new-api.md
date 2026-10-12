@@ -186,12 +186,12 @@ When starting a dev server for manual testing, create a test account on the inst
   2. `gofmt -l <files>` and `grep` / file reads are the only local checks (and gofmt is a read, not a build).
   3. Push the branch / open the PR and let CI compile and run the tests; read CI results and iterate there.
   4. If runtime proof seems required before pushing, state that explicitly and let the operator decide — never reach for a local compile as a shortcut.
-- The legacy `systemd-run --user --scope -p CPUQuota=70% --` wrapper below exists ONLY for cases the operator explicitly orders a local heavy run. It is an exception, not a license:
+- The legacy `.githooks/heavy` wrapper below exists ONLY for cases the operator explicitly orders a local heavy run. It is an exception, not a license:
 
 ```bash
 # ONLY when the operator explicitly asks for a local run:
-systemd-run --user --scope -p CPUQuota=70% -- go test ./...
-systemd-run --user --scope -p CPUQuota=70% -- bun run build
+.githooks/heavy go test ./...
+.githooks/heavy bun run build
 ```
 
 Lightweight commands (`git`, `grep`, `ls`, file reads, `gofmt -l`) do NOT need a quota wrapper.

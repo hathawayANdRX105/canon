@@ -18,11 +18,11 @@ silverq 实例——用户曾因此严厉警告（2026-09-20）。
 |---|---|
 | `cargo check --features meow-tun --all-targets` | 增量检查，推送前确认能编译（秒级） |
 | `cargo fmt --all` | 随时 |
-| `cargo build --release --features meow-tun` | **仅部署需要产物时**，且必须 `systemd-run --user --scope -p CPUQuota=70% --` 包裹 |
+| `cargo build --release --features meow-tun` | **仅部署需要产物时**，且必须 `.githooks/heavy` 包裹 |
 | `~/.local/bin/silverq-lab.sh` | 容器实验室 gauntlet，数据面/TUN 实验的唯一本地运行场所 |
 | `git` / `gh` / `grep` / 文件读写 | 轻量，不限 |
 
-CPU 密集型命令（编译/测试/装包）一律 `systemd-run --user --scope -p CPUQuota=70% --` 前缀，禁止裸跑。
+CPU 密集型命令（编译/测试/装包）一律 `.githooks/heavy` 前缀，禁止裸跑（`heavy` 按 `nproc` 的一半现算 CPUQuota；注意该百分比是**单核**百分比，不是整机——写死 70% 在 8 核上只有 0.7 核，理由见 `.githooks/heavy` 头注）。
 
 ## 宿主机生产实例保护（硬约束）
 
