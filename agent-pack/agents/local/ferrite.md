@@ -21,6 +21,12 @@
   2. 执行后自检 `git worktree list`：新条目路径出现第二个 `.wt/` 即嵌套，立即 `git worktree remove` 重来。
      闸门 `checklist_no_nested_worktree` 命中即 FAIL。
   3. 派子代理 prompt 必须写**全局绝对路径**（如 `{{root}}/.wt/<name>/`），禁止让其推导相对路径。
+- **建完分支立刻把上游指向自己的分支**：`git worktree add .wt/<name> -b <branch> origin/main`
+  这类带远端 start-point 的写法会把新分支的 upstream 设成那个 start-point —— 在该 worktree 里
+  一次 `git push`（尤其 `--force`）就会打到 **main 或别人的分支**。实测本仓：`.wt/admin-card` 的
+  `feat/admin-card` upstream = `origin/main`，`.wt/sidebar-migration` 的 upstream =
+  `origin/feat/coding-mount`。建完就 `git push -u origin <branch>` 落地自己的分支并改正 upstream；
+  不要上游时用 `git worktree add --no-track ...`（不带 start-point 时 git 本来也不设）。
 - **`.wt/` 删除保护**：只能删**本会话自己创建**且 PR 已合并的 worktree，且需维护者确认 +
   对照 `git worktree list` 确认归属；用 `git worktree remove`。
   严禁对 `.wt/` 做任何批量/暴力删除（`rm -rf`、`git clean`）——那是别人的开发会话，等同删库。
