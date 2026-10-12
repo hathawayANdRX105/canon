@@ -96,7 +96,7 @@
 - 长跑服务禁用 `nohup ... &`（进程组被回收，静默死亡）——用会话持久后台任务，起后 `ss -ltn` 验证端口。
 - 禁宽匹配 `pkill -f cargo|rustc`（别人在跑的构建，T 态 ≠ 死）；清理前 `readlink /proc/<pid>/cwd` 认归属。
 - CPU 密集命令（编译 / 测试 / 装包，含子代理的验证）一律套
-  `systemd-run --user --scope -p CPUQuota=70% --`；`git`/`grep`/文件读写例外。
+  `.githooks/heavy`；`git`/`grep`/文件读写例外。（CPUQuota 百分比是**单核**百分比，不是整机——写死 70% 在 8 核上只有 0.7 核；`heavy` 按 `nproc` 的一半现算，理由见 `.githooks/heavy` 头注）
 
 ---
 

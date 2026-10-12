@@ -1,4 +1,4 @@
-<!-- managed by canon agents.yaml @ 2026-10-12 -->
+<!-- managed by canon agents.yaml @ 2026-10-13 -->
 ## canon 约定
 
 canon 是**规范与 agent 文档的正本仓**。别的项目想改规范、改 agent 约定，来这里改，再分发回去。
@@ -243,7 +243,8 @@ just review          # canon check 全套自检
   测试；testless 异常/零命中自动降级全量，绝不静默跳过。全量务必
   `cargo test --workspace`（根包 workspace 下裸 `cargo test` 只跑根包）。
 - 不要在会话里自行 `export RUSTC_WRAPPER` 或改 jobs——统一走仓配置；
-  重命令照旧套 cgroup CPU 配额（`systemd-run --user --scope -p CPUQuota=70% --`）。
+  重命令照旧套 cgroup CPU 配额，用 `.githooks/heavy <cmd>`（按 `nproc` 的一半现算，下限 100%）；
+  **CPUQuota 的百分比是单核百分比**，别写死数字——理由见 `.githooks/heavy` 头注。
 - 增量编译已关（缓存优先）：同树连续小改动按 crate 级重编是预期行为，不是
   回归；若本仓热重载明显变慢，跟用户确认后局部放开。
 - 新建 `.wt` worktree 直接用；旧布局 worktree 若报 workspace 收编错误，
@@ -270,9 +271,12 @@ just review          # canon check 全套自检
 - 全量测试、全量构建、全量 lint 放 CI 或收尾阶段，不在改动过程中反复跑。
 - 本地只跑轻量、快的针对性检查（单 crate `cargo check`、单包测试、`fmt --check`、
   类型检查）。
-- 需要本地跑重命令时，套 cgroup CPU 配额（`systemd-run --user --scope -p CPUQuota=70% --`
-  或本仓等价手段），不抢占用户正在用的 CPU——与「Rust 开发性能」章节同值，
-  两处不要各写一个数。
+- 需要本地跑重命令时，用 `.githooks/heavy <cmd>`（= `systemd-run --user --scope -p CPUQuota=<配额>%`），
+  不抢占用户正在用的 CPU。**CPUQuota 的百分比是单核百分比，不是整机**：`systemd.resource-control(5)`
+  写明 "relative to the total CPU time available on one CPU"、"Use values > 100% for allotting
+  CPU time on more than one CPU" —— 所以写死 `CPUQuota=70%` 在 8 核机器上只有 0.7 个核（实测：同一
+  冷编 463s vs 无配额 ~77s；同批 4 并发 70% = 33.1s、400% = 8.4s）。`heavy` 按 `nproc` 的一半现算
+  （下限 100%），机器大小自适应；**不要在各处再写死数字**，理由与实测见 `.githooks/heavy` 头注。
 - 本条是**默认下限**：本仓 local 约定更严格时以 local 为准（如本项目禁止本地跑
   任何编译/测试、只准 CI 跑，比套配额更严），此时本条自动让位，不构成豁免。
 - 装依赖、打包等命令同样受限。
