@@ -76,7 +76,7 @@ bundle 内容变化会改变 manganis 指纹 → **必须重启 dx**（`--watch 
 | 症状 | 原因 | 处理 |
 |---|---|---|
 | 页面白屏、无头浏览器 tab 卡死 | 旧版 DropdownMenu busy-poll 钉死 wasm 主线程（web-visual 会话修复 `67963a3`） | 确认分支含该修复，缺则 cherry-pick，重启 dx |
-| `Err 404 - dx is not serving a web app` | wasm 还在编（首次 336s+，多会话抢核更久） | 等；判据是 `apps/web` 的 dx 产物 `target/dx/*/debug/web/public/wasm/*.js` 落盘（目录名取 `apps/web/Dioxus.toml` 的 `[application] name`）且 cargo 中间产物 `target/wasm32-unknown-unknown/wasm-dev/deps/*.wasm` 落盘 |
+| `Err 404 - dx is not serving a web app` | wasm 还在编（首次 336s+，多会话抢核更久） | 等；判据是本 worktree 的 `apps/web` dx 产物 `target/dx/*/debug/web/public/wasm/*.js` 落盘（目录名取 `apps/web/Dioxus.toml` 的 `[application] name`）且 cargo 中间产物 `target/wasm32-unknown-unknown/wasm-dev/deps/*.wasm` 落盘 |
 | ainotation 工具调用挂起 | service 不健康或晚于 omp 会话启动 | `just aino-service` + `/mcp reconnect ainotation` |
 | `just aino-service` 报 already locked | 别的 service 实例持锁（可能僵尸） | `pgrep -af 'cli.mjs service'` 查归属，确认无主再清 |
 | npx 拉 mcp 包超时 | 走代理慢 | 直接 `node ~/.npm/_npx/*/node_modules/@ainotation/mcp/dist/cli.mjs`（绕过 npx 解析） |

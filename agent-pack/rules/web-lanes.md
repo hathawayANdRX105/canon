@@ -35,13 +35,15 @@ git worktree add --detach .wt/web-fix       # 审查角色：常驻 detached（�
 git worktree list                            # 自检：新条目路径必须是 .wt/ 下且不出现第二个 .wt/
 ```
 
-两个 web worktree **共享一个编译目录**（避免每开一个 worktree 付一次冷 wasm target）：
+两个 web worktree 各自用自己的 `target/`（不再共享主检出编译目录），各车道并行构建互不干扰：
 
 ```bash
-export CARGO_TARGET_DIR=/home/hathaway/projects/mono/target   # 两个车道共用主检出 target/（原 target-web 已废弃）
+# 无需再 export CARGO_TARGET_DIR；每个 worktree 的 dx 产物落在自己的 target/ 下
 ```
 
-cargo 用文件锁串行化并发构建；registry 依赖（dioxus 等）只编一次。
+cargo 用文件锁串行化同目录内的并发构建；独立 target 后两车道不再互等文件锁。
+注意：跨 worktree **无法**复用 Rust 产物 —— sccache 的 Rust cache key 含 rustc cwd
+（basedirs 只作用于 C/C++），故每个 worktree 首次构建付一次冷编。
 
 ## 循环 A：开发（角色 = dev agent）
 
@@ -117,5 +119,5 @@ copy_constants / code_doc 等），merge 期跑 `github/pr_gates` + clippy 等�
 
 - `.wt/web-fix` 常驻 detached HEAD（git 不允许同一分支 checkout 进两个 worktree），
   每轮循环从 `origin/web-dev` 切新 `webfix/xxx`，不在旧 webfix 分支上续。
-- 共享 target 时两个车道同时构建会互相等锁（cargo 串行），属预期，不要 kill 对方的 cargo。
+- 各 worktree 独立 target/，两车道同时构建不再互等 cargo 文件锁（并行安全）；独立 target 后跨 worktree 无法复用 Rust 产物（sccache key 含 rustc cwd），首次构建各付一次冷编。不要 kill 对方的 cargo。
 - dx / ainotation / 后端的具体启动命令在任务书里，不在本文件重复。
