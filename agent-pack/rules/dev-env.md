@@ -17,7 +17,7 @@
 | `just dev-web` 报 `Failed to find binary package to build` | 已修复（2026-09-18）：配方里用了 `$(justfile_directory)`，但 just 没有这个变量，shell 展开成空字符串，导致 `cd /apps/admin-web` 失败 | 现在已改成 `justfile()` 内置函数，正常可用 |
 | 改了 `crates/web/ui-kit` 之类的依赖 crate（或任何代码），页面没变化 | `dx` 不自动重建 wasm（`--watch false`），且只对结构变更重跑 bindgen | 跑 `just dev-web-rebuild <port>`（一键重编+重启；免登录档加 `debug`），浏览器再强刷一次 |
 | 第一次跑 `dx` 很久还没监听端口，以为启动失败 | 首次编译 wasm 很慢，实测要 336 秒 | 等。判断是否正常：看 dx 的日志输出有没有在编译 |
-| 页面显示另一个分支/worktree 的内容，或一直停在"正在重新构建"占位页 | 同一 bin target（admin-web）的所有会话共用同一个产物目录 `target/dx/admin-web/debug/web/public`（dev-web 配方**故意**把 `CARGO_TARGET_DIR` 共享到主仓 target/，保持 cargo 指纹 + sccache 跨会话命中），N 个会话 = N 个写者写同一个目录，伺服的是最后那个构建 | 先跑 `just dev-web status`：列出所有在跑的 dx serve（app/pid/端口/项目目录）+ 各产物目录 mtime，看清哪个 worktree 拥有那个页面；复用那个 server 的端口，或先在它的 worktree 里 `just dev-web stop`。新起的实例会被 `scripts/dev-web.sh` 自动拒绝（打印对方的 pid/项目目录/端口；确要强行用 `FORCE=1 just dev-web <port> [mode]`，风险自担） |
+| 前端一直停在"正在重新构建"占位页 | 每个 worktree 用自己的 `target/`（配方不再把 `CARGO_TARGET_DIR` 共享到主仓），本 worktree 的 dx 产物落在自己的 `target/dx/<bin>/debug/web/public`；占位页 = 本 worktree 自身 wasm 构建还没完成，与别的 worktree 无关（不再有多个会话写同一个产物目录、后起者静默伺服别人的构建） | 跑 `just dev-web status`（各在跑 dx 的产物目录 mtime + 本 worktree 实例）确认状态；看 dx 日志 `/tmp/ferrite-dev-web-<worktree>.log`，等本 worktree 构建完成再强刷。不同 worktree 产物目录独立、可并行起，不会伺服别人的构建（绝不 kill 别人的进程） |
 | 改了 `crates/api` 的代码，但前端行为没变 | 后端是常驻进程，不会自动加载新代码 | 跑 `just dev-backend update`（约 3 秒，会重建并重启，**登录状态不会丢**） |
 
 ---
@@ -48,9 +48,9 @@
 | 3. 灌测试数据 | `just db-seed` | 可以重复执行（幂等）。数据乱了用 `just db-reset && just db-seed` |
 | 4. 确认后端起没起 | `just dev-backend status` | 已经在跑就**不要**再 start。没起才 `just dev-backend start` |
 | 5. 验证后端 | `curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3211/api/dashboard` | 返回 **401 是正常的**（说明服务活着、接口需要登录）；返回连接被拒说明没起来 |
-| 6. 启动前端 | `just dev-web`（默认普通档 = 手动登录；端口 auto：在 10000-16000 随机位分配，占用则 +1 换最多 3 次；用持久后台任务，见第二节；dx 日志在 `/tmp/ferrite-dev-web-<worktree>.log`） | 分配结果打 stdout（`== auto 端口分配: <port> ==`）；`ss -ltn` 确认该端口在监听，`curl http://127.0.0.1:<port>/` 应该返回 200。`dx` 是 Dioxus 的官方开发 CLI（装在 PATH 里，`dx --help` 可查），配方内部就是调它。**同 bin target 已有别的 worktree 的 dx 在跑时，start 会打印对方信息并拒绝再起第二个**（共用产物目录，后起者会静默伺服别人的构建）；确要自起先 `just dev-web status` 看清归属 |
+| 6. 启动前端 | `just dev-web`（默认普通档 = 手动登录；端口 auto：在 10000-16000 随机位分配，占用则 +1 换最多 3 次；用持久后台任务，见第二节；dx 日志在 `/tmp/ferrite-dev-web-<worktree>.log`） | 分配结果打 stdout（`== auto 端口分配: <port> ==`）；`ss -ltn` 确认该端口在监听，`curl http://127.0.0.1:<port>/` 应该返回 200。`dx` 是 Dioxus 的官方开发 CLI（装在 PATH 里，`dx --help` 可查），配方内部就是调它。**各 worktree 独立 `target/`，start 不再因别的 worktree 已有同 bin dx 而拒绝**（产物目录独立，后起者不会伺服别人的构建），可并行起；要接管某端口先 `just dev-web status` 看清归属 |
 | 7. 免登录调前端 | `just dev-web debug`（auto 端口；= `just dev-web <port> debug`；普通档 `just dev-web <port>`） | 与上一行唯一区别：编译时多开 `debug-auto-login` feature（自动登录测试账号 `admin_dev`）。想手动测登录页就打开 `#login` 锚点；自己点"退出登录"不会被自动重登顶掉 |
-| 8. 停/体检前端 dx | `just dev-web stop` / `just dev-web status` | `stop` 只停**本 worktree 脚本起过**的 dx 实例（`/tmp/ferrite-dev-web-<worktree>.state` 识别 + cmdline 归属校验，拒绝碰别的进程）；`status` 列出所有在跑的 dx serve（app/pid/端口/项目目录）+ 各 bin target 产物目录 mtime。页面显示另一个分支的内容时先跑它 |
+| 8. 停/体检前端 dx | `just dev-web stop` / `just dev-web status` | `stop` 只停**本 worktree 脚本起过**的 dx 实例（`/tmp/ferrite-dev-web-<worktree>.state` 识别 + cmdline 归属校验，拒绝碰别的进程）；`status` 列出所有在跑的 dx serve（app/pid/端口/项目目录）+ 各在跑 dx 自己的产物目录 mtime。页面一直停在"正在重新构建"/行为异常时先跑它 |
 
 **前端报 `Connection refused` 时，先看后端**：前端 `dx` 的代理指向 3211，后端死了前端必然报错。
 先跑 `just dev-check` 确认后端状态，不要先去折腾前端。
