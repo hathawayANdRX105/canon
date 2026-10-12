@@ -34,7 +34,7 @@ MAPPED_DOCS = []
 # canon-owned 相对路径（相对 .githooks/）。目录 = 整目录分发；文件 = 单文件。
 OWNED_DIRS = ["hooks", "spec/github", "spec/workspace", "spec/cleanup",
               "spec/code", "spec/quality", "spec/harness", "spec/docs", "spec/dioxus"]
-OWNED_FILES = ["canon", "spec/dispatch.yaml", "spec/severity_overrides.yaml"]
+OWNED_FILES = ["canon", "heavy", "spec/dispatch.yaml", "spec/severity_overrides.yaml"]
 # 受保护：push 永不触碰
 PROTECTED = ["spec/custom"]
 
