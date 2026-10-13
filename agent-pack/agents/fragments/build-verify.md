@@ -18,12 +18,8 @@
 - 全量测试、全量构建、全量 lint 放 CI 或收尾阶段，不在改动过程中反复跑。
 - 本地只跑轻量、快的针对性检查（单 crate `cargo check`、单包测试、`fmt --check`、
   类型检查）。
-- 需要本地跑重命令时，用 `.githooks/heavy <cmd>`（= `systemd-run --user --scope -p CPUQuota=<配额>%`），
-  不抢占用户正在用的 CPU。**CPUQuota 的百分比是单核百分比，不是整机**：`systemd.resource-control(5)`
-  写明 "relative to the total CPU time available on one CPU"、"Use values > 100% for allotting
-  CPU time on more than one CPU" —— 所以写死 `CPUQuota=70%` 在 8 核机器上只有 0.7 个核（实测：同一
-  冷编 463s vs 无配额 ~77s；同批 4 并发 70% = 33.1s、400% = 8.4s）。`heavy` 按 `nproc` 的一半现算
-  （下限 100%），机器大小自适应；**不要在各处再写死数字**，理由与实测见 `.githooks/heavy` 头注。
+- 需要本地跑重命令时，用 `.githooks/heavy <cmd>`（CPU 配额按核数现算），
+  不抢占用户正在用的 CPU；不要自行写死 `CPUQuota` 数字，理由与实测见 `.githooks/heavy` 头注。
 - 本条是**默认下限**：本仓 local 约定更严格时以 local 为准（如本项目禁止本地跑
   任何编译/测试、只准 CI 跑，比套配额更严），此时本条自动让位，不构成豁免。
 - 装依赖、打包等命令同样受限。

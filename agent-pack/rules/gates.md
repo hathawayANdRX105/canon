@@ -135,4 +135,4 @@ CRG / 语义审查意见）都必须被显式处置：
    交维护者裁决。落点 = PR 正文 `## Delivery record` 或 issue 交付评论。沉默即违规。
 5. **WARN ≠ 可忽略**：与 `FAIL` 同等处置。
 
-完整版与判例见 canon `specs/agents/_discipline.md`。
+完整版见 canon `agent-pack/agents/fragments/_discipline.md`（即各仓 AGENTS.md 的「发现处置纪律」章节）。
