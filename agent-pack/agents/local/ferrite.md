@@ -66,7 +66,7 @@
 | 关卡 | 性质 | 要求 |
 |---|---|---|
 | **快关**（PR push，`just test-fast` testless 影响分析） | **阻塞** | 合并门：`shell-ci` 绿了才能 merge；红了 `gh pr checks <N>` 拉日志修复重推，CI 没跑完/没跑完不许合并 |
-| **全量**（main push / 手动 `full=true`，`just test`） | **异步、离线跟进** | 不阻塞合并，但**必须回查并汇报**：触发（含 main push 自动）后用 bash 长间隔轮询（如 `gh run watch <id> -R hathawayANdRX105/ferrite-ci --interval 120`），无论成败都要向维护者汇报 run id + 结论；红了立即开修复任务，不静默收尾 |
+| **全量**（main push / 手动 `full=true`，壳仓内 `just test`） | **异步、离线跟进** | 不阻塞合并，但**必须回查并汇报**：触发（含 main push 自动）后用 bash 长间隔轮询（如 `gh run watch <id> -R hathawayANdRX105/ferrite-ci --interval 120`），无论成败都要向维护者汇报 run id + 结论；红了立即开修复任务，不静默收尾 |
 
 - 手动全量（主仓目录）：`gh workflow run ci-dispatch.yml --ref <branch> -f full=true`；
   应急绕开私仓直接打壳仓：`gh workflow run ci.yml -R hathawayANdRX105/ferrite-ci -f sha=<sha> -f pr=<N> -f base=main`。
@@ -74,7 +74,11 @@
 - 发布同走壳仓：推 `ferrite-v*` tag → 主仓 `ferrite-release.yml` 秒级派发 → 壳仓 `release.yml`
   构建并把 Release（asset+notes）用 PAT 发回**私有主仓**；壳仓不落 artifact（私有代码产物
   不进公开仓）。主仓手动触发只 dry-run；**合并新派发器之前不得推 tag**（旧全量版会烧私有分钟）。
-- **不准在本地运行中等及以上的测试**（只许 `cargo check -p` 与 3 秒内单用例调试）——
+- **本地测试入口 = `just test-fast`**（testless 影响分析，只跑受波及用例；异常/零命中时本地
+  不降级、打印派发命令后 exit 1）；`cargo check -p` 与 3 秒内单用例调试照旧。
+  **中等及以上测试禁止本地跑**：`just test` 本地直接拒跑（`cargo test --all` / 整包 /
+  整个 test binary / e2e 一律交壳仓 CI）；需要全量时手动派发：
+  `gh workflow run ci-dispatch.yml --ref <branch> -f full=true`。
   失效模式判据（feature 门禁假绿、`#[ignore]`、e2e 30 秒整数倍=PG 事故）见 **`.agent/rules/testing-ci.md`**，新增测试前必读。
 - 缓存不变量：只有写入方（main push / 手动 full）回填 sccache（日键）/ cargo（lock 键），PR 只读；
   不做定期全量清（7 天 LRU 自动淘汰），手动兜底跑壳仓 `cache-admin`。壳仓 `on:` 只有 `workflow_dispatch`（防 fork 借 PAT 投毒）。

@@ -15,13 +15,13 @@
 | 某个 e2e 测试的耗时正好是 30 秒 / 60 秒 / 90 秒 | DB 门禁测试连不上 Postgres（test 关卡服务容器缺失 / 故障）时超时后 `return` 跳过——却被记为 passed。CI 带 PG18 服务，出现这个信号 = **服务坏了，是 CI 事故** | 耗时是 30 秒的整数倍；日志里搜 `skipping e2e`（这条是 stderr，CI 吞掉了） |
 | 有一批测试从来没在 CI 里跑过 | 它们标了 `#[ignore]`，而 CI 从不带 `--ignored` 参数运行 | 全仓 `#[ignore]` 出现在 13 个文件里共 56 处，CI 一律跳过 |
 | 本地能跑绿，CI 却报 lint 错 | CI 与本地使用的 Rust 工具链版本不一致（新 clippy 可能新增 lint） | 版本由仓库 `rust-toolchain.toml` 固定（CI 检出源码后自动生效）；改 pin 前先查 `rustc --version`，禁止 `rustup update stable` 临时升级本地 |
-| 本地跑测试把机器跑死 | 本机可用内存常年不到 2GB，多 crate 一起编译会耗尽内存 | 本地只做 `cargo check -p <crate>`，测试全部交给 CI |
+| 本地跑测试把机器跑死 | 本机可用内存常年不到 2GB，多 crate 一起编译会耗尽内存 | 本地只跑 `just test-fast`（testless 选测）与 `cargo check -p <crate>`；全量测试交给 CI |
 
 ---
 
 ## 二、维护者希望做什么事
 
-- **所有测试在 CI 跑**（公开壳仓 `hathawayANdRX105/ferrite-ci`，见 AGENTS.md「CI 处理」），本地只验证"能不能编译"和 3 秒内的单用例调试。
+- **测试验收都在 CI 跑**（公开壳仓 `hathawayANdRX105/ferrite-ci`，见 AGENTS.md「CI 处理」）；本地只跑三种命令：`just test-fast`（日常测试入口）、`cargo check -p <crate>`、3 秒内的单用例调试。
 - **CI 全绿是必要条件**（主仓 `shell-ci` 状态没绿不许合并），但记住：**绿不等于所有断言都验过**——
   下面的三个失效模式都会造成假绿。所以绿之后，还要按本文 §3.3–3.5 的判据自查一遍。
 - **测试必须真的在执行**：新增测试后要确认 CI 日志里能看到它在跑、能看到断言数量。做不到这一点，就等于没写测试。
@@ -45,10 +45,11 @@
 
 | 场景 | 命令 | 说明 |
 |---|---|---|
-| 验证代码能编译 | `cargo check -p <crate>` | 本地**唯一**常规验证方式，必须套 cgroup CPU 配额 |
+| 日常测试（改动可能破坏哪些用例） | `just test-fast [base]` | **本地测试入口**：testless 选测，只跑受波及用例；异常 / 零命中时本地不降级全量（打印派发命令后 exit 1），降级只发生在 CI 内 |
+| 验证代码能编译 | `cargo check -p <crate>` | 本地常规验证方式，必须套 cgroup CPU 配额 |
 | 调试单个失败用例 | `cargo test -p <crate> -- <测试名>` | 仅用于调试，不能替代 CI 验收；测试要能在 3 秒内跑完 |
 | 预览 PR 的 test 关卡会选哪些测试 | `testless select --from origin/main` | 只读影响分析结果，`tests` 字段列出候选用例；不会在本地编译或运行。`scripts/ci_scope.py` 未接入当前 CI，不能用于预览 |
-| 中等及以上测试 | **禁止** | 整包（无用例名过滤）、整个 test binary、多包 / `cargo test --all` / `--workspace` / `just test` / e2e——全部交给 PR 的 CI。本机内存不足会假死 |
+| 中等及以上测试 / 全量 | **禁止本地跑** | 整包（无用例名过滤）、整个 test binary、多包 / `cargo test --all` / `--workspace` / `just test` / e2e。`just test` 本地直接拒跑（`TEST_FORCE=1` 才放行）；全量一律交壳仓 CI（main push 自动 / 手动 `full=true`）。本机内存不足会假死 |
 
 ### 3.2 CI 怎么跑测试（壳仓架构）
 
@@ -74,11 +75,12 @@ CI 全部在公开壳仓 `hathawayANdRX105/ferrite-ci` 跑（计费原因见 AGE
 | 全量（main push / 手动 full） | **异步、离线跟进** | 不阻塞合并，但**必须回查并汇报**：触发后用 bash 长间隔轮询（`gh run watch <id> -R hathawayANdRX105/ferrite-ci --interval 120` 或间隔更大的轮询），无论成败都要汇报 run id + 结论；红了立即开修复任务，禁止静默收尾 |
 
 快关机制：`testless select --from <base>` 选出受影响的**测试名**过滤器 → `cargo test --workspace -- <过滤名>` 只跑这些测试。
-`just test-fast` 的三种收尾（都绝不静默跳测试）：
+`just test-fast` 的收尾（绝不静默跳测试；降级目标分环境）：
 
-- `testless` 非 0 退出（如只有 `Cargo.lock` 变动、无法解析）或输出不是合法 JSON → 直接 `cargo test --workspace` 全量；
-- 选出了过滤名但全通过数为 0（零命中）→ 判定可疑，也降级全量；
-- 选出的过滤名为空（本次 diff 真的不影响任何测试，典型是纯文档 / `.github/` / workflow 改动）→ 打印「本次改动不影响任何测试」并 `exit 0`。
+- `testless` 非 0 退出（如只有 `Cargo.lock` 变动、无法解析）或输出不是合法 JSON：
+  **CI 内**降级 `cargo test --workspace` 全量；**本地**不降级（中等及以上测试禁止本地跑），打印壳仓全量派发命令后 `exit 1`（`TEST_FORCE=1 just test-fast` 强跑）；
+- 选出了过滤名但全通过数为 0（零命中）→ 同上分环境处理：CI 降级全量 / 本地拒跑；
+- 选出的过滤名为空（本次 diff 真的不影响任何测试，典型是纯文档 / `.github/` / workflow 改动）→ 打印「本次改动不影响任何测试」并 `exit 0`（两种环境一致）。
 
 **最后这个分支的坑**：纯文档、`.github/`、workflow 改动会走「零选中 → exit 0」，此时 test 关卡对代码运行 0 个测试——
 **这种绿不代表 CI 运行链路本身被验证过**。改了 `ci.yml` / 选包逻辑后，务必手动触发全量验证。
@@ -136,8 +138,8 @@ CI 全部在公开壳仓 `hathawayANdRX105/ferrite-ci` 跑（计费原因见 AGE
 
 ## 四、约束事项（简略）
 
-- 本地只跑两种命令：`cargo check -p <crate>` 和 3 秒内能跑完的单用例调试。都必须套 cgroup CPU 配额。
-- **不准在本地运行中等及以上的测试**：整包（无用例名过滤）、整个 test binary、多包 / `cargo test --all` / `--workspace` / `just test` / e2e 一律交给 PR 的 CI（本机内存不足会假死）。
+- 本地只跑三种命令：`just test-fast`（日常测试入口，testless 选测）、`cargo check -p <crate>`、3 秒内能跑完的单用例调试。编译类都必须套 cgroup CPU 配额。
+- **不准在本地运行中等及以上的测试**：整包（无用例名过滤）、整个 test binary、多包 / `cargo test --all` / `--workspace` / `just test` / e2e——`just test` 本地直接拒跑（`TEST_FORCE=1` 例外），全量一律交壳仓 CI（main push 自动 / 手动 `full=true`；本机内存不足会假死）。
 - CI 未全绿（主仓 `shell-ci` 状态）不许合并；CI 失败要拉壳仓 run 日志，当新任务修复。
 - 工具链版本以仓库 `rust-toolchain.toml` 为准（壳仓检出源码后自动生效）；CI 报新 lint 时先核对该文件与本地 `rustc --version`，不要用 `rustup update stable` 临时升级本地。
 - 新增测试必须确认 CI 真的会执行它——避开上面三种失效模式；并记住 PR 快关不含 doctest，文档示例只有全量关卡验收。
