@@ -191,6 +191,9 @@ EOF
 # 编译验收
 .githooks/heavy cargo check -p <crate>  # 必须带 -p，禁止无 -p 全仓 check
 
+# 本地测试入口：testless 选测受影响用例（异常/零命中时本地不降级，按提示走壳仓派发）
+.githooks/heavy just test-fast
+
 # 单测验收（3 秒内跑完的简单单测才本地跑；否则只 check，测试推 CI）
 .githooks/heavy cargo test -p <crate> -- <test_name>
 ```
@@ -198,15 +201,15 @@ EOF
 > 说明：所有 cargo 命令（check/test/clippy）必须带 `-p` 目标 crate，禁止无 `-p` 全仓 check。
 
 规则：
-- **所有集成测试/多 crate 联调/重型测试 → CI 跑**，本地不执行 `cargo test --all`
-- 本地 `cargo test` 仅限「改动核心逻辑的单体单测且 3 秒内跑完」的调试场景
+- **所有集成测试/多 crate 联调/重型测试 → CI 跑**，本地不执行 `cargo test --all`；全量 `just test` 本地直接拒跑
+- 本地测试入口 = `just test-fast`（testless 影响分析选测）；`cargo test -p <crate> -- <test_name>` 仅限「改动核心逻辑的单体单测且 3 秒内跑完」的调试场景
 - 工具链版本以本地为准：CI 侧新版 clippy 拦分支时，把壳仓 CI 的 `dtolnay/rust-toolchain` 钉到本地版本；禁止 `rustup update stable`
 
 - 全部子任务 audit 通过 → push PR
 - CI 动态选包跑（按目标仓库 AGENTS.md 的 CI 调度规则执行；有动态选包的仓跑选包；全量 CI 的仓更要本地克制，只跑 -p check）
 - **CI 全绿前不得 closeout / merge**
 - CI 失败 → 提取云端日志 → 回阶段 2 精准修复（把失败当新子任务）
-- 本地只跑 `cargo check -p <crate>`（极小范围）；`cargo test` 全量禁止本地跑
+- 本地只跑 `just test-fast` 与 `cargo check -p <crate>`（极小范围）；全量 `just test` / `cargo test --all` 禁止本地跑（test 配方直接拒跑）
 
 ---
 
