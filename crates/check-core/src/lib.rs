@@ -16,6 +16,6 @@ pub mod kinds;
 pub mod registry;
 pub mod rule;
 
-pub use finding::{Class, Finding, Severity};
-pub use registry::{NotChecked, Registry, Report, RunOptions};
+pub use finding::{Class, Finding, NotChecked, RuleOutcome, Severity};
+pub use registry::{Registry, Report, RunOptions};
 pub use rule::Rule;

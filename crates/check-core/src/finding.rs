@@ -41,6 +41,30 @@ pub enum Severity {
     Fail,
 }
 
+/// 无法执行的检查子项：报告里显式声明「没查什么」，绝不伪装成 finding。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NotChecked {
+    pub id: String,
+    pub reason: String,
+}
+
+/// 规则执行结果：findings + 无法判定的子项（如语义端点不可达）。
+#[derive(Debug, Default)]
+pub struct RuleOutcome {
+    pub findings: Vec<Finding>,
+    pub not_checked: Vec<NotChecked>,
+}
+
+impl RuleOutcome {
+    /// 仅 findings 的结果（绝大多数规则）。
+    pub fn findings(findings: Vec<Finding>) -> Self {
+        Self {
+            findings,
+            not_checked: Vec::new(),
+        }
+    }
+}
+
 /// 一条发现。id 形如 `TEXT-PATTERN.no-dbg`（kind 实例）或 `RSX.one-rsx`（专用规则）。
 #[derive(Debug, Clone, Serialize)]
 pub struct Finding {
