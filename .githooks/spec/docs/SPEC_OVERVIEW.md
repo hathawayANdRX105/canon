@@ -260,6 +260,7 @@ ferrite 是两层布局（`crates/<domain>/<crate>/src`），而规则原先写�
 | `rust_todo_needs_issue` | l1 | pre-commit, pre-push, merge | WARN | 注释里 TODO/FIXME 必须关联 issue 号（例 `// TODO(#123):`；不扫字符串/测试） |
 | `rust_test_no_assert` | l1 | pre-commit, pre-push, merge | WARN | 测试函数必须含 assert |
 | `rust_no_cfg_test_in_tests_dir` | l1 | pre-commit, pre-push, merge | WARN | tests/ 目录里不要 #[cfg(test)] |
+| `shared_components_check` | l1 | pre-commit, pre-push, merge | FAIL | 页面自带 ui 子模块即 FAIL：`crates/web/*/src` 里带 `src/views` 的 page crate 禁有 `src/ui.rs` / `src/ui/`，共享组件放共享 crate（ui-kit）；无 `crates/web` 布局的仓语料为空输出 [] — ferrite 家族 (mono/gugu/silverq) |
 | `clippy` | l1 | merge | FAIL/WARN | rustc 错误 + unused/dead_code → FAIL；collapsible_if 等默认风格 → WARN；显式启用 12 条 pedantic/restriction/nursery（too_many_lines / semicolon_if_nothing_returned / wildcard_imports / needless_pass_by_value / struct_excessive_bools / explicit_iter_loop / explicit_into_iter_loop / cloned_instead_of_copied / redundant_clone / collapsible_else_if / redundant_else / single_match_else，经 `cargo clippy … -- -W` 传 clippy-driver）→ WARN；不启用 cognitive_complexity（与 CK-CCN 冗余）、many_single_char_names（FP 高）、unwrap_used（与 error_panic 重复） |
 | `ts_signals` | l1 | pre-commit, merge | FAIL/WARN | tree-sitter 确定性语法信号:unsafe 块缺安全不变量 → FAIL;if/else-if 链 ≥3 臂或嵌套 ≥3 层、`0..len()` 索引循环、owned 参数 clone → WARN,均带 category+suggestion;软依赖 tree_sitter+tree_sitter_rust,缺失静默跳过 |
 | `dep_hygiene` | l1 | merge | WARN | `cargo-machete` 未使用依赖 |
@@ -298,12 +299,12 @@ verify 家族（l2 级联）的 `slop_comment`/`antislop`/`duplication` 三个�
 > 来源：ferrite / gugu / silverq / mono 根层 `.githooks/spec/SPEC_OVERVIEW.md` 的规则清单。
 > 严重度与触发以各仓 `.githooks/spec/quality/checklist_*.yaml` 的 `hooks:` / `fail_severity` 为准
 > （与旧文档不一致处已在行内注明）。`doc_sync` 一行已随该规则 2026-10-06 整条删除，不再列出
-> （见 `todo/problem/gate-doc-sync-readme-drift.md`）。
+> （见 `todo/problem/gate-doc-sync-readme-drift.md`）。`shared_components_check` 一行 2026-10-14
+> 回port 进 canon `specs/quality/`（主题十），从此按正本分发，不再列这里。
 
 | 名字 | SLA | 触发 | 严重度 | 检测内容 |
 |---|---|---|---|---|
 | `structure_check` | l1 | pre-commit, pre-push, merge | FAIL | crate 分层与数据边界（面板禁直接 `use mock::`，禁旧嵌套路径）— ferrite/gugu/mono |
-| `shared_components_check` | l1 | pre-commit, pre-push, merge | FAIL | ≥2 个 page 共用的组件必须放共享 crate，page 内禁 `src/ui.rs` — ferrite/gugu/silverq/mono |
 | `no_nested_types` | l1 | pre-commit, pre-push, merge | FAIL | 禁止在 `fn` 体内定义 `struct` / `enum` — ferrite/gugu/silverq/mono/algorchemy |
 | `no_nested_worktree` | l1 | pre-commit, pre-push, merge | FAIL | 禁止 `.wt/` 下嵌套 worktree（历史事故：13 层嵌套 + 321G 产物）— ferrite/gugu/silverq/mono/algorchemy |
 | `tests_check` | l1 | pre-commit, pre-push, merge | WARN | 测试代码划分与命名 — ferrite/gugu/silverq/mono |

@@ -1,6 +1,6 @@
 # CD-08: 依赖卫生 — cargo-machete 检测未使用的依赖
 # 为什么: 未使用依赖拖慢编译、扩大供应链攻击面; agent 常加依赖后改用别的方案忘了删
-# 需要: cargo install cargo-machete
+# 需要: cargo install cargo-machete (0.9.x 无 --quiet; 报告正文走 stdout, 只丢 stderr 警告)
 # 例外: Cargo.toml [package.metadata.cargo-machete] ignored 列表
 enabled: true
 hooks: [merge]
@@ -17,7 +17,7 @@ harness:
     - |
       ROOT=$(git rev-parse --show-toplevel)
       cd "$ROOT" || exit 2
-      out=$(cargo machete --quiet 2>/dev/null)
+      out=$(cargo machete 2>/dev/null)
       if [ -z "$out" ]; then
         echo '[]'
       else

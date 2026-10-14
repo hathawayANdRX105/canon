@@ -122,7 +122,10 @@ severity_overrides:
   PR-03: "FAIL"   # 缺少必填 heading
   PR-04: "FAIL"   # heading 含 CJK / What 无中文
   # PR-05 缺省 INFO；要恢复强制 issue 关联用 fixes_linkage_mode，不要动这里
-  PR-06: "FAIL"   # 缺少 type label
+  # PR-06: "FAIL" — 「缺少 type label」finding 原生即 FAIL（pull_requests.rs 硬编码），
+  # 这条 override 对它本是 no-op；但 override 按规则 id 生效，会把同一 id 的「关键词建议」
+  # （原生 WARN）误升成 FAIL → gh pr create 被拒。2026-10-14 按维护者裁决注释掉：
+  # 关键词建议回落 WARN（不弃用提示，仅不再硬拦）。
   PR-07: "FAIL"   # Construction plan/Checklist checkbox < 2
   PR-08: "FAIL"   # 分支名前缀不在白名单
 
