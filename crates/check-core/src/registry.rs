@@ -6,7 +6,7 @@ use serde::Serialize;
 
 use crate::config::{ChecksConfig, RuleOverride};
 use crate::context::Ctx;
-use crate::finding::{Class, Finding};
+use crate::finding::{Class, Finding, Severity};
 use crate::kinds::KindFactory;
 use crate::rule::Rule;
 
@@ -114,5 +114,32 @@ impl Report {
         } else {
             0
         }
+    }
+
+    /// canon harness 兼容口径：引擎只认 rc 0（解析 findings）/2（WARN 跳过），
+    /// 因此 notChecked 以 INFO finding 表达、退出码收敛为 0/2。
+    pub fn canon_exit_code(&self) -> i32 {
+        if self.errors.is_empty() { 0 } else { 2 }
+    }
+
+    /// canon 口径的 findings：真实发现 + notChecked 的 INFO 占位（不丢信息）。
+    pub fn canon_findings(&self) -> Vec<Finding> {
+        let mut findings = self.findings.clone();
+        if !self.not_checked.is_empty() {
+            let detail = self
+                .not_checked
+                .iter()
+                .map(|n| format!("{}: {}", n.id, n.reason))
+                .collect::<Vec<_>>()
+                .join("; ");
+            findings.push(Finding::new(
+                "CHECKS-NOTCHECKED",
+                Severity::Info,
+                ".",
+                0,
+                format!("本次未执行的检查（端点/工具缺失，非通过）：{detail}"),
+            ));
+        }
+        findings
     }
 }
