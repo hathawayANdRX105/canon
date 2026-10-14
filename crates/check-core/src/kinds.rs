@@ -111,7 +111,8 @@ impl KindFactory for PathForbiddenFactory {
 }
 
 // ---------------------------------------------------------------------------
-// text-pattern：scope 文件逐行匹配拒绝正则，命中即行级 finding。
+// text-pattern：scope 文件逐行匹配拒绝正则，命中即行级 finding；
+// `patterns_allow` 命中同一行时该行豁免（占位符/示例抑制）。
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -123,6 +124,10 @@ struct TextPatternParams {
     /// 逐行匹配；一行只报一次（首个命中的模式）。
     #[serde(default)]
     patterns_deny: Vec<String>,
+    /// 行级豁免：deny 命中但本组任一模式也命中该行 → 不报
+    /// （典型用法：真实凭据召回 + 占位符/示例词抑制）。
+    #[serde(default)]
+    patterns_allow: Vec<String>,
     message: String,
 }
 
@@ -131,6 +136,7 @@ struct TextPatternRule {
     include: globset::GlobSet,
     exclude: globset::GlobSet,
     patterns: Vec<regex::Regex>,
+    allow: Vec<regex::Regex>,
     message: String,
 }
 
@@ -148,7 +154,8 @@ impl Rule for TextPatternRule {
     }
 
     fn doc(&self) -> &str {
-        "scope 文件逐行匹配 patterns_deny，命中即行级 finding。\
+        "scope 文件逐行匹配 patterns_deny，命中即行级 finding；\
+         `patterns_allow` 任一模式命中同一行时该行豁免（占位符/示例抑制）。\
          参数见 checks.toml 的 [kinds.text-pattern.<name>]。"
     }
 
@@ -175,15 +182,19 @@ impl TextPatternRule {
         };
         let mut findings = Vec::new();
         for (idx, line) in text.lines().enumerate() {
-            if self.patterns.iter().any(|re| re.is_match(line)) {
-                findings.push(Finding::new(
-                    self.id.as_str(),
-                    Severity::Warn,
-                    rel.display().to_string(),
-                    u32::try_from(idx + 1).unwrap_or(u32::MAX),
-                    format!("{}: {}", self.message, line.trim()),
-                ));
+            if !self.patterns.iter().any(|re| re.is_match(line)) {
+                continue;
             }
+            if self.allow.iter().any(|re| re.is_match(line)) {
+                continue;
+            }
+            findings.push(Finding::new(
+                self.id.as_str(),
+                Severity::Warn,
+                rel.display().to_string(),
+                u32::try_from(idx + 1).unwrap_or(u32::MAX),
+                format!("{}: {}", self.message, line.trim()),
+            ));
         }
         findings
     }
@@ -207,11 +218,17 @@ impl KindFactory for TextPatternFactory {
             let re = regex::Regex::new(source).map_err(|e| format!("bad regex {source:?}: {e}"))?;
             patterns.push(re);
         }
+        let mut allow = Vec::new();
+        for source in &parsed.patterns_allow {
+            let re = regex::Regex::new(source).map_err(|e| format!("bad regex {source:?}: {e}"))?;
+            allow.push(re);
+        }
         Ok(Box::new(TextPatternRule {
             id: format!("TEXT-PATTERN.{name}"),
             include,
             exclude,
             patterns,
+            allow,
             message: parsed.message,
         }))
     }

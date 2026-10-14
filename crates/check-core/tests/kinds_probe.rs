@@ -57,6 +57,40 @@ message = "禁止 dbg! 残留"
 }
 
 #[test]
+fn text_pattern_allow_suppresses_placeholder_lines() {
+    // 真实凭据召回 + 占位符/示例词抑制（T7 口径：SECRET_PAT × SECRET_EXCLUDE）
+    let dir = tempfile::tempdir().unwrap();
+    let registry = build_rules(
+        r#"
+[kinds.text-pattern.hardcoded-secret]
+patterns_deny = ["(?i)(password|secret|api_key|token)\\s*[:=]\\s*[\"'][^\"'\\s]{8,}[\"']"]
+patterns_allow = ["(?i)(your-|xxx|todo|placeholder|example|mock|fake|dummy|changeme)"]
+message = "疑似硬编码凭据"
+"#,
+    );
+    // intact：文档占位符与 mock 值被 allow 抑制（行本身命中 deny 模式）
+    let placeholder = write_fixture(
+        dir.path(),
+        "src/doc.rs",
+        "// let password = \"your-password-here\";\nlet api_key = \"placeholder-key-123\";\n",
+    );
+    let ctx = Ctx::new(dir.path(), vec![placeholder.clone()], None);
+    assert!(registry.run(&ctx, &no_overrides()).findings.is_empty());
+
+    // broken：像真实凭据的行被召回
+    let leaked = write_fixture(
+        dir.path(),
+        "src/leak.rs",
+        "let token = \"a8f3k2m9x7q1w4e6r0t5y8u3i2o9p4\";\n",
+    );
+    let ctx = Ctx::new(dir.path(), vec![placeholder, leaked], None);
+    let report = registry.run(&ctx, &no_overrides());
+    assert_eq!(report.findings.len(), 1, "{report:?}");
+    assert_eq!(report.findings[0].id, "TEXT-PATTERN.hardcoded-secret");
+    assert_eq!(report.findings[0].line, 1);
+}
+
+#[test]
 fn text_pattern_include_globs_stay_shallow() {
     // literal_separator：`*` 不跨目录分隔符，深层同名模式不进扫描面
     let dir = tempfile::tempdir().unwrap();
