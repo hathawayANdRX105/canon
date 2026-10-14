@@ -100,3 +100,34 @@ message = "page 不应自带 ui 子模块"
     assert_eq!(report.findings.len(), 1, "{report:?}");
     assert_eq!(report.findings[0].id, "PATH-FORBIDDEN.page-ui");
 }
+
+#[test]
+fn name_pattern_intact_zero_broken_one_with_exclude() {
+    let dir = tempfile::tempdir().unwrap();
+    let registry = build_rules(
+        r#"
+[kinds.name-pattern.snake]
+paths_include = ["crates/**/*.rs", "crates/*.rs"]
+paths_exclude = ["crates/**/generated/**"]
+pattern = "^[a-z0-9_]+\\.rs$"
+message = "Rust 源文件名必须 snake_case"
+"#,
+    );
+    // intact：snake_case 名 + 排除目录里的违规名
+    let ok = write_fixture(dir.path(), "crates/alpha/src/lib.rs", "// ok\n");
+    let excluded = write_fixture(
+        dir.path(),
+        "crates/alpha/generated/BadName.rs",
+        "// excluded\n",
+    );
+    let ctx = Ctx::new(dir.path(), vec![ok.clone(), excluded.clone()], None);
+    assert!(registry.run(&ctx, &no_overrides()).findings.is_empty());
+
+    // broken：crates 下的非 snake_case 文件名
+    let broken = write_fixture(dir.path(), "crates/alpha/src/BadName.rs", "// bad\n");
+    let ctx = Ctx::new(dir.path(), vec![ok, excluded, broken], None);
+    let report = registry.run(&ctx, &no_overrides());
+    assert_eq!(report.findings.len(), 1, "{report:?}");
+    assert_eq!(report.findings[0].id, "NAME-PATTERN.snake");
+    assert_eq!(report.findings[0].path, "crates/alpha/src/BadName.rs");
+}

@@ -17,9 +17,13 @@ pub trait KindFactory: Send + Sync {
     fn instantiate(&self, name: &str, params: &toml::Table) -> Result<Box<dyn Rule>, String>;
 }
 
-/// T0 内置 kind；其余 kind 随所属域 crate（T1–T8）落地。
+/// 内置 kind；其余 kind 随所属域 crate（T1–T8）落地。
 pub fn builtin_factories() -> Vec<Box<dyn KindFactory>> {
-    vec![Box::new(PathForbiddenFactory), Box::new(TextPatternFactory)]
+    vec![
+        Box::new(PathForbiddenFactory),
+        Box::new(TextPatternFactory),
+        Box::new(NamePatternFactory),
+    ]
 }
 
 // ---------------------------------------------------------------------------
@@ -223,4 +227,109 @@ fn compile_globs(patterns: &[String]) -> Result<globset::GlobSet, String> {
         builder.add(glob);
     }
     builder.build().map_err(|e| format!("bad globs: {e}"))
+}
+
+// ---------------------------------------------------------------------------
+// name-pattern：跟踪文件里，命中 paths_include 的**文件名**必须匹配 pattern
+// （全仓不变量，line=0）。用于文件命名规范（snake_case、*_test.rs 等）。
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct NamePatternParams {
+    /// 参与命名的跟踪文件 glob（相对仓库根）。
+    paths_include: Vec<String>,
+    #[serde(default)]
+    paths_exclude: Vec<String>,
+    /// 文件名（不含目录）必须匹配的正则。
+    pattern: String,
+    message: String,
+}
+
+struct NamePatternRule {
+    id: String,
+    include: globset::GlobSet,
+    exclude: globset::GlobSet,
+    pattern: regex::Regex,
+    message: String,
+}
+
+impl Rule for NamePatternRule {
+    fn id(&self) -> &str {
+        &self.id
+    }
+
+    fn class(&self) -> Class {
+        Class::Deterministic
+    }
+
+    fn title(&self) -> &str {
+        "文件命名规范"
+    }
+
+    fn doc(&self) -> &str {
+        "跟踪文件命中 paths_include（且不在 paths_exclude）时，文件名必须匹配 \
+         pattern 正则，否则 finding；全仓不变量。参数见 checks.toml 的 \
+         [kinds.name-pattern.<name>]。"
+    }
+
+    fn default_severity(&self) -> Severity {
+        Severity::Fail
+    }
+
+    fn run(&self, ctx: &Ctx) -> Vec<Finding> {
+        ctx.tracked_files()
+            .iter()
+            .filter(|rel| self.applies(rel))
+            .filter_map(|rel| self.check_name(rel))
+            .collect()
+    }
+}
+
+impl NamePatternRule {
+    fn applies(&self, rel: &Path) -> bool {
+        self.include.is_match(rel) && !self.exclude.is_match(rel)
+    }
+
+    fn check_name(&self, rel: &Path) -> Option<Finding> {
+        let name = rel.file_name()?.to_str()?;
+        if self.pattern.is_match(name) {
+            return None;
+        }
+        Some(Finding::new(
+            self.id.as_str(),
+            Severity::Fail,
+            rel.display().to_string(),
+            0,
+            format!(
+                "{}（文件名 {name} 不匹配 {}）",
+                self.message,
+                self.pattern.as_str()
+            ),
+        ))
+    }
+}
+
+struct NamePatternFactory;
+
+impl KindFactory for NamePatternFactory {
+    fn kind(&self) -> &'static str {
+        "name-pattern"
+    }
+
+    fn instantiate(&self, name: &str, params: &toml::Table) -> Result<Box<dyn Rule>, String> {
+        let parsed: NamePatternParams =
+            NamePatternParams::deserialize(toml::Value::Table(params.clone()))
+                .map_err(|e| format!("bad params: {e}"))?;
+        let include = compile_globs(&parsed.paths_include)?;
+        let exclude = compile_globs(&parsed.paths_exclude)?;
+        let pattern = regex::Regex::new(&parsed.pattern)
+            .map_err(|e| format!("bad regex {:?}: {e}", parsed.pattern))?;
+        Ok(Box::new(NamePatternRule {
+            id: format!("NAME-PATTERN.{name}"),
+            include,
+            exclude,
+            pattern,
+            message: parsed.message,
+        }))
+    }
 }
