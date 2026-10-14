@@ -130,6 +130,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "check-deps"
+version = "0.1.0"
+dependencies = [
+ "check-core",
+ "globset",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "toml",
+]
+
+[[package]]
 name = "check-dioxus"
 version = "0.1.0"
 dependencies = [
