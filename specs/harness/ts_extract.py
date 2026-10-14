@@ -14,7 +14,8 @@ Two outputs, one parse:
                                     -> WARN consider match
    - TS-INDEX-LOOP: `for i in 0..v.len()`          -> WARN iter()/enumerate()
    - TS-CLONE-OWNED: clone() on an owned parameter -> WARN borrow + lifetime
-   - TS-UNSAFE-NOINVARIANT: unsafe block whose item doc lacks a safety
+   - TS-UNSAFE-NOINVARIANT: unsafe block whose item doc comment and
+     the comment run directly above the block both lack a safety
      invariant (safety/invariant keyword) -> FAIL (hard block)
 
 Soft dependency: tree_sitter + tree_sitter_rust. Missing -> silent
@@ -345,14 +346,57 @@ def _enclosing(node):
 
 
 def _has_safety_doc(root, src: bytes, unsafe_node) -> bool:
-    """The item containing the unsafe block carries a safety invariant."""
+    """The item containing the unsafe block carries a safety invariant
+    (doc comment on the item) or a `// SAFETY:` line-comment run
+    immediately above the block."""
     cur = unsafe_node
     while cur is not None and cur.type not in ITEM_KINDS:
         cur = cur.parent
-    if cur is None:
+    if cur is not None:
+        doc = _doc_before(root, src, cur).lower()
+        if any(k in doc for k in DOC_KEYWORDS):
+            return True
+    return _safety_comment_above(unsafe_node, src)
+
+
+def _safety_comment_above(unsafe_node, src: bytes) -> bool:
+    """A `// SAFETY:` line-comment run directly above the block.
+
+    Boundary decisions (kept in sync with test_ts_extract.py):
+    - a consecutive run of `line_comment` nodes directly above the
+      block counts: interleaved plain comments and multi-line
+      `// SAFETY:` sections are fine; the wrapping
+      `expression_statement` is transparent, so a comment above
+      `unsafe { ... };` belongs to the block.
+    - blank lines are tree whitespace, never nodes, so they do not
+      break the run; any other node (code, `#[attr]`) does — a note
+      separated from the block by code or an attribute does not
+      belong to it.
+    - keyword match is case-insensitive over the same DOC_KEYWORDS
+      the doc channel uses (`SAFETY:` / `safety:` / `invariant:`).
+    - a comment on the first line inside the block never counts:
+      only preceding siblings of the block's own context are walked.
+    """
+    holder = unsafe_node.parent \
+        if unsafe_node.parent is not None \
+        and unsafe_node.parent.type == "expression_statement" \
+        else unsafe_node
+    parent = holder.parent
+    if parent is None:
         return False
-    doc = _doc_before(root, src, cur).lower()
-    return any(k in doc for k in DOC_KEYWORDS)
+    idx = None
+    for i, c in enumerate(parent.children):
+        if c.id == holder.id:
+            idx = i
+            break
+    if idx is None:
+        return False
+    run = []
+    for c in reversed(parent.children[:idx]):
+        if c.type != "line_comment":
+            break
+        run.append(_text(src, c).lower())
+    return any(k in c for c in run for k in DOC_KEYWORDS)
 
 
 def parse_files(payload: str) -> dict:

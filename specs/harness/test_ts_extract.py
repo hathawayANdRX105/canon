@@ -44,6 +44,107 @@ pub fn nested_ifs(x: String) -> u32 {
     0
 }
 """
+SAFETY_COMMENT_SRC = """pub fn direct(x: u32) {
+    // SAFETY: x is a validated pid
+    unsafe { std::hint::black_box(x) }
+}
+
+pub fn sandwiched(x: u32) {
+    let n = 0;
+    // plain note about the block
+    // SAFETY: invariant stated in the note above
+    unsafe { std::hint::black_box(x + n) }
+}
+
+pub fn multi_line(x: u32) {
+    // SAFETY: the value is a validated pointer
+    // SAFETY: it is never dereferenced outside the block
+    unsafe { std::hint::black_box(x) }
+}
+
+pub fn lower(x: u32) {
+    // safety: lowercase keyword is accepted
+    unsafe { std::hint::black_box(x) }
+}
+
+pub fn blank_gap(x: u32) {
+    // SAFETY: blank lines are tree whitespace, not nodes
+
+    unsafe { std::hint::black_box(x) }
+}
+
+pub fn far_above(x: u32) {
+    // SAFETY: stated at the function head, not adjacent
+    let a1 = 1;
+    let a2 = 2;
+    let a3 = 3;
+    let a4 = 4;
+    let a5 = 5;
+    let a6 = 6;
+    let a7 = 7;
+    let a8 = 8;
+    let a9 = 9;
+    unsafe { std::hint::black_box(x) }
+}
+
+pub fn attr_between(x: u32) {
+    // SAFETY: this note documents the attribute, not the block
+    #[cfg(unix)]
+    unsafe { std::hint::black_box(x) }
+}
+
+pub fn inside_block(x: u32) {
+    unsafe {
+        // SAFETY: too late, inside the block
+        std::hint::black_box(x)
+    }
+}
+"""
+
+
+class SafetyCommentTest(unittest.TestCase):
+    """Boundary decisions for the `// SAFETY:` line-comment channel:
+    - a consecutive run of plain line comments directly above the
+      block counts (interleaved other comments OK, multi-line OK,
+      blank lines are tree whitespace and stay transparent,
+      `safety`/`SAFETY` both match — same keyword + case policy as
+      the doc channel);
+    - the run is broken by any non-comment node: code or a `#[attr]`
+      between the note and the block means the note does not belong
+      to the block;
+    - a comment on the first line inside the block never counts.
+    """
+    def _lines(self):
+        return [x["line"] for x in ts.signals("safety.rs",
+                                              SAFETY_COMMENT_SRC)
+                if x["id"] == "TS-UNSAFE-NOINVARIANT"]
+
+    def test_direct_above_not_signaled(self):
+        self.assertNotIn(3, self._lines())
+
+    def test_interleaved_plain_comments_not_signaled(self):
+        self.assertNotIn(10, self._lines())
+
+    def test_multi_line_safety_run_not_signaled(self):
+        self.assertNotIn(16, self._lines())
+
+    def test_lowercase_safety_not_signaled(self):
+        self.assertNotIn(21, self._lines())
+
+    def test_blank_line_gap_still_counts(self):
+        self.assertNotIn(27, self._lines())
+
+    def test_far_above_code_still_fails(self):
+        self.assertIn(41, self._lines())
+
+    def test_attribute_between_still_fails(self):
+        self.assertIn(47, self._lines())
+
+    def test_comment_inside_block_still_fails(self):
+        self.assertIn(51, self._lines())
+
+    def test_only_the_three_expected_failures(self):
+        self.assertEqual(self._lines(), [41, 47, 51])
 
 
 class FactCardTest(unittest.TestCase):
