@@ -73,7 +73,13 @@ enum Cmd {
 
 /// 成员仓 main 的唯一入口：`std::process::exit(check_core::cli::run(frontend))`。
 pub fn run(frontend: Frontend) -> i32 {
-    let args = Args::parse();
+    run_with(frontend, std::env::args())
+}
+
+/// 与 [`run`] 同逻辑，但 argv 由调用方给出——集成测试用它驱动 CLI
+/// （库 crate 不带 bin；CLI 行为由测试覆盖，见 tests/cli.rs）。
+pub fn run_with(frontend: Frontend, args: impl IntoIterator<Item = String>) -> i32 {
+    let args = Args::parse_from(args);
     let cfg = match config::load(&args.config) {
         Ok(cfg) => cfg,
         Err(e) => {
