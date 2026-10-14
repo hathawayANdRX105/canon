@@ -5,6 +5,12 @@
 # 语义判断(名字-行为一致、注释信息层、位置适配)归
 # semantic_rust 的事实卡类目——本规则只出确定性信号。
 # 软依赖 tree_sitter + tree_sitter_rust,缺失静默跳过。
+# TS-UNSAFE-NOINVARIANT 认账的注记位置:块自身正上方(expression_statement
+# 包裹透明)、if/while 条件位、for 迭代位、let 取值位(块在 then/else/
+# body 内时仍需块自己正上方的注记)。
+# 已知盲区(不修,只声明):宏实参按不透明 token_tree 解析,
+# assert!(unsafe { .. }) 不产生 unsafe_block 节点 → 块与注记双向
+# 不可见;要补需在宏实参上做文本级扫描(超出本规则树级范围)。
 enabled: true
 hooks: [pre-commit, merge]
 sla: l1

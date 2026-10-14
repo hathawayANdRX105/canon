@@ -101,6 +101,108 @@ pub fn inside_block(x: u32) {
 }
 """
 
+SAFETY_POSITION_SRC = """pub fn cond_if(x: u32) {
+    // SAFETY: the operand is a validated pointer
+    if unsafe { 1 } != 0 {
+        let _ = x;
+    }
+}
+
+pub fn cond_while(x: u32) {
+    // SAFETY: the condition never dereferences the raw pointer
+    while unsafe { false } {
+        break;
+    }
+}
+
+pub fn cond_for(x: u32) {
+    // SAFETY: the iterator upholds the lifetime invariant
+    for _ in unsafe { iter() } {
+        let _ = x;
+    }
+}
+
+pub fn value_let(x: u32) {
+    // SAFETY: the value is a validated pointer
+    let rc = unsafe { 7 };
+    let _ = (rc, x);
+}
+
+pub fn cond_then_body(x: u32) {
+    // SAFETY: the note is above the statement, not the body
+    if x > 0 {
+        unsafe { std::hint::black_box(x) }
+    }
+}
+
+pub fn attr_between(x: u32) {
+    // SAFETY: the note documents the attribute, not the block
+    #[cfg(unix)]
+    if unsafe { 1 } != 0 {
+        let _ = x;
+    }
+}
+
+pub fn code_between(x: u32) {
+    // SAFETY: stated up front, not adjacent
+    let a1 = 1;
+    let a2 = 2;
+    if unsafe { a1 } != 0 {
+        let _ = x;
+    }
+}
+
+pub fn let_gap(x: u32) {
+    // SAFETY: not adjacent to the let
+    let a1 = 1;
+    let rc = unsafe { a1 };
+    let _ = (rc, x);
+}
+"""
+
+
+class SafetyPositionTest(unittest.TestCase):
+    """A note above the statement belongs to an unsafe block in the
+    statement's condition slot (`if unsafe {…} != 0`, `while unsafe {…}`,
+    `for … in unsafe {…}`) or value slot (`let x = unsafe {…};`) — same
+    transparency the `expression_statement` wrapper already had.
+
+    Bodies stay strict: a block in then/else/for body still needs a note
+    directly above itself, and the run is still broken by code or an
+    `#[attr]` between note and statement.
+    """
+    def _lines(self):
+        return [x["line"] for x in ts.signals("safety.rs",
+                                              SAFETY_POSITION_SRC)
+                if x["id"] == "TS-UNSAFE-NOINVARIANT"]
+
+    def test_if_condition_not_signaled(self):
+        self.assertNotIn(3, self._lines())
+
+    def test_while_condition_not_signaled(self):
+        self.assertNotIn(10, self._lines())
+
+    def test_for_iterator_not_signaled(self):
+        self.assertNotIn(17, self._lines())
+
+    def test_let_value_not_signaled(self):
+        self.assertNotIn(24, self._lines())
+
+    def test_block_in_then_body_still_fails(self):
+        self.assertIn(31, self._lines())
+
+    def test_attribute_between_note_and_statement_still_fails(self):
+        self.assertIn(38, self._lines())
+
+    def test_code_between_note_and_statement_still_fails(self):
+        self.assertIn(47, self._lines())
+
+    def test_code_between_note_and_let_still_fails(self):
+        self.assertIn(55, self._lines())
+
+    def test_only_the_expected_failures(self):
+        self.assertEqual(self._lines(), [31, 38, 47, 55])
+
 
 class SafetyCommentTest(unittest.TestCase):
     """Boundary decisions for the `// SAFETY:` line-comment channel:

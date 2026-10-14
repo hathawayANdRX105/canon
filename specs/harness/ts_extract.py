@@ -17,6 +17,16 @@ Two outputs, one parse:
    - TS-UNSAFE-NOINVARIANT: unsafe block whose item doc comment and
      the comment run directly above the block both lack a safety
      invariant (safety/invariant keyword) -> FAIL (hard block)
+     (transparent holders: the wrapping expression_statement, and the
+     condition/iterator/value slot of if/while/for/let statements;
+     bodies stay strict)
+
+   Known blind spot (by design): macro arguments parse as opaque
+   token_tree nodes, so `assert!(unsafe { ... })` produces no
+   unsafe_block node at all — neither the block nor a note above it
+   is visible to this rule. Text-level scanning of macro arguments
+   would close this gap; it is out of scope for the tree-based
+   extractor.
 
 Soft dependency: tree_sitter + tree_sitter_rust. Missing -> silent
 skip (empty findings), same policy as lizard in ccn_gate.
@@ -47,6 +57,20 @@ ITEM_KINDS = {
     "mod_item": "mod", "const_item": "const", "type_item": "type",
 }
 DOC_KEYWORDS = ("safety", "invariant")
+SLOT_TRANSPARENT = (
+    # expression-side nodes through which the condition / iterator /
+    # value slot of an `if` / `while` / `for` / `let` statement stays
+    # transparent to a note above the statement:
+    # - `binary_expression`: `if unsafe { .. } != 0` parses the block
+    #   as one operand of the condition;
+    # - `parenthesized_expression`: `if (unsafe { .. }) { .. }`.
+    # A call site (`arguments`, e.g. `if check(unsafe { .. })`) is
+    # deliberately NOT transparent — that form is out of scope for this
+    # rule, so a block buried in a call argument keeps its own
+    # direct-above note. Bodies (`block` nodes) are likewise excluded,
+    # so a block in a then/else/for body still needs its own note.
+    "binary_expression", "parenthesized_expression",
+)
 FILE_MARKER = re.compile(r"^===== FILE: (.+) =====$")
 INDEX_LOOP_RE = re.compile(r"^0\.\.=?[\w.\[\]() ]+\.len\(\)(-\s*1)?$")
 TYPE_NODE_TYPES = (
@@ -359,6 +383,91 @@ def _has_safety_doc(root, src: bytes, unsafe_node) -> bool:
     return _safety_comment_above(unsafe_node, src)
 
 
+def _note_context(unsafe_node):
+    """The node whose preceding siblings carry this block's note.
+
+    Transparent holders (a note above them belongs to the block):
+    - `expression_statement`: `unsafe { ... };` as a statement;
+    - `if` / `while` / `for` / `let` **only** when the block sits in
+      that statement's condition slot or iterator/value slot — see
+      _in_condition_or_value_slot(). Bodies (then/else/for body) stay
+      strict: a block inside one keeps its own direct-above note.
+    """
+    # Walk up through the transparent expression nodes so that
+    # `if unsafe { .. } != 0` reaches the if_expression via its
+    # binary_expression.
+    cur = unsafe_node
+    while (cur.parent is not None
+           and cur.parent.type in SLOT_TRANSPARENT):
+        cur = cur.parent
+    stmt = cur.parent
+    if stmt is None:
+        return unsafe_node
+    if stmt.type in ("if_expression", "while_expression",
+                     "for_expression"):
+        # The block is in the statement's condition / iterator slot —
+        # the note belongs above the whole statement (its wrapping
+        # expression_statement, when present, is transparent too).
+        if not _in_condition_or_value_slot(stmt, cur):
+            return unsafe_node
+        holder = stmt
+        if (holder.parent is not None
+                and holder.parent.type == "expression_statement"):
+            holder = holder.parent
+        return holder
+    if stmt.type == "let_declaration":
+        # Value slot of a let: note above the let itself.
+        return stmt if _in_condition_or_value_slot(stmt, cur) \
+            else unsafe_node
+    # Bare `unsafe { .. };` statement (or any other context): the
+    # expression_statement wrapper stays transparent as before.
+    return stmt if stmt.type == "expression_statement" else unsafe_node
+
+
+def _in_condition_or_value_slot(stmt, unsafe_node) -> bool:
+    """Whether `unsafe_node` holds the expression slot of statement
+    `stmt` that a statement-level note describes:
+    - `if` / `while`: the condition = the first expression child after
+      the `if` / `while` keyword (then/else/body are `block` nodes and
+      never match — a block in a body keeps its own note rule);
+    - `for`: the iterator = the child right after the `in` keyword;
+    - `let`: the value = the child right after `=`.
+    The slot may reach the block through the transparent expression
+    nodes in SLOT_TRANSPARENT only (`if unsafe { .. } != 0` parses the
+    block inside a binary_expression under the condition).
+    """
+    t = stmt.type
+    if t in ("if_expression", "while_expression"):
+        slot = next((c for c in stmt.children
+                     if c.type not in ("if", "while", "else", "block")), None)
+    elif t in ("for_expression", "let_declaration"):
+        key = "in" if t == "for_expression" else "="
+        children = stmt.children
+        i = next((j for j, c in enumerate(children) if c.type == key), None)
+        slot = children[i + 1] if i is not None and i + 1 < len(children) \
+            else None
+    else:
+        return False
+    return slot is not None and _reaches_in_expr_side(slot, unsafe_node)
+
+
+def _reaches_in_expr_side(slot, target) -> bool:
+    """Whether `target` is `slot` itself or sits under it through
+    SLOT_TRANSPARENT expression nodes only — never through a body
+    `block`, which is what keeps then/else/body blocks strict."""
+    cur = slot
+    while cur.id != target.id:
+        if cur.type not in SLOT_TRANSPARENT:
+            return False
+        nxt = next((c for c in cur.children
+                    if c.start_byte <= target.start_byte
+                    and target.end_byte <= c.end_byte), None)
+        if nxt is None:
+            return False
+        cur = nxt
+    return True
+
+
 def _safety_comment_above(unsafe_node, src: bytes) -> bool:
     """A `// SAFETY:` line-comment run directly above the block.
 
@@ -367,7 +476,12 @@ def _safety_comment_above(unsafe_node, src: bytes) -> bool:
       block counts: interleaved plain comments and multi-line
       `// SAFETY:` sections are fine; the wrapping
       `expression_statement` is transparent, so a comment above
-      `unsafe { ... };` belongs to the block.
+      `unsafe { ... };` belongs to the block. The condition / iterator
+      / value slot of an `if` / `while` / `for` / `let` statement is
+      transparent the same way (`if unsafe { ... } != 0`,
+      `while unsafe { ... }`, `for .. in unsafe { ... }`,
+      `let rc = unsafe { ... };`), see _note_context(); bodies stay
+      strict and need their own note directly above the block.
     - blank lines are tree whitespace, never nodes, so they do not
       break the run; any other node (code, `#[attr]`) does — a note
       separated from the block by code or an attribute does not
@@ -377,10 +491,7 @@ def _safety_comment_above(unsafe_node, src: bytes) -> bool:
     - a comment on the first line inside the block never counts:
       only preceding siblings of the block's own context are walked.
     """
-    holder = unsafe_node.parent \
-        if unsafe_node.parent is not None \
-        and unsafe_node.parent.type == "expression_statement" \
-        else unsafe_node
+    holder = _note_context(unsafe_node)
     parent = holder.parent
     if parent is None:
         return False
