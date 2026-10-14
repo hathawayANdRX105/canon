@@ -22,7 +22,7 @@ pub struct ChecksConfig {
     pub kinds: BTreeMap<String, BTreeMap<String, toml::Table>>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SemanticEndpoint {
     pub endpoint: String,

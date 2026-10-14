@@ -1,0 +1,17 @@
+[package]
+name = "check-semantic"
+version = "0.1.0"
+edition = "2024"
+description = "Semantic decision rules for canon rule crates: jev/laya client, typed question DSL, threshold evaluation"
+publish = false
+
+[dependencies]
+check-core = { path = "../check-core" }
+globset = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+ureq = { version = "2", features = ["json"] }
+
+[dev-dependencies]
+tempfile = "3"

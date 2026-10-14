@@ -21,6 +21,8 @@ pub struct Ctx {
     tracked: Vec<PathBuf>,
     changed: Option<Vec<PathBuf>>,
     selected: Vec<PathBuf>,
+    /// semantic 类的决策端点（checks.toml [semantic]）；由 Registry 注入。
+    semantic: Option<crate::config::SemanticEndpoint>,
 }
 
 impl Ctx {
@@ -36,7 +38,20 @@ impl Ctx {
             tracked,
             changed,
             selected,
+            semantic: None,
         }
+    }
+
+    /// 注入语义端点配置（Registry 在跑 semantic 类规则前调用）。
+    pub fn with_semantic(&self, semantic: Option<crate::config::SemanticEndpoint>) -> Ctx {
+        let mut next = self.clone();
+        next.semantic = semantic;
+        next
+    }
+
+    /// semantic 端点（endpoint/model/max_len）；None = 未配置。
+    pub fn semantic(&self) -> Option<&crate::config::SemanticEndpoint> {
+        self.semantic.as_ref()
     }
 
     /// 策略层 scope 覆盖：include glob 内且不在 exclude glob 的文件入选；
@@ -63,6 +78,7 @@ impl Ctx {
             tracked: self.tracked.clone(),
             changed: self.changed.clone(),
             selected,
+            semantic: self.semantic.clone(),
         }
     }
 

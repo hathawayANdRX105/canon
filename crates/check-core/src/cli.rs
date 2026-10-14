@@ -197,7 +197,7 @@ fn check(p: CheckInvocation<'_>) -> i32 {
         } else {
             Some(classes)
         },
-        semantic_endpoint: p.cfg.semantic.as_ref().map(|s| s.endpoint.as_str()),
+        semantic_endpoint: p.cfg.semantic.as_ref(),
         overrides: Some(&p.cfg.rules),
     };
     emit(&p.registry.run(&ctx, &opts), p.json, p.report_json, p.canon)

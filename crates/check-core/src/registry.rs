@@ -73,10 +73,14 @@ impl Registry {
                 }
                 _ => ctx.clone(),
             };
+            // semantic 端点注入到 ctx（规则经 Ctx::semantic() 取）
+            let rule_ctx = scoped_ctx.with_semantic(opts.semantic_endpoint.cloned());
             report.checked.push(rule.id().to_string());
+            let outcome = rule.run_outcome(&rule_ctx);
+            report.not_checked.extend(outcome.not_checked);
             report
                 .findings
-                .extend(rule.run(&scoped_ctx).into_iter().map(|mut f| {
+                .extend(outcome.findings.into_iter().map(|mut f| {
                     f.severity = effective;
                     f
                 }));
@@ -88,17 +92,13 @@ impl Registry {
 pub struct RunOptions<'a> {
     /// None = 全部 class。
     pub classes: Option<Vec<Class>>,
-    /// semantic 类的决策端点；None = semantic 类 notChecked。
-    pub semantic_endpoint: Option<&'a str>,
+    /// semantic 类的决策端点（checks.toml [semantic]）；None = semantic 类 notChecked。
+    pub semantic_endpoint: Option<&'a crate::config::SemanticEndpoint>,
     /// checks.toml 的 [rules.<id>] 覆盖。
     pub overrides: Option<&'a BTreeMap<String, RuleOverride>>,
 }
 
-#[derive(Debug, Clone, Serialize)]
-pub struct NotChecked {
-    pub id: String,
-    pub reason: String,
-}
+pub use crate::finding::NotChecked;
 
 /// 检查报告。findings 遵循 canon 契约；checked / not_checked / errors 支撑
 /// 「无 pass 语义」——只声明查了什么、没查什么、发现了什么。
