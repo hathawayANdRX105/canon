@@ -37,6 +37,9 @@ canon/
 ├── crates/mcp/        # MCP server：让 agent 直接查规范、跑检查、管任务
 ├── crates/flow/       # 任务流：项目/任务/步骤 + 工作日志
 ├── crates/web/        # flow 的本地看板（Dioxus wasm）
+├── crates/check-*/    # Rust 规则库（纯 lib，被成员仓的 checks/ 独立包消费）：
+│                      #   check-core（引擎/kind 框架）、check-rust、check-dioxus、
+│                      #   check-deps、check-assets；接入见 CHECKS_ONBOARDING.md
 ├── specs/             # 规范正本
 │   ├── quality/ code/ cleanup/ workspace/ github/ dioxus/   ← 规则 yaml
 │   ├── harness/       ← 规则执行器（Python）+ 模型问题集（JSON）
@@ -48,7 +51,8 @@ canon/
 └── ratchet.tsv        ← 圈复杂度存量账本
 ```
 
-`specs/docs/SPEC_OVERVIEW.md` 是全部规则的逐条总览。
+`specs/docs/SPEC_OVERVIEW.md` 是全部规则的逐条总览；
+`specs/docs/CHECKS_ONBOARDING.md` 是成员仓接入 Rust 规则库（`checks/` 独立包）的 SOP。
 
 ## 检查什么
 
@@ -242,6 +246,7 @@ export REVIEW_LLM_MODEL=qwen-plus
 - `specs/docs/SPEC_OVERVIEW.md` —— 全部规则的逐条总览（判什么、严重度、触发钩子）
 - `specs/docs/CHECKLIST_SPEC.md` —— checklist yaml schema 与 harness 协议
 - `specs/docs/SPEC_LAYOUT.md` —— 规范目录布局与同步规则
+- `specs/docs/CHECKS_ONBOARDING.md` —— 成员仓接入 Rust 规则库（`checks/` 独立包）的 SOP
 - `specs/harness/` —— 规则执行器与模型问题集
 
 **文档分发**：`agent-sync` 把 `agent-pack/` 下的文档分发到各项目，一个主题要么纯通用（放 canon）要么纯项目特有（留项目）。`agent-sync status` 看漂移、`agent-sync push <项目>` 下发、`agent-sync backport <项目> <src>` 把项目本地修正回流 canon。本地有改动的文件绝不自动覆盖。
