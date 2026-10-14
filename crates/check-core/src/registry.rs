@@ -55,6 +55,7 @@ impl Registry {
             {
                 continue;
             }
+            let override_cfg = opts.overrides.and_then(|m| m.get(rule.id()));
             if rule.class() == Class::Semantic && opts.semantic_endpoint.is_none() {
                 report.not_checked.push(NotChecked {
                     id: rule.id().to_string(),
@@ -62,15 +63,20 @@ impl Registry {
                 });
                 continue;
             }
-            let effective = opts
-                .overrides
-                .and_then(|m| m.get(rule.id()))
+            let effective = override_cfg
                 .and_then(|o| o.severity)
                 .unwrap_or_else(|| rule.default_severity());
+            // 策略层 scope 覆盖（checks.toml [rules.<id>] scope_include/exclude）
+            let scoped_ctx = match override_cfg {
+                Some(o) if !o.scope_include.is_empty() || !o.scope_exclude.is_empty() => {
+                    ctx.scoped(&o.scope_include, &o.scope_exclude)
+                }
+                _ => ctx.clone(),
+            };
             report.checked.push(rule.id().to_string());
             report
                 .findings
-                .extend(rule.run(ctx).into_iter().map(|mut f| {
+                .extend(rule.run(&scoped_ctx).into_iter().map(|mut f| {
                     f.severity = effective;
                     f
                 }));
