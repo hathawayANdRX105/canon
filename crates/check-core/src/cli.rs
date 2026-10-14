@@ -65,6 +65,9 @@ enum Cmd {
         /// stdout 输出完整报告（findings/notChecked/checked/errors）
         #[arg(long = "report-json")]
         report_json: bool,
+        /// canon harness 口径：notChecked 转 INFO finding，退出码收敛 0/2
+        #[arg(long)]
+        canon: bool,
     },
 }
 
@@ -89,6 +92,7 @@ pub fn run(frontend: Frontend) -> i32 {
             classes,
             json,
             report_json,
+            canon,
         } => check(CheckInvocation {
             registry: &registry,
             build_errors: &build_errors,
@@ -99,6 +103,7 @@ pub fn run(frontend: Frontend) -> i32 {
             classes: &classes,
             json,
             report_json,
+            canon,
         }),
     }
 }
@@ -158,6 +163,7 @@ struct CheckInvocation<'a> {
     classes: &'a [String],
     json: bool,
     report_json: bool,
+    canon: bool,
 }
 
 fn check(p: CheckInvocation<'_>) -> i32 {
@@ -188,7 +194,7 @@ fn check(p: CheckInvocation<'_>) -> i32 {
         semantic_endpoint: p.cfg.semantic.as_ref().map(|s| s.endpoint.as_str()),
         overrides: Some(&p.cfg.rules),
     };
-    emit(&p.registry.run(&ctx, &opts), p.json, p.report_json)
+    emit(&p.registry.run(&ctx, &opts), p.json, p.report_json, p.canon)
 }
 
 fn fail_setup(errors: &[String]) -> i32 {
@@ -236,21 +242,31 @@ fn parse_classes(raw: &[String]) -> Result<Vec<Class>, String> {
     Ok(classes)
 }
 
-fn emit(report: &crate::registry::Report, json: bool, report_json: bool) -> i32 {
+fn emit(report: &crate::registry::Report, json: bool, report_json: bool, canon: bool) -> i32 {
     if report_json {
         println!(
             "{}",
             serde_json::to_string_pretty(report).unwrap_or_else(|_| "{}".to_string())
         );
     } else if json {
+        // canon 口径：notChecked 收敛成 INFO finding，findings 一份不丢
+        let findings = if canon {
+            report.canon_findings()
+        } else {
+            report.findings.clone()
+        };
         println!(
             "{}",
-            serde_json::to_string_pretty(&report.findings).unwrap_or_else(|_| "[]".to_string())
+            serde_json::to_string_pretty(&findings).unwrap_or_else(|_| "[]".to_string())
         );
     } else {
         print_human(report);
     }
-    report.exit_code()
+    if canon {
+        report.canon_exit_code()
+    } else {
+        report.exit_code()
+    }
 }
 
 fn print_human(report: &crate::registry::Report) {

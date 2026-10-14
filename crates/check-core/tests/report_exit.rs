@@ -100,3 +100,19 @@ fn setup_errors_exit_two() {
     };
     assert_eq!(report.exit_code(), 2);
 }
+
+#[test]
+fn canon_exit_collapses_not_checked_to_zero() {
+    // canon harness 契约：rc 只有 0 / 2；notChecked 由 INFO finding 表达
+    let mut report = Report::default();
+    report.not_checked.push(check_core::NotChecked {
+        id: "FAKE.semantic".into(),
+        reason: "no endpoint".into(),
+    });
+    assert_eq!(report.exit_code(), 10);
+    assert_eq!(report.canon_exit_code(), 0);
+    let findings = report.canon_findings();
+    assert_eq!(findings.len(), 1);
+    assert_eq!(findings[0].id, "CHECKS-NOTCHECKED");
+    assert_eq!(findings[0].severity, Severity::Info);
+}
