@@ -1,113 +1,16 @@
 //! canon — spec-driven quality gate + MCP spec server, one binary.
 //!
-//! The engine (`engine` module) contains zero detection logic: every rule
+//! Thin clap front end: parse argv via [`canon::cli`], route to
+//! [`canon::gate`]. `gate::engine` contains zero detection logic (every rule
 //! lives in `checklist_*.yaml` under `<repo>/.githooks/spec/` and runs an
-//! external harness command. `specs/` is the source of truth for the default
-//! rules pack; `canon init` seeds a repo with it. The `tools`/`rules` modules
-//! carry the gh-workflow policy layer (issue/PR compliance, merge
-//! orchestration, gh command interception), and `mcp` exposes the rule
-//! catalog plus a pre-commit preflight over MCP stdio.
+//! external harness command); `specs/` is the source of truth for the default
+//! rules pack and `canon init` seeds a repo with it.
 
-use std::path::PathBuf;
 use std::process::ExitCode;
 
-use clap::{Parser, Subcommand};
-
-use gate::{engine, shared, tools};
-
-#[derive(Parser)]
-#[command(
-    name = "canon",
-    version,
-    about = "spec-driven quality gate + MCP spec server — yaml rules, external harnesses, zero built-in detection"
-)]
-struct Cli {
-    #[command(subcommand)]
-    command: Commands,
-}
-
-#[derive(Subcommand)]
-enum Commands {
-    /// Install canon: copy binary to ~/.local/bin (canon + gh), set
-    /// core.hooksPath, write hook scripts, and seed .githooks/spec/ with
-    /// the default rules pack (never overwrites existing files).
-    Init {
-        /// Rules pack dir (auto-detected near the binary / canon checkout if omitted)
-        #[arg(long)]
-        rules_dir: Option<PathBuf>,
-    },
-    /// Run pre-commit hooks
-    PreCommit,
-    /// Validate the commit message git is about to commit (CM-01/02/03);
-    /// git passes the message file as $1
-    CommitMsg { path: PathBuf },
-    /// Run pre-push hooks (git 调 pre-push 钩子时带 remote name 与 URL，
-    /// 包装脚本按 issue #21 统一转发 "$@"，两个位置参数 canon 只接收不消费)
-    PrePush {
-        #[arg(hide = true)]
-        remote_name: Option<String>,
-        #[arg(hide = true)]
-        remote_url: Option<String>,
-    },
-    /// Run merge checks: `canon merge <owner/repo> <pr_number> [--dry-run]`
-    Merge(MergeArgs),
-    Check {
-        /// Checklist names (file name minus `checklist_` prefix and `.yaml`)
-        names: Vec<String>,
-        /// Maximum SLA tier to run (l1/l2/l3, default l1)
-        #[arg(long, default_value = "l1")]
-        sla: String,
-        /// Output machine-readable JSON with all finding extras (score,
-        /// confidence, evidence, ...). For dev agents to consume.
-        #[arg(long)]
-        json: bool,
-    },
-    /// Validate issues
-    Issue,
-    /// Audit issues/PRs for checkbox & linkage compliance
-    Audit(AuditArgs),
-    /// Validate issues
-    Pr,
-    /// Serve the rule catalog and a preflight run over MCP stdio
-    Mcp,
-    /// Run the local flow board: REST + WebSocket push over std::net.
-    /// Routes reuse the 16 flow tools; `GET /api/stream` is the WS push.
-    /// Default port 10081 (web UI via `dx serve` runs on 10080).
-    Serve {
-        /// Listen port (10000+ range; default 10081)
-        #[arg(long, default_value_t = 10081)]
-        port: u16,
-    },
-}
-
-#[derive(clap::Args)]
-struct MergeArgs {
-    /// owner/repo
-    repo: String,
-    /// PR number
-    pr: u32,
-    /// Plan only, no squash
-    #[arg(long)]
-    dry_run: bool,
-}
-
-#[derive(clap::Args)]
-struct AuditArgs {
-    /// owner/repo (defaults to git remote origin)
-    repo: Option<String>,
-    /// Scan issues/PRs created in the last N days
-    #[arg(long)]
-    recent: Option<u32>,
-    /// Limit number of items to scan (0 = unlimited)
-    #[arg(long, default_value = "0")]
-    limit: u32,
-    /// Number of concurrent workers
-    #[arg(long, default_value = "5")]
-    workers: u32,
-    /// Specific issue/PR numbers to check
-    #[arg(long)]
-    issues: Option<String>,
-}
+use canon::cli::{AuditArgs, Cli, Commands};
+use canon::gate::{engine, shared, tools};
+use clap::Parser;
 
 fn main() -> ExitCode {
     // gh-mode: installed as ~/.local/bin/gh → intercept issue/pr commands
@@ -174,13 +77,6 @@ fn main() -> ExitCode {
             }
             ExitCode::from(shared::exit_code(&findings) as u8)
         }
-        Commands::Serve { port } => match flow::serve::run(port) {
-            Ok(()) => ExitCode::SUCCESS,
-            Err(e) => {
-                eprintln!("canon serve: {e}");
-                ExitCode::FAILURE
-            }
-        },
         Commands::Mcp => match run_mcp_stdio() {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
@@ -207,7 +103,7 @@ fn run_mcp_stdio() -> std::io::Result<()> {
         if line.trim().is_empty() {
             continue;
         }
-        if let Some(reply) = mcp::handle_line(&line) {
+        if let Some(reply) = canon::mcp::handle_line(&line) {
             writeln!(out, "{reply}")?;
             out.flush()?;
         }
@@ -236,43 +132,4 @@ fn build_audit_args(args: &AuditArgs) -> Vec<String> {
         vec.push(format!("--issues={issues}"));
     }
     vec
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::{Cli, Commands};
-    use clap::Parser;
-    use gate::shared::load_yaml;
-    use std::path::Path;
-
-    #[test]
-    fn loads_real_spec_and_counts_required_headings() {
-        // ponytail: the crate root IS the canon repo root, so the default
-        // rules pack is just a subdir. No ancestor walk needed.
-        let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("specs")
-            .join("github")
-            .join("github_issues.yaml");
-        let v =
-            load_yaml(path.to_str().expect("spec path is utf-8")).expect("spec yaml must parse");
-        let headings = v
-            .get("required_headings")
-            .expect("required_headings key present")
-            .as_sequence()
-            .expect("required_headings is a sequence");
-        assert_eq!(headings.len(), 6, "expected 6 required headings");
-        let names: Vec<&str> = headings.iter().filter_map(|h| h.as_str()).collect();
-        assert!(names.contains(&"Goal"));
-        assert!(names.contains(&"Out of scope"));
-    }
-
-    // issue #21：钩子包装统一转发 "$@" 后，git 给 pre-push 的 remote name/URL
-    // 必须能被 CLI 原样接收，而不是报 unexpected argument
-    #[test]
-    fn pre_push_tolerates_git_forwarded_args() {
-        let cli =
-            Cli::try_parse_from(["canon", "pre-push", "origin", "https://github.com/o/r.git"])
-                .expect("git 的 pre-push 两个位置参数应被 CLI 接受");
-        assert!(matches!(cli.command, Commands::PrePush { .. }));
-    }
 }

@@ -1,31 +1,35 @@
-[workspace]
-members = ["crates/gate", "crates/flow", "crates/mcp"]
-# .wt/* worktree 基于各种历史提交（含分 crate 前的旧布局，manifest 无
-# [workspace] 表），不属于本 workspace；不排除会被 cargo 误收编报错。
-exclude = [".wt"]
-
 [package]
 name = "canon"
 version = "0.5.17"
 edition = "2024"
-description = "Spec-driven quality gate + MCP spec server + flow workflow recorder: one native binary"
+description = "Spec-driven quality gate + MCP spec server: one native binary"
 publish = false
+
+# lib 目标承载 gate 模块（src/gate/）+ mcp 单文件，bin 只做 clap 路由。
+# tests/ 下的集成测试需要 lib 才能 import。
+[lib]
+name = "canon"
+path = "src/lib.rs"
 
 [[bin]]
 name = "canon"
 path = "src/main.rs"
 
 # 开发/测试构建降 debuginfo：编译更快、rustc 内存更低、target 显著缩小；
-# backtrace 仍带行号（line-tables-only）。workspace 级，覆盖全部成员 crate。
+# backtrace 仍带行号（line-tables-only）。
 # incremental 关闭：增量产物不可被 sccache 缓存命中（见 .cargo/config.toml），
-# 本仓小 crate 增量收益低，跨会话缓存收益高。
+# 本仓编译单元少，跨 worktree 缓存收益高。
 [profile.dev]
 debug = "line-tables-only"
 incremental = false
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-gate = { path = "crates/gate" }
-mcp = { path = "crates/mcp" }
-flow = { path = "crates/flow", features = ["serve"] }
+serde_yaml = "0.9"
+regex = "1"
+anyhow = "1"
+
+[dev-dependencies]
+tempfile = "3"

@@ -19,7 +19,7 @@
 │   └── ...
 ```
 
-启动时 `crates/gate/src/catalog.rs` 的 `catalog::load()` 扫 `.githooks/spec/{quality,code,cleanup,workspace,github}/` 下的 yaml（spec 根层与 `custom/` 不在扫描范围），**顺序按文件名字典序**（用户想让谁先跑就改名加前缀，如 `00_`、`10_`）。
+启动时 `src/gate/catalog.rs` 的 `catalog::load()` 扫 `.githooks/spec/{quality,code,cleanup,workspace,github}/` 下的 yaml（spec 根层与 `custom/` 不在扫描范围），**顺序按文件名字典序**（用户想让谁先跑就改名加前缀，如 `00_`、`10_`）。
 
 ## `custom/` 覆盖层（每仓本地覆盖）
 
@@ -209,7 +209,7 @@ checklist 自身再用 `hooks:` 字段过滤；topic 进来后**每个 yaml 独�
 
 ## Gate 端实现要点
 
-参考 `crates/spec/src/tools/code.rs::run_lang`，新写 `crates/spec/src/tools/checklist.rs`：
+参考 `src/gate/tools/code.rs::run_lang`，新写 `src/gate/tools/checklist.rs`：
 
 ```rust
 pub fn run_all(scope: HookScope, target_files: &[PathBuf]) -> Vec<Finding> {
@@ -303,7 +303,7 @@ timeout: 30
 
 ## 迁移路径
 
-1. 加 `crates/spec/src/tools/checklist.rs`（~120 行）
+1. 加 `src/gate/tools/checklist.rs`（~120 行）
 2. `src/main.rs` 在 PreCommit/PrePush/Merge 路径里调 `run_all`
 3. `.githooks/spec/dispatch.yaml` 加 `checklist` topic
 4. `.githooks/spec/docs/SPEC_OVERVIEW.md` 加「主题九：Checklist（CK-01）」章节

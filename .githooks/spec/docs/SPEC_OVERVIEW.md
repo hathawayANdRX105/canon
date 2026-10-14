@@ -230,7 +230,7 @@ ferrite 是两层布局（`crates/<domain>/<crate>/src`），而规则原先写�
 
 - `canon audit [owner/repo] [--issues=N,M] [--recent=N] [--limit=N] [--workers=N]`：
   用 Rust issue/PR 规则 + gh API 扫描**存量** issue/PR 的 checkbox 与规则合规，
-  与钩子解耦，可按 `--recent` 时间窗跑（实现 `crates/gate/src/tools/audit.rs`）。
+  与钩子解耦，可按 `--recent` 时间窗跑（实现 `src/gate/tools/audit.rs`）。
 - 触发：CI 每日 → 最近 1 天创建的 issue/PR 全规则。deskctl / new-api / kime 曾配
   `.github/workflows/daily_audit.yml`（UTC 0:30 跑 `gate audit --recent=1`，
   旧文档记载 FAIL 会自动建 issue 记录、支持 workflow_dispatch）；
@@ -335,5 +335,5 @@ l3 默认 hooks: [merge]，本地用 `canon check <l3-name> --sla l3` 触发。
 ## 更新与校验
 
 - 新增/修改规则：只改 `.githooks/spec/*.yaml` 参数 + 相应校验器逻辑，更新本文档
-- gate 改动后：`cargo build --release -p gate-bin` → `upx --best --lzma target/release/gate` → `canon init` 重部署 + `install` 复制为 `~/.local/bin/gh`
+- gate 改动后：`just build`（`cargo build --release` → `.githooks/canon`）→ `just install` 装到 `~/.local/bin/canon`，`canon init` 重部署 + 复制为 `~/.local/bin/gh`
 - 触发式按上表 lazy 执行，不全局扫描

@@ -33,10 +33,13 @@ dioxus_css_semantic
 
 ```
 canon/
-├── crates/gate/       # 门禁引擎：checklist 分发 + gh 工作流策略 → canon 二进制
-├── crates/mcp/        # MCP server：让 agent 直接查规范、跑检查、管任务
-├── crates/flow/       # 任务流：项目/任务/步骤 + 工作日志
-├── crates/web/        # flow 的本地看板（Dioxus wasm）
+├── src/
+│   ├── gate/          # 全部实现：checklist 引擎 + catalog + shared + rules/ + tools/
+│   ├── mcp.rs         # MCP server：让 agent 直接查规范、跑检查
+│   ├── cli.rs         # clap 命令行定义
+│   ├── lib.rs         # 模块根（gate / mcp / cli）
+│   └── main.rs        # 薄 bin：clap 路由 → canon 二进制
+├── tests/             # 全部测试（对应 lib 目标，src/ 内不留测试代码）
 ├── specs/             # 规范正本
 │   ├── quality/ code/ cleanup/ workspace/ github/ dioxus/   ← 规则 yaml
 │   ├── harness/       ← 规则执行器（Python）+ 模型问题集（JSON）
@@ -129,32 +132,13 @@ canon/
 
 ## MCP server
 
-`crates/mcp` 是 JSON-RPC 2.0 over stdio 的 MCP server，装在 `canon init` 之后即可被 MCP 客户端（如 omp、Claude Code）调用。22 个工具分两组：
-
-**规范组**——让 agent 直接读规范、跑检查，不必猜命令：
+`src/mcp.rs` 是 JSON-RPC 2.0 over stdio 的 MCP server，装在 `canon init` 之后即可被 MCP 客户端（如 omp、Claude Code）调用。三个工具，都读本仓的 spec 树——让 agent 直接读规范、跑检查，不必猜命令：
 
 | 工具 | 用途 |
 |---|---|
 | `spec_catalog` | 列出本仓强制的全部规则：规则 ID、严重度、触发钩子、存在理由 |
 | `spec_explain` | 单条规则的完整文本：禁止什么、怎么检测、哪个钩子执行、为什么有这条 |
-| `spec_list` | 列出规范树里的 checklist 及其严重度与触发钩子 |
-| `spec_run` | 立即在本仓跑 checklist（可指定规则名或目录，可按 SLA 上限过滤），带任务/步骤参数时结果写入任务日志 |
-| `spec_bind` | 把某个 checklist 绑到任务步骤上，该步骤不经证据不得关闭 |
-| `preflight` | 立即跑本仓检查而不是等 git 钩子拒绝（可按分支 diff、某次提交、若干路径或目录限定范围） |
-| `rules_run` | 按规则名或路径运行检查 |
-
-**流程组**——任务看板与工作日志：
-
-| 工具 | 用途 |
-|---|---|
-| `project_create` / `project_list` / `project_update` | 注册项目及其状态流水线（看板列） |
-| `task_create` / `task_get` / `task_transition` / `task_claim` | 建任务、查任务与合法流转、按流水线推进（前进只能下一步，后退可踢回）、认领任务 |
-| `step_add` / `step_mark` | 追加步骤（work/spec/record），spec 步骤无证据拒绝关闭 |
-| `template_list` | 可用的步骤模板（内置后端/前端/通用 + 用户文件） |
-| `board_view` | 看板快照，按项目分组 |
-| `journal` | 任务追加式工作日志：状态流转、步骤完成、规范运行记录 |
-| `event_note` | 往任务时间线写自由决策/备注 |
-| `ping` | 健康检查 |
+| `preflight` | 立即跑本仓检查而不是等 git 钩子拒绝（可按分支 diff、某次提交、若干路径或目录限定范围，可按规则族收窄） |
 
 配置：在 MCP 客户端里以 `canon mcp` 子命令注册，走 stdio 传输：
 
@@ -170,7 +154,7 @@ canon/
 }
 ```
 
-`canon init` 把二进制装到 `~/.local/bin/`，所以路径通常直接写 `canon` 即可。超时设大是因为 `spec_run` / `preflight` 会真跑检查，模型判决加上规则执行可能到分钟级。
+`canon init` 把二进制装到 `~/.local/bin/`，所以路径通常直接写 `canon` 即可。超时设大是因为 `preflight` 会真跑检查，规则执行加上 L3 的模型判决可能到分钟级。
 
 **为什么配 MCP 而不是让 agent 猜命令**：规范会变（新增规则、改阈值、换 harness），agent 凭记忆写的检查命令迟早对不上。走 MCP 时 agent 每次现查 `spec_catalog` / `spec_explain` 拿到当次的真实规则，规则变了不用重训。
 
