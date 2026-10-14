@@ -1,0 +1,34 @@
+# FR-02 共享组件归属 (mode: grep)
+# 规则: page crate 不应自带 ui 子模块; 共享组件放共享 crate (ferrite 布局 = crates/web/ui-kit)
+# 检测: 布局里有 crates/web/*/src 的仓, 逐个 page crate (有 src/views 的才算 page)
+#       找页面自带的 ui 子模块 (src/ui.rs / src/ui/*.rs); 无 crates/web 布局的仓语料为空 → []
+# 历史: 原 harness 扫 crates/admin-web/page-* — admin 早已搬进 crates/web/admin, 该路径不存在,
+#       find 空转 → 规则恒绿; 2026-10-14 回port 进 canon 并改扫真实页面布局。
+enabled: true
+hooks: [pre-commit, pre-push, merge]
+sla: l1
+fail_severity: FAIL
+match:
+  paths_include: ["**/*.rs"]
+  paths_exclude: ["target/", ".wt/"]
+mode: grep
+harness:
+  command: "sh"
+  args:
+    - "-c"
+    - |
+      ROOT=$(git rev-parse --show-toplevel)
+      [ -d "$ROOT/crates/web" ] || { echo '[]'; exit 0; }
+      hits=""
+      for d in "$ROOT"/crates/web/*/src; do
+        [ -d "$d/views" ] || continue
+        h=$(find "$d/ui.rs" "$d/ui" -type f -name '*.rs' 2>/dev/null)
+        [ -n "$h" ] && hits="$hits$(printf '\n%s' "$h")"
+      done
+      if [ -z "$hits" ]; then
+        echo '[]'
+      else
+        printf '%s\n' "$hits" | jq -R -s 'split("\n") | map(select(length>0)) | map({id: "FR02-UI", severity: "FAIL", path: ., line: 0, message: "page 不应自带 ui 子模块; 共享组件放共享 crate (crates/web/ui-kit)"})'
+      fi
+optional: true
+timeout: 10
