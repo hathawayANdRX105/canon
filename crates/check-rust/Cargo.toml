@@ -1,0 +1,12 @@
+[package]
+name = "check-rust"
+version = "0.1.0"
+edition = "2024"
+description = "Rust source-structure rules for canon rule crates: test placement, cfg(test) in tests/, dead_code allow"
+publish = false
+
+[dependencies]
+check-core = { path = "../check-core" }
+
+[dev-dependencies]
+tempfile = "3"

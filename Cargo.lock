@@ -130,6 +130,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "check-rust"
+version = "0.1.0"
+dependencies = [
+ "check-core",
+ "tempfile",
+]
+
+[[package]]
 name = "clap"
 version = "4.6.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
