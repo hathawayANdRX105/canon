@@ -22,7 +22,8 @@ impl Rule for DeadCodeAllow {
 
     fn doc(&self) -> &str {
         "出现 `#[allow(dead_code)]` 即 finding；确需保留的，同行 `//` 写明理由放行\
-         （口径与 canon rust_no_dead_code_allow 一致）。多行属性按起始行判定。"
+         （口径与 canon rust_no_dead_code_allow 一致）。多行属性按起始行判定，\
+         注释行（`//`/`///`/`//!`）不误伤。"
     }
 
     fn default_severity(&self) -> Severity {
@@ -39,6 +40,10 @@ impl Rule for DeadCodeAllow {
                 continue;
             };
             for (idx, line) in text.lines().enumerate() {
+                let trimmed = line.trim_start();
+                if trimmed.starts_with("//") {
+                    continue;
+                }
                 let Some(after) = line.split(']').next_back() else {
                     continue;
                 };

@@ -45,9 +45,15 @@ fn default_max_len() -> u32 {
 #[serde(deny_unknown_fields)]
 pub struct RuleOverride {
     pub severity: Option<Severity>,
-    /// 缺省即启用；只有显式 `enabled = false` 才停用。
+    /// 缺省即启用；只有显式 `enabled = false` 才停用（禁静默开关）。
     #[serde(default = "default_true")]
     pub enabled: bool,
+    /// 策略层 scope 覆盖：只跑这些目录下的文件（glob，相对仓库根）。
+    #[serde(default)]
+    pub scope_include: Vec<String>,
+    /// 策略层 scope 排除：命中这些 glob 的文件从检查集剔除。
+    #[serde(default)]
+    pub scope_exclude: Vec<String>,
 }
 
 fn default_true() -> bool {
