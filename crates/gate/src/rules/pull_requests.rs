@@ -589,6 +589,74 @@ title_must_be_chinese: true
     }
 
     #[test]
+    fn pr06_severity_split_without_override() {
+        // Native severities when no `severity_overrides` entry touches PR-06:
+        // a missing type label is FAIL, keyword suggestions stay WARN. The
+        // commented-out `PR-06: "FAIL"` override in the repo spec must NOT
+        // drag suggestion findings up to FAIL (regression: gh pr create was
+        // rejected on suggestion-only findings).
+        let spec = cfg(r#"
+type_labels_cfg: ["bug", "feature"]
+keyword_label_suggestions:
+  "修复": "bug"
+allowed_branch_prefixes: ["feat/", "fix/"]
+"#);
+
+        // keyword hit + label present: the suggestion finding (emitted once
+        // per PR-06 block — the impl faithfully replicates Python's two
+        // occurrences) is natively WARN with no severity_overrides.
+        let f = check_content(
+            "feat: x",
+            "修复了一个问题",
+            &["feature"],
+            "feat/a",
+            Some(&spec),
+        );
+        let suggestions: Vec<_> = f
+            .iter()
+            .filter(|x| x.rule_id == "PR-06" && x.msg.contains("consider also labeling"))
+            .collect();
+        assert_eq!(suggestions.len(), 2, "{f:?}");
+        assert!(
+            suggestions.iter().all(|x| x.severity == Severity::Warn),
+            "native severity must stay WARN: {f:?}"
+        );
+
+        // no keyword hit + no label: only the missing-label finding, FAIL.
+        let f = check_content("feat: x", "plain body", &[], "feat/a", Some(&spec));
+        let fails: Vec<_> = f
+            .iter()
+            .filter(|x| x.rule_id == "PR-06" && x.msg.contains("no type label"))
+            .collect();
+        assert_eq!(fails.len(), 2, "{f:?}");
+        assert!(fails.iter().all(|x| x.severity == Severity::Fail), "{f:?}");
+    }
+
+    #[test]
+    fn pr06_override_demotes_suggestion_not_fail_findings() {
+        // Overrides may move non-INFO findings in either direction; INFO
+        // findings stay INFO (one-way rule in shared::apply_severity_overrides).
+        let spec = cfg(r#"
+type_labels_cfg: ["bug", "feature"]
+keyword_label_suggestions:
+  "修复": "bug"
+allowed_branch_prefixes: ["feat/", "fix/"]
+severity_overrides:
+  PR-06: "INFO"
+"#);
+        let f = check_content("feat: x", "修复了一个问题", &[], "feat/a", Some(&spec));
+        let by_msg = |want: &str| {
+            f.iter()
+                .filter(|x| x.rule_id == "PR-06" && x.msg.contains(want))
+                .collect::<Vec<_>>()
+        };
+        let fail = by_msg("no type label").pop();
+        assert_eq!(fail.map(|x| x.severity), Some(Severity::Info), "{f:?}");
+        let warn = by_msg("consider also labeling").pop();
+        assert_eq!(warn.map(|x| x.severity), Some(Severity::Info), "{f:?}");
+    }
+
+    #[test]
     fn linkage_is_optional_unless_spec_asks_otherwise() {
         // PR-first workflow: a PR with zero `Fixes #` is legitimate (INFO).
         // `fixes_linkage_mode` promotes the missing-linkage finding for repos
