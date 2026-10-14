@@ -1,7 +1,12 @@
 # FR-02 共享组件归属 (mode: grep)
-# 规则: page crate 不应自带 ui 子模块; 共享组件放共享 crate (ferrite 布局 = crates/web/ui-kit)
-# 检测: 布局里有 crates/web/*/src 的仓, 逐个 page crate (有 src/views 的才算 page)
-#       找页面自带的 ui 子模块 (src/ui.rs / src/ui/*.rs); 无 crates/web 布局的仓语料为空 → []
+# 规则: page crate 不应自带 ui 子模块; 共享组件放共享 crate (ui-kit)
+# 检测: 候选根 crates/web(旧布局) 与 crates/ui(新布局, 2026-10 重排 #220), 逐个
+#       候选 page crate (其 src 下有 views/ 的才算 page) 找页面自带的 ui 子模块
+#       (src/ui.rs / src/ui/*.rs); 两个候选根都不存在的仓语料为空 → []
+# 已知差距: 新布局下页面是模块 (crates/ui/pages/src/<域>/views), 不是 crate;
+#       crate src 深度没有 views/ → 本版本按「crate src 深度」判 page, 新布局
+#       下语料为空仍输出 [] (恒绿, 但非静默短路); 页面模块级扫描(禁自带
+#       components/shared 子模块)是语义重设计, 留后续 PR, 勿盲扩 (fail_severity=FAIL)。
 # 历史: 原 harness 扫 crates/admin-web/page-* — admin 早已搬进 crates/web/admin, 该路径不存在,
 #       find 空转 → 规则恒绿; 2026-10-14 回port 进 canon 并改扫真实页面布局。
 enabled: true
@@ -18,17 +23,23 @@ harness:
     - "-c"
     - |
       ROOT=$(git rev-parse --show-toplevel)
-      [ -d "$ROOT/crates/web" ] || { echo '[]'; exit 0; }
+      # 候选布局根: crates/web(旧) / crates/ui(新); 两个都不存在才语料为空 → []
+      ROOTS=""
+      [ -d "$ROOT/crates/web" ] && ROOTS="$ROOTS $ROOT/crates/web"
+      [ -d "$ROOT/crates/ui" ] && ROOTS="$ROOTS $ROOT/crates/ui"
+      [ -z "$ROOTS" ] && { echo '[]'; exit 0; }
       hits=""
-      for d in "$ROOT"/crates/web/*/src; do
-        [ -d "$d/views" ] || continue
-        h=$(find "$d/ui.rs" "$d/ui" -type f -name '*.rs' 2>/dev/null)
-        [ -n "$h" ] && hits="$hits$(printf '\n%s' "$h")"
+      for root in $ROOTS; do
+        for d in "$root"/*/src; do
+          [ -d "$d/views" ] || continue
+          h=$(find "$d/ui.rs" "$d/ui" -type f -name '*.rs' 2>/dev/null)
+          [ -n "$h" ] && hits="$hits$(printf '\n%s' "$h")"
+        done
       done
       if [ -z "$hits" ]; then
         echo '[]'
       else
-        printf '%s\n' "$hits" | jq -R -s 'split("\n") | map(select(length>0)) | map({id: "FR02-UI", severity: "FAIL", path: ., line: 0, message: "page 不应自带 ui 子模块; 共享组件放共享 crate (crates/web/ui-kit)"})'
+        printf '%s\n' "$hits" | jq -R -s 'split("\n") | map(select(length>0)) | map({id: "FR02-UI", severity: "FAIL", path: ., line: 0, message: "page 不应自带 ui 子模块; 共享组件放共享 crate (ui-kit)"})'
       fi
 optional: true
 timeout: 10
