@@ -31,7 +31,10 @@ jobs:
       - name: Format check
         run: cargo fmt --all -- --check
       - name: Build
-        run: cargo build --locked --all-targets
+        run: cargo build --locked --workspace --all-targets
       - name: Test
-        run: cargo test --locked --all-targets --no-fail-fast -- --test-threads=2
-        timeout-minutes: 10
+        # --workspace 是硬要求：根包+workspace 布局下裸 cargo test 只跑根包，
+        # crates/*（gate/mcp/flow/check-*）的测试全部静默不跑（2026-10-15 实测：
+        # 日志只出现根包 canon 的 2 个测试）。见根 AGENTS.md 同一坑的记载。
+        run: cargo test --locked --workspace --all-targets --no-fail-fast -- --test-threads=2
+        timeout-minutes: 20
