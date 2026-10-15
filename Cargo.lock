@@ -180,6 +180,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "check-git"
+version = "0.1.0"
+dependencies = [
+ "check-core",
+ "serde",
+ "tempfile",
+ "toml",
+]
+
+[[package]]
 name = "check-rust"
 version = "0.1.0"
 dependencies = [

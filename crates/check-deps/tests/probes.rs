@@ -319,3 +319,64 @@ fn path_and_registry_deps_are_out_of_scope() {
         "rev 钉版与 registry 依赖都应沉默：{report:?}"
     );
 }
+
+// ---------------------------------------------------------------------------
+// dep-cycles：workspace path 依赖环 → FAIL（确定性、零误报）。
+
+fn run_cycles(root: &std::path::Path, toml_text: &str) -> check_core::Report {
+    let config: check_core::config::ChecksConfig = toml::from_str(toml_text).unwrap();
+    let (registry, errors) =
+        Registry::build(Vec::new(), &[Box::new(check_deps::CyclesFactory)], &config);
+    assert!(errors.is_empty(), "{errors:?}");
+    let ctx = Ctx::new(root, Vec::new(), None);
+    registry.run(
+        &ctx,
+        &RunOptions {
+            classes: None,
+            semantic_endpoint: None,
+            overrides: None,
+        },
+    )
+}
+
+#[test]
+fn dep_cycles_fires_on_two_package_cycle_silent_on_dag() {
+    let dir = tempfile::tempdir().unwrap();
+    // 环：a ↔ b（path 互相依赖）
+    write(
+        dir.path(),
+        "Cargo.toml",
+        "[workspace]\nresolver = \"2\"\nmembers = [\"crates/a\", \"crates/b\"]\n",
+    );
+    write(
+        dir.path(),
+        "crates/a/Cargo.toml",
+        "[package]\nname = \"a\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[dependencies]\nb = { path = \"../b\" }\n",
+    );
+    write(dir.path(), "crates/a/src/lib.rs", "pub use b::f;\n");
+    write(
+        dir.path(),
+        "crates/b/Cargo.toml",
+        "[package]\nname = \"b\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[dependencies]\na = { path = \"../a\" }\n",
+    );
+    write(dir.path(), "crates/b/src/lib.rs", "pub use a::g;\n");
+
+    let report = run_cycles(dir.path(), "[kinds.dep-cycles.main]\n");
+    assert_eq!(report.findings.len(), 1, "{report:?}");
+    assert_eq!(report.findings[0].id, "DEP-CYCLES.main");
+    assert_eq!(report.findings[0].severity, check_core::Severity::Fail);
+    assert!(
+        report.findings[0].message.contains("2 个包"),
+        "{:?}",
+        report.findings[0].message
+    );
+
+    // intact：解开环（b 不再依赖 a）→ 静默
+    write(
+        dir.path(),
+        "crates/b/Cargo.toml",
+        "[package]\nname = \"b\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+    );
+    let report = run_cycles(dir.path(), "[kinds.dep-cycles.main]\n");
+    assert!(report.findings.is_empty(), "{report:?}");
+}

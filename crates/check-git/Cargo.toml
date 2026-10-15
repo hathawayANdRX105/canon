@@ -1,0 +1,14 @@
+[package]
+name = "check-git"
+version = "0.1.0"
+edition = "2024"
+description = "Git-history signal rules for canon rule crates: change hotspots, temporal coupling, defect history (advisory)"
+publish = false
+
+[dependencies]
+check-core = { path = "../check-core" }
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+
+[dev-dependencies]
+tempfile = "3"
