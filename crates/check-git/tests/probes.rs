@@ -158,3 +158,46 @@ fn non_git_dir_is_silently_skipped() {
     assert!(report.findings.is_empty(), "{report:?}");
     assert!(report.errors.is_empty(), "{report:?}");
 }
+
+#[test]
+fn scope_exclude_filters_hotspot_and_coupling_respects_scope_side() {
+    if !git_available() {
+        eprintln!("skip: git unavailable");
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    seed_history(dir.path());
+
+    // scope_exclude 收口生成物/manifest 类噪声：hot.rs 被排除后热点不再报
+    let toml = "[kinds.git-hotspot.main]\nmin_churn = 3\n";
+    let config: ChecksConfig = toml::from_str(toml).unwrap();
+    let (registry, errors) = Registry::build(Vec::new(), &factories(), &config);
+    assert!(errors.is_empty(), "{errors:?}");
+    let mut overrides = std::collections::BTreeMap::new();
+    overrides.insert(
+        "GIT.hotspot.main".to_string(),
+        check_core::config::RuleOverride {
+            severity: None,
+            enabled: true,
+            scope_include: Vec::new(),
+            scope_exclude: vec!["src/hot.rs".to_string()],
+        },
+    );
+    let tracked: Vec<PathBuf> = ["src/hot.rs", "src/cold.rs"]
+        .iter()
+        .map(PathBuf::from)
+        .collect();
+    let ctx = Ctx::new(dir.path(), tracked, None);
+    let report = registry.run(
+        &ctx,
+        &RunOptions {
+            classes: None,
+            semantic_endpoint: None,
+            overrides: Some(&overrides),
+        },
+    );
+    assert!(
+        report.findings.is_empty(),
+        "scope_exclude 后不得再报：{report:?}"
+    );
+}

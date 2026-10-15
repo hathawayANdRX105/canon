@@ -91,8 +91,8 @@ impl Rule for Defects {
             return Vec::new();
         };
         let counts = history::defect_counts(&commits, DEFAULT_FIX_KEYWORDS);
-        let tracked = crate::tracked_rel_paths(ctx);
-        let mut hits: Vec<(&String, usize)> = tracked
+        let in_scope = crate::in_scope_paths(ctx);
+        let mut hits: Vec<(&String, usize)> = in_scope
             .iter()
             .filter_map(|rel| Some((rel, *counts.get(rel)?)))
             .filter(|(_, n)| *n >= self.params.min_fixes)

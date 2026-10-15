@@ -11,12 +11,18 @@ pub mod defects;
 pub mod history;
 pub mod hotspot;
 
-/// 跟踪文件的相对路径集（历史口径过滤：被删文件自然剔除）。
-pub(crate) fn tracked_rel_paths(ctx: &Ctx) -> Vec<String> {
-    ctx.tracked_files()
+/// scope 内文件的相对路径集（checks.toml 覆盖链过滤后；被删文件自然剔除）。
+/// all 口径 = 全部跟踪文件；changed 口径 = 本次改动文件。
+pub(crate) fn in_scope_paths(ctx: &Ctx) -> Vec<String> {
+    ctx.scope_files()
         .iter()
         .map(|p| p.display().to_string())
         .collect()
+}
+
+/// 同上的集合形态（耦合对「任一侧命中」判定用）。
+pub(crate) fn in_scope_paths_set(ctx: &Ctx) -> std::collections::BTreeSet<String> {
+    in_scope_paths(ctx).into_iter().collect()
 }
 
 /// 成员仓 bin 组装用：本域的参数化 kind（checks.toml 实例化）。

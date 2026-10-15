@@ -73,7 +73,8 @@ impl Rule for Coupling {
     fn doc(&self) -> &str {
         "git log 统计窗口内同提交共现 ≥ min_cochanges 的文件对，按次数降序报 \
          limit 条。含义：两个模块总是一起改——要么隐性契约该显式化，要么该合并，\
-         要么改动在跨层扩散。提示性信号，非错误。\
+         要么改动在跨层扩散。提示性信号，非错误；changed 口径下只报「你正在改的\
+         那一侧」。scope 过滤走 checks.toml 覆盖链（scope_exclude 收口生成物）。\
          参数见 checks.toml 的 [kinds.git-coupling.<name>]。"
     }
 
@@ -88,17 +89,28 @@ impl Rule for Coupling {
         let Some(commits) = history::load(ctx.root(), &self.params.since) else {
             return Vec::new();
         };
-        // 共现统计/排序统一走 history::coupling（避免与历史模块双实现）
-        let hits = history::coupling(&commits, self.params.min_cochanges);
+        // 共现统计/排序统一走 history::coupling（避免与历史模块双实现）；
+        // 对任一侧落入 scope 的文件对才报，finding 落在 scope 内那侧——
+        // changed 口径下「你在改的文件与 X 时序耦合」才是有效的提示时机。
+        let in_scope = crate::in_scope_paths_set(ctx);
+        let hits: Vec<_> = history::coupling(&commits, self.params.min_cochanges)
+            .into_iter()
+            .filter(|((a, b), _)| in_scope.contains(a) || in_scope.contains(b))
+            .collect();
         hits.iter()
             .take(self.params.limit)
             .map(|((a, b), n)| {
+                let (path, other) = if in_scope.contains(a) {
+                    (a.clone(), b.clone())
+                } else {
+                    (b.clone(), a.clone())
+                };
                 Finding::new(
                     self.id.as_str(),
                     Severity::Warn,
-                    a.clone(),
+                    path,
                     0,
-                    format!("时序耦合：与 {b} 近 {n} 次同提交变更——隐性契约？该合并？"),
+                    format!("时序耦合：与 {other} 近 {n} 次同提交变更——隐性契约？该合并？"),
                 )
             })
             .collect()

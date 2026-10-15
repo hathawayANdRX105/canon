@@ -80,8 +80,9 @@ impl Rule for Hotspot {
     fn doc(&self) -> &str {
         "git log 统计窗口内每文件的变更次数 × 文件行数得热度分，\
          churn ≥ min_churn 的文件按分降序报 limit 条。热点≠错误：\
-         含义是「改动最频繁且体量大」——用于排整改优先级、审查重点。\
-         历史口径全仓，scope 过滤走 checks.toml 覆盖链。\
+         含义是「改动最频繁且体量大」——排整改优先级（all 口径）、\
+         提示「你正在改的就是热点」（changed 口径）。scope 过滤走 \
+         checks.toml 覆盖链（scope_exclude 收口生成物）。\
          参数见 checks.toml 的 [kinds.git-hotspot.<name>]。"
     }
 
@@ -97,8 +98,8 @@ impl Rule for Hotspot {
             return Vec::new();
         };
         let churn = history::churn(&commits);
-        let tracked = crate::tracked_rel_paths(ctx);
-        let mut scored: Vec<(usize, u64, &String)> = tracked
+        let in_scope = crate::in_scope_paths(ctx);
+        let mut scored: Vec<(usize, u64, &String)> = in_scope
             .iter()
             .filter_map(|rel| {
                 let churn = *churn.get(rel)?;
