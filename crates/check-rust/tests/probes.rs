@@ -39,11 +39,15 @@ fn test_file_in_src_intact_zero_broken_one() {
     let registry = registry();
     let intact = vec![
         write_fixture(dir.path(), "src/lib.rs", "pub fn f() {}\n"),
-        write_fixture(dir.path(), "tests/api.rs", "use my_crate::f;\n"),
+        write_fixture(
+            dir.path(),
+            "tests/api.rs",
+            "use my_crate::f;\n#[test]\nfn api_works() {\n    assert!(true);\n}\n",
+        ),
         write_fixture(
             dir.path(),
             "tests/foo_test.rs",
-            "// tests/ 下允许 *_test.rs\n",
+            "// tests/ 下允许 *_test.rs\n#[test]\nfn foo() {\n    assert!(true);\n}\n",
         ),
         write_fixture(dir.path(), "src/test_helper.rs", "pub fn helper() {}\n"),
     ];
@@ -69,7 +73,7 @@ fn cfg_test_in_tests_intact_zero_broken_one_src_stays_legal() {
         write_fixture(
             dir.path(),
             "tests/api.rs",
-            "use my_crate::f;\n#[test]\nfn a() {}\n",
+            "use my_crate::f;\n#[test]\nfn api_works() {\n    assert!(true);\n}\n",
         ),
         // src/ 里的 #[cfg(test)] 是正当单测形态，规则不得触碰
         write_fixture(dir.path(), "src/lib.rs", "#[cfg(test)]\nmod tests {\n}\n"),
@@ -188,4 +192,180 @@ fn multi_line_attr_fires_and_trailing_reason_exempt() {
     assert_eq!(report.findings.len(), 1, "{report:?}");
     assert_eq!(report.findings[0].id, "RUST.dead-code-allow");
     assert_eq!(report.findings[0].line, 1, "finding 落在属性起始行");
+}
+
+// ---------------------------------------------------------------------------
+// 第二批（canon §6 rust 栈收尾）：process-cmd / stale-api / todo-needs-issue /
+// empty-module / test-no-assert。
+
+#[test]
+fn process_cmd_fires_only_on_real_subprocess_http() {
+    let dir = tempfile::tempdir().unwrap();
+    let registry = registry();
+    let intact = vec![
+        write_fixture(
+            dir.path(),
+            "src/http.rs",
+            "pub fn fetch() {\n    let body = reqwest::get(\"https://x\").await;\n}\n",
+        ),
+        // 注释行提及不误伤；tests/ 走覆盖链排除（fixture 不触发）
+        write_fixture(
+            dir.path(),
+            "src/doc.rs",
+            "// 旧实现用 std::process::Command 拉 \"curl\"，已迁 reqwest\npub fn f() {}\n",
+        ),
+    ];
+    let intact_report = run(&registry, dir.path(), &intact);
+    assert!(intact_report.findings.is_empty(), "{intact_report:?}");
+
+    let mut broken = intact.clone();
+    broken.push(write_fixture(
+        dir.path(),
+        "src/shell.rs",
+        "pub fn shell() {\n    let c = std::process::Command::new(\"wget\");\n}\n",
+    ));
+    let report = run(&registry, dir.path(), &broken);
+    assert_eq!(report.findings.len(), 1, "{report:?}");
+    assert_eq!(report.findings[0].id, "RUST.process-cmd");
+    assert_eq!(report.findings[0].severity, check_core::Severity::Fail);
+}
+
+#[test]
+fn stale_api_flags_deprecated_calls_not_comments() {
+    let dir = tempfile::tempdir().unwrap();
+    let registry = registry();
+    let intact = vec![
+        write_fixture(
+            dir.path(),
+            "src/modern.rs",
+            "pub fn f() {\n    let x: u32 = unsafe { std::mem::zeroed() };\n}\n",
+        ),
+        write_fixture(
+            dir.path(),
+            "src/doc.rs",
+            "// 不要用 std::mem::uninitialized，用 zeroed\npub fn f() {}\n",
+        ),
+    ];
+    let intact_report = run(&registry, dir.path(), &intact);
+    assert!(intact_report.findings.is_empty(), "{intact_report:?}");
+
+    let mut broken = intact.clone();
+    broken.push(write_fixture(
+        dir.path(),
+        "src/legacy.rs",
+        "pub fn legacy() {\n    let x: u32 = unsafe { std::mem::uninitialized() };\n    let e = err.description();\n}\n",
+    ));
+    let report = run(&registry, dir.path(), &broken);
+    assert_eq!(report.findings.len(), 1, "{report:?}");
+    assert_eq!(report.findings[0].id, "RUST.stale-api");
+    assert!(
+        report.findings[0].message.contains("uninitialized"),
+        "{:?}",
+        report.findings[0].message
+    );
+}
+
+#[test]
+fn todo_without_issue_flagged_with_issue_and_string_literal_silent() {
+    let dir = tempfile::tempdir().unwrap();
+    let registry = registry();
+    let intact = vec![
+        write_fixture(
+            dir.path(),
+            "src/ok.rs",
+            "// TODO(#123): 等迁移窗口\n// FIXME(#42): 临时兼容\nlet s = \"字符串里的 TODO 不该报\";\n",
+        ),
+        write_fixture(
+            dir.path(),
+            "src/ok2.rs",
+            "pub fn unfinished() {\n    todo!(\"TODO(#7): 收尾\")\n}\n",
+        ),
+    ];
+    let intact_report = run(&registry, dir.path(), &intact);
+    assert!(intact_report.findings.is_empty(), "{intact_report:?}");
+
+    let mut broken = intact.clone();
+    broken.push(write_fixture(
+        dir.path(),
+        "src/later.rs",
+        "// TODO: 之后再做\npub fn later() {}\n",
+    ));
+    broken.push(write_fixture(
+        dir.path(),
+        "src/stub.rs",
+        "pub fn stub() {\n    unimplemented!(\"等上游\")\n}\n",
+    ));
+    let report = run(&registry, dir.path(), &broken);
+    assert_eq!(report.findings.len(), 2, "{report:?}");
+    assert!(
+        report
+            .findings
+            .iter()
+            .all(|f| f.id == "RUST.todo-needs-issue")
+    );
+}
+
+#[test]
+fn empty_module_flags_tiny_reexport_only_files() {
+    let dir = tempfile::tempdir().unwrap();
+    let registry = registry();
+    let intact = vec![
+        write_fixture(dir.path(), "src/real.rs", "pub fn f() {}\n"),
+        // 只有 re-export 但带说明注释超过 2 行有效内容？——按口径 ≤2 行有效即报；
+        // 这里放一个有实现的迷你文件做对照（impl 不报）
+        write_fixture(
+            dir.path(),
+            "src/impl_min.rs",
+            "pub struct S;\nimpl S {\n    pub fn x() {}\n}\n",
+        ),
+    ];
+    // impl_min.rs 有 struct/impl → 不报；real.rs 正常 → 不报
+    let intact_report = run(&registry, dir.path(), &intact);
+    assert!(intact_report.findings.is_empty(), "{intact_report:?}");
+
+    let mut broken = intact.clone();
+    broken.push(write_fixture(
+        dir.path(),
+        "src/reexport.rs",
+        "pub use crate::real::f;\n",
+    ));
+    let report = run(&registry, dir.path(), &broken);
+    assert_eq!(report.findings.len(), 1, "{report:?}");
+    assert_eq!(report.findings[0].id, "RUST.empty-module");
+}
+
+#[test]
+fn test_no_assert_flags_bare_tests_handles_nested_mods() {
+    let dir = tempfile::tempdir().unwrap();
+    let registry = registry();
+    let intact = vec![
+        write_fixture(
+            dir.path(),
+            "tests/real.rs",
+            "#[test]\nfn with_assert() {\n    assert_eq!(1 + 1, 2);\n}\n\n#[test]\nfn with_expect() {\n    let r = Result::<i32, String>::Ok(1);\n    r.expect(\"ok\");\n}\n",
+        ),
+        // 嵌套 mod tests（旧 awk 版盲区）：有 assert → 不报
+        write_fixture(
+            dir.path(),
+            "tests/nested.rs",
+            "mod inner {\n    #[test]\n    fn nested_with_assert() {\n        assert!(true);\n    }\n}\n",
+        ),
+    ];
+    let intact_report = run(&registry, dir.path(), &intact);
+    assert!(intact_report.findings.is_empty(), "{intact_report:?}");
+
+    let mut broken = intact.clone();
+    broken.push(write_fixture(
+        dir.path(),
+        "tests/bare.rs",
+        "#[test]\nfn runs_but_verifies_nothing() {\n    let _ = 1 + 1;\n    std::hint::black_box(1);\n}\n",
+    ));
+    let report = run(&registry, dir.path(), &broken);
+    assert_eq!(report.findings.len(), 1, "{report:?}");
+    assert_eq!(report.findings[0].id, "RUST.test-no-assert");
+    assert!(
+        report.findings[0]
+            .message
+            .contains("runs_but_verifies_nothing")
+    );
 }

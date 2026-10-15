@@ -94,3 +94,52 @@ impl<'ast> Visit<'ast> for AttrVisitor<'ast> {
         // 属性不嵌套属性，无需递归。
     }
 }
+
+// ---------------------------------------------------------------------------
+// 字符串字面量区间：文本类规则过滤「字面量里的文案」用。
+
+/// 一个字符串字面量的行/列覆盖区间（1-based 行、0-based 列）。
+pub struct StrLitSpan {
+    start_line: usize,
+    start_col: usize,
+    end_line: usize,
+    end_col: usize,
+}
+
+impl StrLitSpan {
+    /// (line, col) 是否落在字面量区间内。
+    pub fn contains(&self, line: usize, col: usize) -> bool {
+        let after_start =
+            line > self.start_line || (line == self.start_line && col >= self.start_col);
+        let before_end = line < self.end_line || (line == self.end_line && col <= self.end_col);
+        after_start && before_end
+    }
+}
+
+/// 收集文件内全部字符串字面量的区间（visit LitStr；多行/原始串均覆盖）。
+pub fn str_lit_spans(file: &File) -> Vec<StrLitSpan> {
+    let mut v = LitVisitor {
+        spans: Vec::new(),
+        _marker: Default::default(),
+    };
+    v.visit_file(file);
+    v.spans
+}
+
+struct LitVisitor<'ast> {
+    spans: Vec<StrLitSpan>,
+    _marker: std::marker::PhantomData<&'ast ()>,
+}
+
+impl<'ast> Visit<'ast> for LitVisitor<'ast> {
+    fn visit_lit_str(&mut self, lit: &'ast syn::LitStr) {
+        let start = lit.span().start();
+        let end = lit.span().end();
+        self.spans.push(StrLitSpan {
+            start_line: start.line,
+            start_col: start.column,
+            end_line: end.line,
+            end_col: end.column,
+        });
+    }
+}
