@@ -89,6 +89,14 @@ pub fn run_with(frontend: Frontend, args: impl IntoIterator<Item = String>) -> i
     };
     let (registry, build_errors) =
         Registry::build(frontend.static_rules, &frontend.factories, &cfg);
+    // 装配错误三个子命令都要可见：list 静默吞掉的话，实例化失败的规则
+    // 会「悄悄不在 list 里」（2026-10-16 实测：max_len 参数错，semantic 实例
+    // 半天没注册进去，list/check 的可见性还不一致）。
+    if !build_errors.is_empty() && !matches!(args.cmd, Cmd::Check { .. }) {
+        for e in &build_errors {
+            eprintln!("checks: {e}");
+        }
+    }
     match args.cmd {
         Cmd::List { json } => list(&registry, json),
         Cmd::Explain { id } => explain(&registry, &id),
