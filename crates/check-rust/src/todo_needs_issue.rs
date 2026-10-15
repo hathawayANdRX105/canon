@@ -39,7 +39,7 @@ impl Rule for TodoNeedsIssue {
     fn run(&self, ctx: &Ctx) -> Vec<Finding> {
         let mut findings = Vec::new();
         for rel in ctx.scope_files() {
-            if rel.extension().is_some_and(|e| e != "rs") {
+            if !crate::is_rust_file(rel) {
                 continue;
             }
             if rel

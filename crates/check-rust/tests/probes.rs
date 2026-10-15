@@ -369,3 +369,18 @@ fn test_no_assert_flags_bare_tests_handles_nested_mods() {
             .contains("runs_but_verifies_nothing")
     );
 }
+
+#[test]
+fn extension_less_files_are_not_scanned() {
+    // spec-problem 双跑对照实测：无扩展名脚本（.agent/skills/notes/notes）曾被
+    // extension().is_some_and(None 误放行) 扫入——扩展名必须严格等于 rs
+    let dir = tempfile::tempdir().unwrap();
+    let registry = registry();
+    let intact = vec![write_fixture(
+        dir.path(),
+        "notes",
+        "// TODO: 无扩展名脚本不扫\napi_key = \"sk-x\"\n",
+    )];
+    let intact_report = run(&registry, dir.path(), &intact);
+    assert!(intact_report.findings.is_empty(), "{intact_report:?}");
+}

@@ -8,6 +8,12 @@
 
 use check_core::rule::Rule;
 
+/// 扩展名严格等于 .rs 才扫：无扩展名文件（如 `.agent/skills/notes/notes` 脚本）
+/// 曾被误扫（spec-problem 双跑对照实测，is_some_and 对 None 误放行）。
+pub(crate) fn is_rust_file(rel: &std::path::Path) -> bool {
+    rel.extension().is_some_and(|e| e == "rs")
+}
+
 mod attrs;
 mod cfg_test_in_tests;
 mod dead_code_allow;
