@@ -1,4 +1,5 @@
-//! D7 probe：dep-edge 与 machete 各配 intact / broken 双例。
+//! D7 probe：dep-edge 与 machete 各配 intact / broken 双例；
+//! dep-tag（git 依赖 branch 钉版 → WARN）用真实 git 仓库做依赖源。
 
 use check_core::Report;
 use check_core::config::ChecksConfig;
@@ -159,5 +160,162 @@ fn machete_translates_unused_dependency() {
             .findings
             .iter()
             .any(|f| f.message.contains("crates/used") || f.message.contains("crate used"))
+    );
+}
+
+// ---------------------------------------------------------------------------
+// dep-tag：git 依赖 branch 钉版 → 恰好一条 WARN；tag / rev 与 registry 依赖 → 沉默。
+// 用真实 git 仓库当依赖源：只有真实 `cargo metadata` 的 source 字段才带
+// tag/branch 信息（伪造不出来）。git 不可用的环境跳过（环境缺失，非测试失败）。
+
+fn git_available() -> bool {
+    std::process::Command::new("git")
+        .arg("--version")
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
+
+/// 建一个本地 git 仓库（upstream）并提交；返回其路径。
+fn git_upstream(root: &Path, name: &str) -> std::path::PathBuf {
+    let dir = root.join(name);
+    write(
+        &dir,
+        "Cargo.toml",
+        "[package]\nname = \"upstream\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+    );
+    write(&dir, "src/lib.rs", "pub fn u() {}\n");
+    let run = |args: &[&str]| {
+        let out = std::process::Command::new("git")
+            .args(args)
+            .current_dir(&dir)
+            .env("GIT_AUTHOR_NAME", "t")
+            .env("GIT_AUTHOR_EMAIL", "t@t")
+            .env("GIT_COMMITTER_NAME", "t")
+            .env("GIT_COMMITTER_EMAIL", "t@t")
+            .output()
+            .expect("git");
+        assert!(out.status.success(), "git {args:?} failed: {out:?}");
+    };
+    run(&["init", "-q", "-b", "main"]);
+    run(&["add", "-A"]);
+    run(&["commit", "-qm", "init"]);
+    dir
+}
+
+fn run_dep_tag(root: &Path) -> Report {
+    let (registry, errors) = Registry::build(
+        vec![Box::new(check_deps::dep_tag::GitDepPin)],
+        &[],
+        &check_core::config::ChecksConfig::default(),
+    );
+    assert!(errors.is_empty(), "{errors:?}");
+    let ctx = Ctx::new(root, Vec::new(), None);
+    registry.run(
+        &ctx,
+        &RunOptions {
+            classes: None,
+            semantic_endpoint: None,
+            overrides: None,
+        },
+    )
+}
+
+#[test]
+fn branch_pinned_git_dep_is_flagged_tag_is_not() {
+    if !git_available() {
+        eprintln!("skip: git unavailable");
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let upstream = git_upstream(dir.path(), "upstream");
+    let upstream = upstream.to_str().unwrap();
+
+    write(
+        dir.path(),
+        "Cargo.toml",
+        "[workspace]\nresolver = \"2\"\nmembers = [\"crates/consumer\"]\n",
+    );
+    write(
+        dir.path(),
+        "crates/consumer/Cargo.toml",
+        &format!(
+            "[package]\nname = \"consumer\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n\
+             [dependencies]\nupstream = {{ git = \"file://{upstream}\", branch = \"main\" }}\n"
+        ),
+    );
+    write(dir.path(), "crates/consumer/src/lib.rs", "pub fn c() {}\n");
+
+    // broken：branch 钉版 → 恰好一条 finding，指回消费方 Cargo.toml
+    let report = run_dep_tag(dir.path());
+    assert_eq!(report.findings.len(), 1, "{report:?}");
+    assert_eq!(report.findings[0].id, "DEPS.git-dep-branch");
+    assert_eq!(report.findings[0].path, "crates/consumer/Cargo.toml");
+    assert_eq!(report.findings[0].severity, check_core::Severity::Warn);
+    assert!(
+        report.findings[0].message.contains("branch=main"),
+        "{:?}",
+        report.findings[0].message
+    );
+
+    // intact：同一依赖改 tag 钉版 → 0 finding
+    write(
+        dir.path(),
+        "crates/consumer/Cargo.toml",
+        &format!(
+            "[package]\nname = \"consumer\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n\
+             [dependencies]\nupstream = {{ git = \"file://{upstream}\", tag = \"v1\" }}\n"
+        ),
+    );
+    let upstream_dir = std::path::PathBuf::from(upstream);
+    let git = |args: &[&str]| {
+        let out = std::process::Command::new("git")
+            .args(args)
+            .current_dir(&upstream_dir)
+            .output()
+            .unwrap();
+        assert!(out.status.success(), "git {args:?}: {out:?}");
+    };
+    git(&["tag", "v1"]);
+    let report = run_dep_tag(dir.path());
+    assert!(
+        report
+            .findings
+            .iter()
+            .all(|f| f.id != "DEPS.git-dep-branch"),
+        "{report:?}"
+    );
+}
+
+#[test]
+fn path_and_registry_deps_are_out_of_scope() {
+    if !git_available() {
+        eprintln!("skip: git unavailable");
+        return;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let upstream = git_upstream(dir.path(), "upstream");
+    let upstream = upstream.to_str().unwrap();
+    write(
+        dir.path(),
+        "Cargo.toml",
+        "[workspace]\nresolver = \"2\"\nmembers = [\"crates/consumer\"]\n",
+    );
+    write(
+        dir.path(),
+        "crates/consumer/Cargo.toml",
+        &format!(
+            "[package]\nname = \"consumer\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n\
+             [dependencies]\nupstream = {{ git = \"file://{upstream}\", rev = \"abcd\" }}\n\
+             serde = \"1\"\n"
+        ),
+    );
+    write(dir.path(), "crates/consumer/src/lib.rs", "pub fn c() {}\n");
+
+    // rev 钉版 + registry 依赖都不报
+    let report = run_dep_tag(dir.path());
+    assert!(
+        report.findings.is_empty(),
+        "rev 钉版与 registry 依赖都应沉默：{report:?}"
     );
 }

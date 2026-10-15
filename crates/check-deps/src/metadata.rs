@@ -74,3 +74,125 @@ fn rel_dir(root: &Path, manifest_path: &str) -> Option<String> {
     let rel = dir.strip_prefix(root).ok()?;
     Some(rel.display().to_string())
 }
+
+/// 一条 git 依赖（Cargo.toml `dependencies` 里的 git 源）的钉版信息。
+#[derive(Debug)]
+pub struct GitDep {
+    /// 消费方包名（workspace 内）。
+    pub package: String,
+    /// 消费方 Cargo.toml 相对目录。
+    pub package_dir: String,
+    /// 依赖重命名后的键（`check-core = { git = … }` → `check-core`）。
+    pub dep: String,
+    /// git 仓库 URL。
+    pub url: String,
+    /// 钉版方式：tag / branch / rev 三选一。
+    pub pin: GitPin,
+}
+
+#[derive(Debug)]
+pub enum GitPin {
+    Tag(String),
+    Branch(String),
+    Rev(String),
+}
+
+impl GitPin {
+    /// 「是否钉死」：tag 与 rev 是可复现钉版；branch 会漂移。
+    pub fn is_pinned(&self) -> bool {
+        !matches!(self, GitPin::Branch(_))
+    }
+
+    /// 人类可读的钉版描述。
+    pub fn describe(&self) -> String {
+        match self {
+            GitPin::Tag(t) => format!("tag={t}"),
+            GitPin::Branch(b) => format!("branch={b}"),
+            GitPin::Rev(r) => format!("rev={}", &r[..r.len().min(12)]),
+        }
+    }
+}
+
+/// 从 `cargo metadata` 的完整 JSON 里抽 git 依赖。
+///
+/// `--no-deps` 不够：git 依赖本身不进 packages（除非被 resolve），但其
+/// `spec` 在依赖声明里。为避免引 cargo_metadata crate，直接跑不带
+/// `--no-deps` 的 metadata 并按 `dependencies[].source` 过滤（零正式依赖的
+/// 代价是多解析一层 JSON——serde 已在依赖树里）。
+pub fn git_deps(root: &Path) -> Option<Vec<GitDep>> {
+    let output = std::process::Command::new("cargo")
+        .current_dir(root)
+        .args(["metadata", "--format-version", "1"])
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    #[derive(Deserialize)]
+    struct Full {
+        #[serde(default)]
+        packages: Vec<FullPkg>,
+    }
+    #[derive(Deserialize)]
+    struct FullPkg {
+        name: String,
+        manifest_path: String,
+        #[serde(default)]
+        dependencies: Vec<FullDep>,
+    }
+    #[derive(Deserialize)]
+    struct FullDep {
+        name: String,
+        #[serde(default)]
+        source: Option<String>,
+        #[serde(default, rename = "req")]
+        _req: Option<String>,
+    }
+
+    let metadata: Full = serde_json::from_slice(&output.stdout).ok()?;
+
+    let mut out = Vec::new();
+    for pkg in &metadata.packages {
+        for dep in &pkg.dependencies {
+            let Some(source) = &dep.source else {
+                continue;
+            };
+            // source 形如 "git+https://…?tag=check-v0.1.5#dd812df…" 或 "?branch=main#rev"
+            let Some(rest) = source.strip_prefix("git+") else {
+                continue;
+            };
+            let (url, query) = match rest.split_once('?') {
+                Some((u, q)) => (u, q),
+                None => (rest, ""),
+            };
+            let url = url.trim_end_matches('#').to_string();
+            let pin = parse_pin(query);
+            let Some(pin) = pin else { continue };
+            out.push(GitDep {
+                package: pkg.name.clone(),
+                package_dir: rel_dir(root, &pkg.manifest_path)?,
+                dep: dep.name.clone(),
+                url,
+                pin,
+            });
+        }
+    }
+    Some(out)
+}
+
+/// 从 metadata source 的 query 串解析钉版（tag=/branch=/rev=）。
+fn parse_pin(query: &str) -> Option<GitPin> {
+    for pair in query.split('&') {
+        let pair = pair.split('#').next().unwrap_or(pair);
+        if let Some(t) = pair.strip_prefix("tag=") {
+            return Some(GitPin::Tag(t.to_string()));
+        }
+        if let Some(b) = pair.strip_prefix("branch=") {
+            return Some(GitPin::Branch(b.to_string()));
+        }
+        if let Some(r) = pair.strip_prefix("rev=") {
+            return Some(GitPin::Rev(r.to_string()));
+        }
+    }
+    None
+}
