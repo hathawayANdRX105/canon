@@ -84,7 +84,7 @@ impl Rule for TestNoAssert {
 }
 
 fn is_test_file(rel: &std::path::Path) -> bool {
-    if rel.extension().is_some_and(|e| e != "rs") {
+    if !crate::is_rust_file(rel) {
         return false;
     }
     let path = rel.to_string_lossy();
