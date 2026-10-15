@@ -254,12 +254,10 @@ ferrite 是两层布局（`crates/<domain>/<crate>/src`），而规则原先写�
 | `ccn` | l1 | pre-commit, merge | FAIL | 函数 ccn 天花板(6) + ratchet 记账：新违规/恶化硬拦，存量 ratchet.tsv 容忍且只许降；lizard 缺失静默跳过 |
 | `antislop` | l1 | pre-commit, pre-push, merge | WARN（HIGH→FAIL） | AI slop 五类（Placeholder/Deferral/Hedging/Stub/命名），antislop 二进制；缺失静默跳过 |
 | `rust_no_process_cmd` | l1 | pre-commit, pre-push, merge | FAIL | HTTP 调用走 reqwest, 不要 subprocess curl/wget |
-| `rust_no_dead_code_allow` | l1 | pre-commit, pre-push, merge | WARN | 合并前清理 #[allow(dead_code)] |
+| → *（已迁出）* `rust_tests_in_tests_dir` / `rust_no_cfg_test_in_tests_dir` / `rust_no_dead_code_allow` | — | pre-push, merge | WARN（checks.toml 覆盖链） | 已由 canon 规则库 `check-rust` 执行（`checks_deterministic` checklist，T10 收口；取证见 rules-crates 计划 §11） |
 | `rust_no_empty_module` | l1 | pre-commit, pre-push, merge | WARN | 微型空文件, 考虑合并到上层 mod |
-| `rust_tests_in_tests_dir` | l1 | pre-commit, pre-push, merge | FAIL | 测试必须同层 tests/ 目录 |
 | `rust_todo_needs_issue` | l1 | pre-commit, pre-push, merge | WARN | 注释里 TODO/FIXME 必须关联 issue 号（例 `// TODO(#123):`；不扫字符串/测试） |
 | `rust_test_no_assert` | l1 | pre-commit, pre-push, merge | WARN | 测试函数必须含 assert |
-| `rust_no_cfg_test_in_tests_dir` | l1 | pre-commit, pre-push, merge | WARN | tests/ 目录里不要 #[cfg(test)] |
 | `shared_components_check` | l1 | pre-commit, pre-push, merge | FAIL | 页面自带 ui 子模块即 FAIL：候选根 `crates/web/*/src`（旧布局）与 `crates/ui/*/src`（新布局 #220），两者都不存在的仓语料为空输出 []；其中带 `src/views` 的 page crate 禁有 `src/ui.rs` / `src/ui/`，共享组件放共享 crate（ui-kit）。已知差距：新布局下页面是 `crates/ui/pages/src/<域>/` 模块（非独立 crate），crate src 深度无 `views/` → 本版本恒绿（非静默短路）；页面模块级扫描留后续重设计 — ferrite 家族 (mono/gugu/silverq) |
 | `clippy` | l1 | merge | FAIL/WARN | rustc 错误 + unused/dead_code → FAIL；collapsible_if 等默认风格 → WARN；显式启用 12 条 pedantic/restriction/nursery（too_many_lines / semicolon_if_nothing_returned / wildcard_imports / needless_pass_by_value / struct_excessive_bools / explicit_iter_loop / explicit_into_iter_loop / cloned_instead_of_copied / redundant_clone / collapsible_else_if / redundant_else / single_match_else，经 `cargo clippy … -- -W` 传 clippy-driver）→ WARN；不启用 cognitive_complexity（与 CK-CCN 冗余）、many_single_char_names（FP 高）、unwrap_used（与 error_panic 重复） |
 | `ts_signals` | l1 | pre-commit, merge | FAIL/WARN | tree-sitter 确定性语法信号:unsafe 块缺安全不变量 → FAIL;if/else-if 链 ≥3 臂或嵌套 ≥3 层、`0..len()` 索引循环、owned 参数 clone → WARN,均带 category+suggestion;软依赖 tree_sitter+tree_sitter_rust,缺失静默跳过 |

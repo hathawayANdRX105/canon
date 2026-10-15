@@ -232,7 +232,20 @@ pub fn load(spec_dir: &Path) -> Vec<Rule> {
 /// itself, so `focus: "antislop"` works without a table entry and the table
 /// never becomes a second rule registry to keep in sync.
 pub const FOCUS_PRESETS: &[(&str, &[&str])] = &[
-    ("test", &["test", "assert"]),
+    // T10 retired the shell seeds (rust_tests_in_tests_dir / rust_no_cfg_test_in_tests_dir /
+    // rust_no_dead_code_allow); the test preset now points at the check-rust rule ids and the
+    // still-live rust_test_no_assert / rust_todo_needs_issue.
+    (
+        "test",
+        &[
+            "test",
+            "assert",
+            "tests_in_tests_dir",
+            "cfg_test_in_tests",
+            "dead_code",
+            "todo",
+        ],
+    ),
     (
         "refactor",
         &[
