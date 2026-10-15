@@ -1,10 +1,12 @@
 //! 依赖图谱类规则：域边界（cargo metadata 路径依赖）与外部工具翻译。
 
+pub mod cycles;
 pub mod dep_edge;
 pub mod dep_tag;
 pub mod machete;
 pub mod metadata;
 
+pub use cycles::CyclesFactory;
 pub use dep_edge::DepEdgeFactory;
 
 use check_core::rule::Rule;
@@ -16,5 +18,8 @@ pub fn rules() -> Vec<Box<dyn Rule>> {
 
 /// 成员仓 bin 组装用：本域的参数化 kind（checks.toml 实例化）。
 pub fn factories() -> Vec<Box<dyn check_core::kinds::KindFactory>> {
-    vec![Box::new(dep_edge::DepEdgeFactory)]
+    vec![
+        Box::new(dep_edge::DepEdgeFactory),
+        Box::new(cycles::CyclesFactory),
+    ]
 }

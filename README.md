@@ -39,7 +39,8 @@ canon/
 ├── crates/web/        # flow 的本地看板（Dioxus wasm）
 ├── crates/check-*/    # Rust 规则库（纯 lib，被成员仓的 checks/ 独立包消费）：
 │                      #   check-core（引擎/kind 框架）、check-rust、check-dioxus、
-│                      #   check-deps、check-assets；接入见 CHECKS_ONBOARDING.md
+│                      #   check-deps、check-assets、check-git（git 历史信号：
+│                      #   热点/变更耦合/缺陷历史，advisory）；接入见 CHECKS_ONBOARDING.md
 ├── specs/             # 规范正本
 │   ├── quality/ code/ cleanup/ workspace/ github/ dioxus/   ← 规则 yaml
 │   ├── harness/       ← 规则执行器（Python）+ 模型问题集（JSON）
