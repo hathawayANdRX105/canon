@@ -124,3 +124,68 @@ fn dead_code_allow_same_line_reason_passes_bare_fails() {
             .all(|f| f.id == "RUST.dead-code-allow")
     );
 }
+
+#[test]
+fn attr_text_in_literals_and_comments_stays_silent() {
+    // T10 取证的 FP 类：字符串字面量 / 注释里的属性文案，AST 口径必须沉默
+    let dir = tempfile::tempdir().unwrap();
+    let registry = registry();
+    let intact = vec![
+        write_fixture(
+            dir.path(),
+            "tests/fixtures.rs",
+            "const FIXTURE: &str = \"#[allow(dead_code)]\\nfn unused() {}\";\n",
+        ),
+        write_fixture(
+            dir.path(),
+            "src/doc.rs",
+            "/// 文档示例：#[cfg(test)] 形态不该被误报\npub fn documented() {}\n",
+        ),
+        write_fixture(
+            dir.path(),
+            "src/comment.rs",
+            "// 行注释里的 #[allow(dead_code)] 也不该报\npub fn commented() {}\n",
+        ),
+        write_fixture(
+            dir.path(),
+            "src/cross_path.rs",
+            "#[allow(clippy::dead_code)]\npub fn lint_path() {}\n",
+        ),
+    ];
+    assert!(
+        run(&registry, dir.path(), &intact).findings.is_empty(),
+        "字面量/注释/跨路径文案不得触发"
+    );
+}
+
+#[test]
+fn multi_line_attr_fires_and_trailing_reason_exempt() {
+    let dir = tempfile::tempdir().unwrap();
+    let registry = registry();
+    // 多行属性：结束行尾注 → 豁免；无尾注 → finding 在起始行
+    write_fixture(
+        dir.path(),
+        "src/legacy.rs",
+        "#[allow(\n    dead_code,\n)] // kept: wire format (#123)\nfn old() {}\n",
+    );
+    let exempt = run(
+        &registry,
+        dir.path(),
+        &[std::path::PathBuf::from("src/legacy.rs")],
+    );
+    assert!(exempt.findings.is_empty(), "{exempt:?}");
+
+    write_fixture(
+        dir.path(),
+        "src/legacy2.rs",
+        "#[allow(\n    dead_code,\n)]\nfn old2() {}\n",
+    );
+    let report = run(
+        &registry,
+        dir.path(),
+        &[std::path::PathBuf::from("src/legacy2.rs")],
+    );
+    assert_eq!(report.findings.len(), 1, "{report:?}");
+    assert_eq!(report.findings[0].id, "RUST.dead-code-allow");
+    assert_eq!(report.findings[0].line, 1, "finding 落在属性起始行");
+}
