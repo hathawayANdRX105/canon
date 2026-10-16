@@ -60,6 +60,16 @@ fn main() {
 }
 ```
 
+### 1.5 入口别名：`.cargo/config.toml` 加 `[alias] xtask`
+
+```toml
+[alias]
+xtask = "run -q --manifest-path checks/Cargo.toml --"
+```
+
+独立包设计下不能用 `-p`（不进 workspace），走 `--manifest-path`。此后
+成员仓检查统一入口：`cargo xtask <list|check|explain>`（kime/mono 已落地）。
+
 ## 2. 写策略：仓根 `checks.toml`
 
 一页文件装三类东西；**规则管判定、路径管策略**——存量债/非纪律面用 `scope_*`
@@ -84,9 +94,21 @@ scope_include = ["crates/ui/**"]
 scope_exclude = ["apps/kit-demo"]
 ```
 
+**语义路径表 `[domains]`**：仓内布局的单一事实源。`[rules.<id>]` 的
+scope_include/exclude 条目可写 `@<域>` 标记，load() 展开为对应 glob 列表——
+仓库改名只改 `[domains]` 一处，未知标记配置期硬报（笔误不会静默变零命中）：
+
+```toml
+[domains]
+frontend = ["crates/ui/**", "apps/web/**"]
+
+[rules."RSX.cjk-text"]
+scope_include = ["@frontend"]
+```
+
 实例参数键由各 kind 的 serde 类型裁决（`deny_unknown_fields`）：**写错键会硬报**，
-不会静默忽略。规则目录与条文：`cargo run -q --manifest-path checks/Cargo.toml -- list`
-（`--json` 机器可读）与 `... explain <id>`。
+不会静默忽略。规则目录与条文：`cargo xtask list`（`--json` 机器可读）与
+`cargo xtask explain <id>`。
 
 ## 3. 接门禁：canon checklist（成员仓本地）
 
@@ -126,10 +148,9 @@ timeout: 600
 ## 4. 验收（照跑四条）
 
 ```bash
-B="cargo run -q --manifest-path checks/Cargo.toml --"
-$B list                                              # 规则集（静态 + 实例）
-$B check --root . --scope all --class deterministic --canon --report-json | jq '{counts: (.findings | group_by(.id) | map({id: .[0].id, n: length})), not_checked}'
-$B check --root . --scope changed --base origin/main --canon --report-json   # 本次改动应为空
+cargo xtask list                                              # 规则集（静态 + 实例）
+cargo xtask check --root . --scope all --class deterministic --canon --report-json | jq '{counts: (.findings | group_by(.id) | map({id: .[0].id, n: length})), not_checked}'
+cargo xtask check --root . --scope changed --base origin/main --canon --report-json   # 本次改动应为空
 canon check checks_deterministic                     # 走引擎接线（merge 口径）
 ```
 
