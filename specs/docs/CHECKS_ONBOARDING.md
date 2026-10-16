@@ -13,18 +13,18 @@
 规则只在开发机与 merge 钩子上跑。
 
 ```
-checks/
+xtask/
 ├── Cargo.toml      # [workspace] 空表 + [package] + canon git 依赖（钉 tag）
 └── src/main.rs     # 组装规则集（4 行）
 ```
 
-`checks/Cargo.toml`：
+`xtask/Cargo.toml`：
 
 ```toml
 [workspace]           # 独立包：不进目标仓 workspace，公开 CI 不解析私仓依赖
 
 [package]
-name = "checks"
+name = "xtask"
 version = "0.1.0"
 edition = "2024"
 publish = false
@@ -37,14 +37,14 @@ check-deps = { git = "https://github.com/hathawayANdRX105/canon", tag = "check-v
 check-assets = { git = "https://github.com/hathawayANdRX105/canon", tag = "check-v0.1.5" }
 
 [[bin]]
-name = "checks"
+name = "xtask"
 path = "src/main.rs"
 ```
 
 按需裁剪依赖（只做 rust 规则就只留 `check-core` + `check-rust`）。
-**tag 钉版**，不用分支——升级是显式动作（见第 5 步）。提交 `checks/Cargo.lock`。
+**tag 钉版**，不用分支——升级是显式动作（见第 5 步）。提交 `xtask/Cargo.lock`。
 
-`checks/src/main.rs`：
+`xtask/src/main.rs`：
 
 ```rust
 fn main() {
@@ -64,7 +64,7 @@ fn main() {
 
 ```toml
 [alias]
-xtask = "run -q --manifest-path checks/Cargo.toml --"
+xtask = "run -q --manifest-path xtask/Cargo.toml --"
 ```
 
 独立包设计下不能用 `-p`（不进 workspace），走 `--manifest-path`。此后
@@ -131,7 +131,7 @@ harness:
       ROOT=$(git rev-parse --show-toplevel)
       cd "$ROOT" || exit 2
       BASE="${GATE_BASE:-origin/main}"
-      cargo run -q --manifest-path checks/Cargo.toml -- check --root "$ROOT" \
+      cargo run -q --manifest-path xtask/Cargo.toml -- check --root "$ROOT" \
         --scope changed --base "$BASE" --class deterministic --canon --json
 optional: true # 依赖/工具缺失 → WARN 跳过，不假绿
 timeout: 600
@@ -161,7 +161,7 @@ canon check checks_deterministic                     # 走引擎接线（merge �
 
 - canon 侧新增 kind/规则 → 在 canon 仓打新 tag（**必须打在 origin/main**：
   `git tag check-vX.Y.Z origin/main && git push origin check-vX.Y.Z`；本地 main 可能
-  含他人未推送提交）；目标仓升 tag 后 `rm checks/Cargo.lock` 重建。
+  含他人未推送提交）；目标仓升 tag 后 `rm xtask/Cargo.lock` 重建。
 - 阈值/严重度调整只改 `checks.toml`，不动规则代码；规则条文用 `explain <id>` 查。
 - 存量债处理次序：先 `scope_exclude` 把非纪律面摘出去，再逐条整改；
   存量清零后把 `fail_severity` 升到 FAIL。
