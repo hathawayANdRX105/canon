@@ -33,3 +33,46 @@ fn missing_config_file_is_empty_defaults() {
     assert!(cfg.kinds.is_empty());
     assert!(cfg.rules.is_empty());
 }
+
+#[test]
+fn domains_expand_markers_in_rule_scopes() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("checks.toml");
+    std::fs::write(
+        &path,
+        r#"
+[domains]
+frontend = ["crates/ui/**", "apps/web/**"]
+
+[rules."GIT.hotspot.m"]
+scope_exclude = ["@frontend", "Cargo.lock"]
+"#,
+    )
+    .unwrap();
+    let cfg = check_core::config::load(&path).unwrap();
+    let rule = cfg.rules.get("GIT.hotspot.m").unwrap();
+    assert_eq!(
+        rule.scope_exclude,
+        vec![
+            "crates/ui/**".to_string(),
+            "apps/web/**".to_string(),
+            "Cargo.lock".to_string()
+        ]
+    );
+}
+
+#[test]
+fn unknown_domain_marker_is_a_hard_config_error() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("checks.toml");
+    std::fs::write(
+        &path,
+        r#"
+[rules."X"]
+scope_include = ["@typo"]
+"#,
+    )
+    .unwrap();
+    let err = check_core::config::load(&path).unwrap_err();
+    assert!(err.message.contains("@typo"), "{:?}", err.message);
+}

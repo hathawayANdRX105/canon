@@ -20,6 +20,11 @@ pub struct ChecksConfig {
     /// 参数化实例：kind -> 实例名 -> 参数表（D9：同一实现，多实例）。
     #[serde(default)]
     pub kinds: BTreeMap<String, BTreeMap<String, toml::Table>>,
+    /// 语义路径表（配置特制/泛化拆分）：仓内布局的单一事实源。
+    /// [rules.<id>] 的 scope_include/exclude 条目写 `@frontend`，
+    /// load() 时展开为 domains.frontend 的 glob 列表——仓库改名只改这里。
+    #[serde(default)]
+    pub domains: BTreeMap<String, Vec<String>>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -76,14 +81,57 @@ impl std::fmt::Display for ConfigError {
 /// 读取 checks.toml；文件缺失 = 空配置，解析失败 = 错误。
 pub fn load(path: &Path) -> Result<ChecksConfig, ConfigError> {
     match std::fs::read_to_string(path) {
-        Ok(text) => toml::from_str(&text).map_err(|e| ConfigError {
-            path: path.to_path_buf(),
-            message: e.to_string(),
-        }),
+        Ok(text) => {
+            let mut cfg: ChecksConfig = toml::from_str(&text).map_err(|e| ConfigError {
+                path: path.to_path_buf(),
+                message: e.to_string(),
+            })?;
+            expand_domains(&mut cfg).map_err(|message| ConfigError {
+                path: path.to_path_buf(),
+                message,
+            })?;
+            Ok(cfg)
+        }
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(ChecksConfig::default()),
         Err(e) => Err(ConfigError {
             path: path.to_path_buf(),
             message: e.to_string(),
         }),
     }
+}
+
+/// 展开 [rules.<id>] scope_* 里的 `@<domain>` 标记为 [domains.<domain>] 的
+/// glob 列表。单层展开（展开结果里的 `@` 不再递归——嵌套是配置错误，会以
+/// 零命中形式被 gate 的 SCOPE-EMPTY 捕获）。未知标记硬报：配置笔误不能
+/// 静默变成零命中。
+fn expand_domains(cfg: &mut ChecksConfig) -> Result<(), String> {
+    let mut expanded: BTreeMap<String, RuleOverride> = BTreeMap::new();
+    for (id, rule) in std::mem::take(&mut cfg.rules) {
+        let mut rule = rule;
+        let map = |entry: String| -> Result<Vec<String>, String> {
+            if let Some(marker) = entry.strip_prefix('@') {
+                let patterns = cfg.domains.get(marker).ok_or_else(|| {
+                    format!(
+                        "规则 {id} 引用未定义的路径域 @{marker}——补 [domains.{marker}] 或改回字面 glob"
+                    )
+                })?;
+                Ok(patterns.clone())
+            } else {
+                Ok(vec![entry])
+            }
+        };
+        let mut inc = Vec::new();
+        for e in std::mem::take(&mut rule.scope_include) {
+            inc.extend(map(e)?);
+        }
+        let mut exc = Vec::new();
+        for e in std::mem::take(&mut rule.scope_exclude) {
+            exc.extend(map(e)?);
+        }
+        rule.scope_include = inc;
+        rule.scope_exclude = exc;
+        expanded.insert(id, rule);
+    }
+    cfg.rules = expanded;
+    Ok(())
 }
