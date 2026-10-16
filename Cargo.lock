@@ -375,6 +375,7 @@ name = "gate"
 version = "0.5.17"
 dependencies = [
  "anyhow",
+ "globset",
  "regex",
  "serde",
  "serde_json",

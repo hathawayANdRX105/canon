@@ -423,6 +423,71 @@ fn file_matches(spec: &ChecklistSpec, rel: &str) -> bool {
     spec.include.iter().any(|p| matches_include(rel, p))
 }
 
+/// 全部跟踪文件（gitignore 感知）。作用域自检的语料口径。
+fn tracked_files() -> Vec<String> {
+    let Ok(out) = Command::new("git")
+        .args(["ls-files", "--name-only"])
+        .output()
+    else {
+        return Vec::new();
+    };
+    if !out.status.success() {
+        return Vec::new();
+    }
+    String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect()
+}
+
+/// 规则作用域自检（spec-problem 07）：paths_include 非空但对全仓跟踪文件
+/// 零命中 = 仓库布局漂移的确定性信号（规则永远不可能触发，FAIL 级也会
+/// 静默变 PASS）。WARN 提示修路径或退役；本就不适用的仓按处置记录退役。
+fn scope_empty_finding(spec: &ChecklistSpec, tracked: &[String]) -> Option<Finding> {
+    if spec.include.is_empty() || tracked.is_empty() {
+        return None;
+    }
+    let compile = |patterns: &[String]| -> Result<globset::GlobSet, String> {
+        let mut builder = globset::GlobSet::builder();
+        for p in patterns {
+            let g = globset::GlobBuilder::new(p)
+                .literal_separator(true)
+                .build()
+                .map_err(|e| format!("glob {p:?}: {e}"))?;
+            builder.add(g);
+        }
+        builder.build().map_err(|e| format!("globset build: {e}"))
+    };
+    // 真 glob 语义（globset）：引擎的宽松匹配器不理解中段 **（crates/web/**/*.rs
+    // 永远匹配不到，spec-problem 01/07 的共同根因）——自检必须按「声明语义」数，
+    // 否则会把「声明了真 glob 但引擎吃不下」的规则漏成静默绿。根治匹配器另项。
+    let inc = match compile(&spec.include) {
+        Ok(s) => s,
+        Err(e) => {
+            return Some(Finding::new(
+                &format!("checklist.{}.SCOPE-EMPTY", spec.name),
+                Severity::Warn,
+                &format!("paths_include 含无法编译的 glob：{e}——修路径或退役本规则"),
+            ));
+        }
+    };
+    let exc = compile(&spec.exclude).unwrap_or_default();
+    let hit = tracked
+        .iter()
+        .any(|rel| inc.is_match(rel) && (exc.is_empty() || !exc.is_match(rel)));
+    (!hit).then(|| {
+        Finding::new(
+            &format!("checklist.{}.SCOPE-EMPTY", spec.name),
+            Severity::Warn,
+            &format!(
+                "规则作用域为空（疑似仓库布局漂移）：paths_include {:?} 对全仓跟踪文件零命中——修路径或退役本规则",
+                spec.include
+            ),
+        )
+    })
+}
+
 fn has_match(spec: &ChecklistSpec, target: &Target) -> bool {
     let files = changed_files(target);
     files.iter().any(|f| file_matches(spec, f))
@@ -631,6 +696,12 @@ fn run_one(spec: &ChecklistSpec, target: &Target, ignore_hooks: bool) -> Vec<Fin
         if !routed {
             return vec![]; // not in this hook's scope — silent skip
         }
+    }
+    // 作用域自检在 diff 匹配之前：声明的语料为空时，本规则对任何 target
+    // 都不可能产出真实 finding，直接给漂移告警而不是跑完 harness 静默绿。
+    let tracked = tracked_files();
+    if let Some(f) = scope_empty_finding(spec, &tracked) {
+        return vec![f];
     }
     if spec.mode != Mode::Grep && !has_match(spec, target) {
         return vec![Finding::new(
@@ -1108,5 +1179,52 @@ mod tests {
             out[0].extra.get("confidence").map(String::as_str),
             Some("0.9")
         );
+    }
+
+    use super::*;
+
+    fn spec_with_include(include: &[&str]) -> ChecklistSpec {
+        spec(&format!(
+            "match:\n  paths_include:\n{}\nharness: {{command: \"true\", args: []}}",
+            include
+                .iter()
+                .map(|p| format!("    - \"{p}\"\n"))
+                .collect::<String>()
+        ))
+    }
+
+    #[test]
+    fn scope_empty_warns_when_include_matches_nothing() {
+        let s = spec_with_include(&["crates/web/**/*.rs"]);
+        let tracked = vec!["crates/ui/pages/src/x.rs".to_string()];
+        let f = scope_empty_finding(&s, &tracked).expect("zero-hit scope must warn");
+        assert!(f.rule_id.ends_with("SCOPE-EMPTY"), "{}", f.rule_id);
+        assert_eq!(f.severity, Severity::Warn);
+        assert!(f.msg.contains("crates/web/**/*.rs"));
+    }
+
+    #[test]
+    fn scope_check_silent_when_include_hits_or_declares_all() {
+        let s = spec_with_include(&["crates/web/**/*.rs"]);
+        let tracked = vec!["crates/web/ui-kit/src/x.rs".to_string()];
+        assert!(scope_empty_finding(&s, &tracked).is_none());
+
+        // 无 paths_include（全文件口径）→ 不自检
+        let all = spec("harness: {command: \"true\", args: []}");
+        assert!(scope_empty_finding(&all, &[]).is_none());
+    }
+
+    #[test]
+    fn scope_check_respects_exclude_and_empty_tracked() {
+        // exclude 排掉唯一命中也算零命中（声明的有效语料为空）
+        let s = spec(
+            "match:\n  paths_include: [\"src/**\"]\n  paths_exclude: [\"src/gen/**\"]\nharness: {command: \"true\", args: []}",
+        );
+        let tracked = vec!["src/gen/x.rs".to_string()];
+        assert!(scope_empty_finding(&s, &tracked).is_some());
+
+        // 非 git 环境（tracked 空）→ 跳过自检（无法验证不等于漂移）
+        let s2 = spec_with_include(&["anything/**"]);
+        assert!(scope_empty_finding(&s2, &[]).is_none());
     }
 }
