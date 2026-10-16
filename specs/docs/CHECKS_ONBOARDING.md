@@ -3,28 +3,35 @@
 把 canon 的 Rust 规则库（`check-core` / `check-rust` / `check-dioxus` / `check-deps` /
 `check-assets`）接进一个成员仓。形态已由 mono 的 T3–T7 五轮接线验证；照抄即可。
 
-> 前置：目标仓是 Rust 仓；与 canon 同机器（`~/.cargo` 的 git 凭据已可读私仓
-> `hathawayANdRX105/canon`）。**目标仓的 CI 不需要私仓凭据**——见第 1 步的设计。
+> 前置：目标仓是 Rust 仓。canon 仓是**公开仓**（`github.com/hathawayANdRX105/canon`，
+> 匿名可拉），CI 不需要任何凭据。
 
-## 1. 建独立包（刻意不进目标仓 workspace）
+## 1. 建 xtask/ 工作区（刻意不进目标仓 workspace）
 
-为什么独立：crate 依赖私仓 canon，若进 workspace，目标仓的任何 `cargo build/test`
-（含公开 CI runner）都要解析私仓 → 无凭据即 401。独立包让公开 CI 完全不碰它；
-规则只在开发机与 merge 钩子上跑。
+为什么独立：xtask 有自己的依赖节奏——canon 规则库按 tag 升级，独立 lock 让
+目标仓根 `Cargo.lock` 不被门禁依赖牵动，`cargo build/test --workspace` 也不必
+编译 check-* crates。规则只在开发机与 merge 钩子上跑。
 
 ```
 xtask/
-├── Cargo.toml      # [workspace] 空表 + [package] + canon git 依赖（钉 tag）
-└── src/main.rs     # 组装规则集（4 行）
+├── Cargo.toml      # [workspace] 清单：members = ["check"]（未来加别的 xtask 命令）
+└── check/
+    ├── Cargo.toml  # [package] xtask-check + canon git 依赖（钉 tag）
+    └── src/main.rs # 组装规则集（4 行）
 ```
 
 `xtask/Cargo.toml`：
 
 ```toml
-[workspace]           # 独立包：不进目标仓 workspace，公开 CI 不解析私仓依赖
+[workspace]           # xtask 独立工作区：不进目标仓 workspace（canon 按 tag 升级
+resolver = "2"        # 不牵动目标仓根 lock）
+members = ["check"]
+```
+
+`xtask/check/Cargo.toml`：
 
 [package]
-name = "xtask"
+name = "xtask-check"
 version = "0.1.0"
 edition = "2024"
 publish = false
@@ -37,14 +44,14 @@ check-deps = { git = "https://github.com/hathawayANdRX105/canon", tag = "check-v
 check-assets = { git = "https://github.com/hathawayANdRX105/canon", tag = "check-v0.1.5" }
 
 [[bin]]
-name = "xtask"
+name = "check"
 path = "src/main.rs"
 ```
 
 按需裁剪依赖（只做 rust 规则就只留 `check-core` + `check-rust`）。
 **tag 钉版**，不用分支——升级是显式动作（见第 5 步）。提交 `xtask/Cargo.lock`。
 
-`xtask/src/main.rs`：
+`xtask/check/src/main.rs`：
 
 ```rust
 fn main() {
@@ -64,11 +71,13 @@ fn main() {
 
 ```toml
 [alias]
-xtask = "run -q --manifest-path xtask/Cargo.toml --"
+xtask = "run -q --manifest-path xtask/Cargo.toml -p xtask-check --"
 ```
 
-独立包设计下不能用 `-p`（不进 workspace），走 `--manifest-path`。此后
-成员仓检查统一入口：`cargo xtask <list|check|explain>`（kime/mono 已落地）。
+xtask/ 是独立工作区（不进目标仓 workspace），所以要走 `--manifest-path` +
+`-p xtask-check`。此后
+成员仓检查统一入口：`cargo xtask check <list|check|explain>`（kime/mono 已落地）。
+将来加别的 xtask 命令：加 `xtask/<命令>/` crate + 一条 `xtask-<命令>` alias。
 
 ## 2. 写策略：仓根 `checks.toml`
 
@@ -107,8 +116,8 @@ scope_include = ["@frontend"]
 ```
 
 实例参数键由各 kind 的 serde 类型裁决（`deny_unknown_fields`）：**写错键会硬报**，
-不会静默忽略。规则目录与条文：`cargo xtask list`（`--json` 机器可读）与
-`cargo xtask explain <id>`。
+不会静默忽略。规则目录与条文：`cargo xtask check list`（`--json` 机器可读）与
+`cargo xtask check explain <id>`。
 
 ## 3. 接门禁：canon checklist（成员仓本地）
 
@@ -131,7 +140,7 @@ harness:
       ROOT=$(git rev-parse --show-toplevel)
       cd "$ROOT" || exit 2
       BASE="${GATE_BASE:-origin/main}"
-      cargo run -q --manifest-path xtask/Cargo.toml -- check --root "$ROOT" \
+      cargo run -q --manifest-path xtask/Cargo.toml -p xtask-check -- check --root "$ROOT" \
         --scope changed --base "$BASE" --class deterministic --canon --json
 optional: true # 依赖/工具缺失 → WARN 跳过，不假绿
 timeout: 600
@@ -148,7 +157,7 @@ timeout: 600
 ## 4. 验收（照跑四条）
 
 ```bash
-cargo xtask list                                              # 规则集（静态 + 实例）
+cargo xtask check list                                         # 规则集（静态 + 实例）
 cargo xtask check --root . --scope all --class deterministic --canon --report-json | jq '{counts: (.findings | group_by(.id) | map({id: .[0].id, n: length})), not_checked}'
 cargo xtask check --root . --scope changed --base origin/main --canon --report-json   # 本次改动应为空
 canon check checks_deterministic                     # 走引擎接线（merge 口径）
