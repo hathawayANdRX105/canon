@@ -16,6 +16,8 @@ projects:
     root: oh-my-pi
     titles:
       local/: oh-my-pi 开发约定
+    params:
+      testing_ci_ref: ""
     include:
     - local/
     - _discipline
@@ -29,6 +31,8 @@ projects:
     root: herdr
     titles:
       local/: herdr 约定
+    params:
+      testing_ci_ref: ""
     include:
     - local/
     - _discipline
@@ -63,6 +67,8 @@ projects:
     root: silverq
     titles:
       local/: silverq 约定
+    params:
+      testing_ci_ref: ""
     include:
     - local/
     - _discipline
@@ -74,6 +80,8 @@ projects:
     root: kymido
     titles:
       local/: kymido 约定
+    params:
+      testing_ci_ref: ""
     include:
     - local/
     - _discipline
@@ -88,6 +96,8 @@ projects:
     root: sightline
     titles:
       local/: sightline 约定
+    params:
+      testing_ci_ref: ""
     include:
     - local/
     - _discipline
@@ -100,6 +110,8 @@ projects:
     root: kime
     titles:
       local/: kime 约定
+    params:
+      testing_ci_ref: ""
     include:
     - local/
     - _discipline
@@ -112,6 +124,8 @@ projects:
     root: mono  # GitHub: hathawayANdRX105/ferrite；本地目录暂名 mono，改名后同步此值
     titles:
       local/: ferrite 约定
+    params:
+      testing_ci_ref: "与 `.agent/rules/testing-ci.md` "
     include:
     - local/
     - _discipline
@@ -127,6 +141,8 @@ projects:
     root: algorchemy
     titles:
       local/: algorchemy 约定
+    params:
+      testing_ci_ref: ""
     include:
     - local/
     - _discipline
@@ -148,6 +164,8 @@ projects:
     root: canon
     titles:
       local/: canon 约定
+    params:
+      testing_ci_ref: ""
     include:
     - local/
     - _discipline

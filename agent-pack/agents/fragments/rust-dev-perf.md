@@ -7,7 +7,7 @@
 - 跑测试用 `just test-fast`：testless 函数级影响分析，只跑本次改动可能破坏的
   测试；testless 异常/零命中绝不静默跳过。全量口径是 `cargo test --workspace`
   （根包 workspace 下裸 `cargo test` 只跑根包）；**全量在本地跑还是交 CI
-  （含本地是否直接拒跑），一律以本仓 local 约定与 `.agent/rules/testing-ci.md` 为准**。
+  （含本地是否直接拒跑），一律以本仓 local 约定{{testing_ci_ref}}为准**。
 - 不要在会话里自行 `export RUSTC_WRAPPER` 或改 jobs——统一走仓配置；
   重命令套 `.githooks/heavy <cmd>`（配额按核数现算，细节见 `.githooks/heavy` 头注）。
 - 增量编译已关（缓存优先）：同树连续小改动按 crate 级重编是预期行为，不是
