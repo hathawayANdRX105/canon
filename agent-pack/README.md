@@ -11,7 +11,7 @@
 
 | 目录 | 内容 | 装到 |
 |---|---|---|
-| `rules/` | conventions / dev-env / gates / pr-workflow / testing-ci / web-lanes + agent-readme | ferrite `.agent/rules/`、`.agent/README.md` |
+| `rules/` | conventions / dev-env / gates / pr-workflow / testing-ci + agent-readme | ferrite `.agent/rules/`、`.agent/README.md` |
 | `skills/` | `<名>.md`（同源单版）或 `<名>.<项目>.md`（分叉双版） | `<项目>/.agent/skills/<名>/SKILL.md` |
 | `templates/` | task-templates-handbook（kymido 编排模板） | kymido `.agent/task-templates-handbook.md` |
 

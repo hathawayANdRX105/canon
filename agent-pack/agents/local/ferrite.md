@@ -122,7 +122,6 @@
 | 提交被拦 / 建 PR 被拒 / 查规则 | `.agent/rules/gates.md`（规则总览 `gate-spec` skill） |
 | 起后端 / 数据库 / 前端 | `.agent/rules/dev-env.md` |
 | Dioxus UI / Rust 公共 API / 调查审查 | `.agent/rules/conventions.md` |
-| web 双车道 | `.agent/rules/web-lanes.md`（任务书用 `task-brief` / `pr-orchestration` skill 生成） |
 | `.agent/` 目录组织 | `.agent/README.md` |
 
 ---
@@ -139,13 +138,6 @@
 - 每轮「审查 + 修复」在 PR 写一条评论（含修复 commit）；冒烟验证单独一条（手段 + 结果）。
   「通过」= `shell-ci` 全绿；快关绿 ≠ 全绿——全量按上表离线回查后汇报。
 - 记录 `base_sha`，CRG / review 用 `--base <base_sha>`，不写死 main。
-
-### web 双车道快车道
-
-改动**只落** `crates/ui/*` + 两个 web app（不碰 contract/api/gateway/harness）时走双车道
-（权威：`.agent/rules/web-lanes.md`），跳过重型流程：短分支从 `web-dev` 切、dev 浏览器自测
-（`just dev-web-rebuild [port] [debug]`）、squash 合回 `web-dev` 即走人；发布 PR = `web-dev → main`
-（merge commit），闸门照跑不绕。固定 worktree `.wt/web-dev` / `.wt/web-fix`，不为小改动新开。
 
 ---
 
