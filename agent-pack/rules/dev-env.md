@@ -85,7 +85,7 @@
 
 ## 五、codegraph 索引（图谱工具引导）
 
-`cg_query` / `cg_callers` / `cg_callees` / `cg_impact` / `cg_affected` 五个工具是**进程内只读**查询，直接读 `.codegraph/codegraph.db`（由外部 `codegraph` CLI 维护的符号/调用图索引）。harness 侧**零 spawn**：不启动任何子进程，只开 db 查。
+`cg_query` / `cg_graph` / `cg_affected` 三个工具是**进程内只读**查询，直接读 `.codegraph/codegraph.db`（由外部 `codegraph` CLI 维护的符号/调用图索引）。harness 侧**零 spawn**：不启动任何子进程，只开 db 查。
 
 **引导（bootstrap）**：
 
@@ -98,10 +98,9 @@
 | 意图 | 工具 |
 |---|---|
 | 按名/语义找符号（含 docstring / 签名） | `cg_query` |
-| 某符号的直接调用方 / 被调方（单跳 calls 边） | `cg_callers` / `cg_callees` |
-| 改这个符号会波及谁（反向 BFS，depth 默认 2、上限 3） | `cg_impact` |
+| 某符号的直接调用方 / 被调方 / 波及谁（单跳 calls 边；反向 BFS，depth 默认 2、上限 3） | `cg_graph`（command=callers / callees / impact） |
 | 给定变更文件列表，该跑哪些测试文件（反向 BFS + 测试文件过滤） | `cg_affected` |
 
 **不要用我**：字面串检索用 `grep`；找文件路径用 `glob`；codegraph 是**符号 / 调用图关系**，不是文本搜索。
 
-**G4 局限**：Rust 域跨文件调用边可能缺失（外部索引解析限制），结果供参考；承重判断前建议与 `grep` 交叉验证。五个工具的每条成功输出都附了这一行提示。
+**G4 局限**：Rust 域跨文件调用边可能缺失（外部索引解析限制），结果供参考；承重判断前建议与 `grep` 交叉验证。三个工具的主要结果输出都附了这一行提示；歧义符号列候选、以及「无受影响测试文件」两类早返回不带。
