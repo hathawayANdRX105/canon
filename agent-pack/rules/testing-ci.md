@@ -58,7 +58,7 @@ CI 全部在公开壳仓 `hathawayANdRX105/ferrite-ci` 跑（计费原因见 AGE
 
 | 关卡 | 跑什么 |
 |---|---|
-| `lint-check` | `cargo fmt --all --check` + `cargo clippy --all-targets -- -D warnings`（始终全量）+ ui-kit 契约测试（显式全跑） |
+| `lint-check` | `cargo fmt --all --check` + `cargo clippy --all-targets -- -D warnings`（始终全量）+ ui-components 契约测试（显式全跑） |
 | `test` | PR：快关 `just test-fast origin/<base>`；main push / 手动 `full=true`：全量 `just test`（= `cargo test --all`）。挂 `postgres:18-alpine` 服务 |
 
 | 怎么触发 | 命令 |
@@ -95,7 +95,7 @@ CI 全部在公开壳仓 `hathawayANdRX105/ferrite-ci` 跑（计费原因见 AGE
 
 **原因**：CI 的 test 关卡跑 `cargo test --workspace -- <过滤>`（快关）或 `cargo test --all`（全量），lint 关卡跑 `cargo clippy --all-targets`——**这些命令都没带 `--features xxx`**，feature 门禁的测试依旧被编译但 `running 0 tests`。
 
-**实例**：`crates/gateway/metering/tests/ledger_concurrency.rs`（Shuttle 并发测试）。它需要 `cargo test -p metering --features shuttle` 才会真正跑；CI 日志里它的三个测试名一次都没出现。
+**实例**：`crates/gateway-metering/tests/ledger_concurrency.rs`（Shuttle 并发测试）。它需要 `cargo test -p metering --features shuttle` 才会真正跑；CI 日志里它的三个测试名一次都没出现。
 
 **怎么办**：
 1. 优先改成**不需要 feature 就能跑**（把依赖改成普通 dev-dependency）。
