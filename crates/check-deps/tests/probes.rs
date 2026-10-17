@@ -80,6 +80,65 @@ edges_deny = [{ from = "crates/baker/**", to = "crates/oven/**" }]
     assert_eq!(report.findings[0].severity, check_core::Severity::Fail);
 }
 
+/// Regression pin: cargo metadata reports `kind` for dev/build edges as a
+/// string (`"dev"`), not an array. Under the old array-only model any such
+/// dependency made the whole metadata deserialization fail, so the rule
+/// silently found nothing even for real normal-edge violations.
+#[test]
+fn dep_edge_survives_the_dev_dependency_kind_shape() {
+    let dir = tempfile::tempdir().unwrap();
+    write(
+        dir.path(),
+        "Cargo.toml",
+        "[workspace]\nresolver = \"2\"\nmembers = [\"crates/baker\", \"crates/oven\", \"crates/yeast\"]\n",
+    );
+    write(
+        dir.path(),
+        "crates/oven/Cargo.toml",
+        "[package]\nname = \"oven\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+    );
+    write(dir.path(), "crates/oven/src/lib.rs", "pub fn bake() {}\n");
+    write(
+        dir.path(),
+        "crates/yeast/Cargo.toml",
+        "[package]\nname = \"yeast\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+    );
+    write(dir.path(), "crates/yeast/src/lib.rs", "pub fn rise() {}\n");
+    write(
+        dir.path(),
+        "crates/baker/Cargo.toml",
+        "[package]\nname = \"baker\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n\
+         [dependencies]\noven = { path = \"../oven\" }\n\n\
+         [dev-dependencies]\nyeast = { path = \"../yeast\" }\n",
+    );
+    write(
+        dir.path(),
+        "crates/baker/src/lib.rs",
+        "pub use oven::bake;\n",
+    );
+
+    // normal edge baker -> oven still fires (pre-fix: metadata unparsable → empty)
+    let report = run(
+        r#"
+[kinds.dep-edge.forward]
+edges_deny = [{ from = "crates/baker/**", to = "crates/oven/**" }]
+"#,
+        dir.path(),
+    );
+    assert_eq!(report.findings.len(), 1, "{report:?}");
+    assert_eq!(report.findings[0].id, "DEP-EDGE.forward");
+
+    // dev edge baker -> yeast is not a normal edge → silent
+    let report = run(
+        r#"
+[kinds.dep-edge.dev]
+edges_deny = [{ from = "crates/baker/**", to = "crates/yeast/**" }]
+"#,
+        dir.path(),
+    );
+    assert!(report.findings.is_empty(), "{report:?}");
+}
+
 #[test]
 fn dep_edge_unknown_kind_config_is_setup_error() {
     let dir = tempfile::tempdir().unwrap();
