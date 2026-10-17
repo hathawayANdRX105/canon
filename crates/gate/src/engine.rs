@@ -1181,8 +1181,6 @@ mod tests {
         );
     }
 
-    use super::*;
-
     fn spec_with_include(include: &[&str]) -> ChecklistSpec {
         spec(&format!(
             "match:\n  paths_include:\n{}\nharness: {{command: \"true\", args: []}}",
