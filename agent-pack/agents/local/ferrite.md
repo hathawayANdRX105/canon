@@ -38,7 +38,7 @@
 
 | 术语 | 位置 | 含义 |
 |---|---|---|
-| 后端域 | `crates/api/` | 8 个 crate：`auth`、`billing`、`control-plane`（管理配置面）、`db`、`observe`、`router`、`api-mcp`、`tavern`。职责详单见 README |
+| 后端域 | `crates/api/` | 7 个 crate：`auth`、`billing`、`control-plane`（管理配置面）、`gateway-state`、`observe`、`router`、`api-mcp`。数据访问层单列在 `crates/db/`；职责详单见 README |
 | 前端域 | `crates/ui/` | 按层聚合：`ui-components`（原型件层：设计系统，零业务语义）、`feature-component`（业务组件层：吃数据与回调的域组装件）、`ui-models`（各域模型层）、`ui-util`（通用格式化）、`ui-styles`（样式真身）、`i18n`（全站文案）、`api`（REST wire，包名 `web-api`）、`pages`（页面组装：五域平铺页面文件）+ chatroom 前端 `coding`（wasm-safe 单 crate） |
 | 共享契约 | `crates/contract/` | 跨端 DTO 与协议错误；**唯一的跨域共享点** |
 | 网关与执行 | `crates/gateway-*`、`crates/harness/` | 调度转发引擎与 Agent 运行时 |

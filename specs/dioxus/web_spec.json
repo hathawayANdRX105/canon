@@ -125,7 +125,7 @@
       },
       "web_spec_severity": {
         "type": "score",
-        "instructions": "How urgent is the spec work this finding points at, for the web-dev lane?",
+        "instructions": "How urgent is the spec work this finding points at, for the web release?",
         "criteria": [
           "0: the file already satisfies the spec; the finding is noise.",
           "1: a local advisory — one naming issue, one missing testid, one extractable block that can wait.",
