@@ -39,14 +39,15 @@
 | 术语 | 位置 | 含义 |
 |---|---|---|
 | 后端域 | `crates/api/` | 8 个 crate：`auth`、`billing`、`control-plane`（管理配置面）、`db`、`observe`、`router`、`api-mcp`、`tavern`。职责详单见 README |
-| 前端域 | `crates/web/` | `ui-kit`（设计系统）、`admin`/`auth`/`client`/`console`/`tavern`/`insights`/`i18n` + kymido 投影层 `harness-*` |
+| 前端域 | `crates/ui/` | 按层聚合：`ui-components`（原型件层：设计系统，零业务语义）、`feature-component`（业务组件层：吃数据与回调的域组装件）、`ui-models`（各域模型层）、`ui-util`（通用格式化）、`ui-styles`（样式真身）、`i18n`（全站文案）、`api`（REST wire，包名 `web-api`）、`pages`（页面组装：五域平铺页面文件）+ chatroom 前端 `coding`（wasm-safe 单 crate） |
 | 共享契约 | `crates/contract/` | 跨端 DTO 与协议错误；**唯一的跨域共享点** |
-| 网关与执行 | `crates/gateway/`、`crates/harness/` | 调度转发引擎与 Agent 运行时 |
-| 应用 | `apps/<name>/` | 唯一有 `main.rs` 的组装层：`api`、`web`、`kit-demo`（ui-kit 演示场，wasm） |
+| 网关与执行 | `crates/gateway-*`、`crates/harness/` | 调度转发引擎与 Agent 运行时 |
+| 基础内容 | `bin/<name>/` | 唯一有 `main.rs` 的独立构建单元：`api`、`mcp`、`web`、`kit-demo`（ui-components 演示场，wasm）、`harness`（无头宿主） |
+| 平台入口 | `apps/<name>/` | 端上壳（desktop / mobile）：Tauri v2 骨架已落地，各自独立 workspace |
 
 - 功能 crate 只出 library API（独立 `Cargo.toml` + workspace member），不定义进程入口；
-  组装只在 `apps/`：`api` 装后端与 gateway/harness；`web` 与 `kit-demo` 两个 wasm app 装前端——
-  `web` 是前端单体入口（消费 `ui-kit`），`kit-demo` 是 ui-kit 组件演示场。
+  组装只在 `bin/`：`api` 装后端与 gateway/harness；`harness` 是无头宿主入口（薄装配 daemon 库：UDS 控制面 + 环回 WS 面）；`web` 与 `kit-demo` 两个 wasm app 装前端——
+  `web` 是前端单体入口（消费 `ui-components`），`kit-demo` 是 ui-components 组件演示场。
 - 域间禁止私有依赖，跨端数据只走 `crates/contract` DTO；新 DTO 先声明、由一个会话统一改。
 - **域目录独占**：会话接手 `crates/<domain>/` 即独占，不准越界改其他域；跨域重构先在 PR 报备清单确认无冲突。
   新增/移动 crate 才动根 `Cargo.toml`，改完在 PR 说明新增 member。
@@ -108,7 +109,7 @@
 
 - 凭据 / 真实 IP / 上游地址绝不入库、不进 PR 正文；文档示例用占位符（`<API_KEY>`、`127.0.0.1`）。
 - relay 引导参数放 `config/config.toml`（gitignore；可选——缺文件走 env `DATABASE_URL`/`LISTEN`，
-  见 `apps/api/src/config.rs`；模板 `deploy/config/config.toml`，运行时配置全在 PG）。
+  见 `bin/api/src/config.rs`；模板 `deploy/config/config.toml`，运行时配置全在 PG）。
 
 ---
 
@@ -141,7 +142,7 @@
 
 ### web 双车道快车道
 
-改动**只落** `crates/web/*` + 两个 web app（不碰 contract/api/gateway/harness）时走双车道
+改动**只落** `crates/ui/*` + 两个 web app（不碰 contract/api/gateway/harness）时走双车道
 （权威：`.agent/rules/web-lanes.md`），跳过重型流程：短分支从 `web-dev` 切、dev 浏览器自测
 （`just dev-web-rebuild [port] [debug]`）、squash 合回 `web-dev` 即走人；发布 PR = `web-dev → main`
 （merge commit），闸门照跑不绕。固定 worktree `.wt/web-dev` / `.wt/web-fix`，不为小改动新开。
@@ -150,6 +151,7 @@
 
 ## 目标约束
 
-- `crates/harness/{core,agent-prompts,tools}` 与 `crates/web/` 下的 Dioxus 前端 crate（含 `harness-*` 投影层）必须支持 `wasm32-unknown-unknown`。
+- `crates/harness/agent-prompts` 与 `crates/ui/` 下的 Dioxus 前端 crate（含 `coding` 投影层）必须支持 `wasm32-unknown-unknown`。
+  `crates/harness/tools` **不在本约束内**：仓内没有 job 编过它到 wasm32（该结论未经实测），`scripts/wasm-check.sh` 也刻意不编它；把它纳入需先完成 wasm 化，属待裁决项 —— 不要据本约束推断它已 wasm-safe。
 - 测试放 crate 同级 `tests/`，不在 `src/` 用 `#[cfg(test)]`。
 - 新增/移动功能 crate 同步更新根 `Cargo.toml` members 与 README crate 清单。
