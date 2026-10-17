@@ -32,7 +32,32 @@ struct DepJson {
     #[serde(default)]
     path: Option<String>,
     #[serde(default)]
-    kind: Option<Vec<String>>,
+    kind: Option<DepKindJson>,
+}
+
+/// cargo metadata serializes `kind` as `null` for normal edges and as a string
+/// (`"dev"` / `"build"`) for the rest. The array shape never appears in real
+/// output; it is kept tolerated only because the old array-only model made the
+/// whole metadata fail to deserialize whenever any dev/build dependency existed,
+/// silently turning the dependent rules into no-ops.
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum DepKindJson {
+    One(String),
+    Many(Vec<String>),
+}
+
+impl DepJson {
+    /// Whether this is a workspace-internal normal edge: `kind` is `null`
+    /// (or an explicit `"normal"`). Dev/build edges do not count; the array
+    /// shape counts as normal only when every element is `"normal"`.
+    fn is_normal_edge(&self) -> bool {
+        match &self.kind {
+            None => true,
+            Some(DepKindJson::One(kind)) => kind == "normal",
+            Some(DepKindJson::Many(kinds)) => kinds.iter().all(|kind| kind == "normal"),
+        }
+    }
 }
 
 /// cargo 缺失 / metadata 失败 = None，调用方静默跳过（加固型规则的情报缺失语义）。
@@ -57,7 +82,7 @@ pub fn load(root: &Path) -> Option<Graph> {
     let mut edges = Vec::new();
     for package in &metadata.packages {
         for dep in &package.dependencies {
-            if dep.path.is_some() && dep.kind.is_none() {
+            if dep.path.is_some() && dep.is_normal_edge() {
                 edges.push((package.name.clone(), dep.name.clone()));
             }
         }
