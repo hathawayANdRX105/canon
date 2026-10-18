@@ -229,8 +229,14 @@ responsibility = "Source files."
     let catalog = load(dir.path());
     let changed = ["crates/beta/src/lib.rs"];
     assert!(diagnose(&catalog, &changed, false, false, false).is_empty());
+    assert!(
+        diagnose(&catalog, &changed, false, true, false).is_empty(),
+        "all=true must not require missing specs when require_spec is false"
+    );
     let ids = diagnostic_ids(diagnose(&catalog, &changed, true, false, false));
     assert_eq!(ids, vec!["CRATE-SPEC-MISSING"]);
+    let all_ids = diagnostic_ids(diagnose(&catalog, &changed, true, true, false));
+    assert_eq!(all_ids, vec!["CRATE-SPEC-MISSING"]);
 }
 
 #[test]
@@ -279,6 +285,37 @@ to = "ghost"
         false,
     ));
     assert_eq!(ids, vec!["CRATE-SPEC-REDIRECT"]);
+}
+
+#[test]
+fn redirect_accepts_package_glob() {
+    let dir = tempfile::tempdir().unwrap();
+    workspace(dir.path());
+    spec(
+        dir.path(),
+        "alpha",
+        r#"
+schema = 1
+crate = "alpha"
+responsibility = "Alpha crate."
+[[files]]
+path = "src/**"
+responsibility = "Source files."
+[[does_not_belong]]
+concern = "Other package"
+to = "a*"
+"#,
+    );
+
+    let catalog = load(dir.path());
+    let ids = diagnostic_ids(diagnose(
+        &catalog,
+        &["crates/alpha/src/lib.rs"],
+        false,
+        false,
+        false,
+    ));
+    assert!(ids.is_empty(), "{ids:?}");
 }
 
 #[test]

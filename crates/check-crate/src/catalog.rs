@@ -344,8 +344,7 @@ impl Catalog {
         }
 
         for redirect in &spec.does_not_belong {
-            if self.package_dirs.contains_key(&redirect.to) || self.root.join(&redirect.to).exists()
-            {
+            if self.redirect_target_exists(&redirect.to) {
                 continue;
             }
             self.problems.push(SpecProblem {
@@ -354,7 +353,7 @@ impl Catalog {
                 path: spec_path.clone(),
                 line: 0,
                 message: format!(
-                    "does_not_belong {:?} points to {:?}, which is neither a workspace package nor an existing path",
+                    "does_not_belong {:?} points to {:?}, which is neither a workspace package, a package glob, nor an existing path",
                     redirect.concern, redirect.to
                 ),
             });
@@ -400,6 +399,26 @@ impl Catalog {
 
     fn includes(&self, dir: &Path) -> bool {
         dir_matches(&self.include, dir) && !dir_matches(&self.exclude, dir)
+    }
+
+    /// A redirect target resolves when it is an exact package name, an existing
+    /// path, or a glob that matches at least one package name or package dir.
+    fn redirect_target_exists(&self, target: &str) -> bool {
+        if self.package_dirs.contains_key(target) || self.root.join(target).exists() {
+            return true;
+        }
+        if !target.chars().any(|ch| matches!(ch, '*' | '?' | '[' | '{')) {
+            return false;
+        }
+        let Ok(glob) = GlobBuilder::new(target).literal_separator(true).build() else {
+            return false;
+        };
+        let matcher = glob.compile_matcher();
+        self.package_dirs.iter().any(|(package, dir)| {
+            matcher.is_match(package.as_str())
+                || matcher.is_match(dir)
+                || matcher.is_match(dir.join("Cargo.toml"))
+        })
     }
 
     pub fn root(&self) -> &Path {
@@ -468,12 +487,11 @@ impl Catalog {
         let mut diagnostics = Vec::new();
 
         for problem in &self.problems {
-            let include = if options.all {
-                true
-            } else if problem.id == "CRATE-SPEC-MISSING" {
-                options.require_spec && touched.contains(&problem.package)
+            let in_scope = options.all || touched.contains(&problem.package);
+            let include = if problem.id == "CRATE-SPEC-MISSING" {
+                options.require_spec && in_scope
             } else {
-                touched.contains(&problem.package)
+                in_scope
             };
             if include {
                 diagnostics.push(Diagnostic {
