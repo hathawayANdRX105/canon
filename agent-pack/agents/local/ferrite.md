@@ -2,114 +2,67 @@
 
 ## 开始工作前（按顺序读）
 
-1. 读根 `AGENTS.md`（本文件）。
-2. 读根 `README.md` 的 crate 清单，确定当前结构与依赖。
-3. 按任务书 / issue 的文件清单工作，用其验收命令验证后提交 conventional commit。
+1. 读根 `README.md` 的 crate 清单，确定当前结构与依赖（模块职责的唯一真身）。
+2. 按任务书 / issue 的文件清单工作，用其验收命令验证后提交 conventional commit。
+3. 本文件只写**硬性约束**与**场景 → 文档导航**；操作细节都在 `.agent/rules/` 下，按导航去读，不要一开始全读。
 
-本文件只写**每个会话必须遵守的硬性约束**与**场景 → 文档导航**。
-操作细节都在 `.agent/rules/` 下，按导航去读，不要一开始全读。
+---
+
+## 闸门：动手前先自查，别等提交后被拦
+
+维护者口径：**审查与查规范走 canon 命令**，不要靠撞闸门反推规矩。
+
+| 命令 | 什么时候用 |
+|---|---|
+| `canon list` | 想知道有哪些规范：规则 ID / 查什么 / 严重度 / 拦在哪个阶段（`--json` 给 agent 读） |
+| `canon check --sla l1` | 提交前本地预检（会拦 pre-commit / pre-push / merge 的那层） |
+| `canon pr check --body-file <正文>` | PR 正文写好先本地验（heading 齐不齐、是否含中文 heading、checkbox 够不够），别等 `gh pr create` 被拒 |
+
+被拦下时闸门会打全**所有** finding（不是遇到第一条就停）并给出下一步命令；**逐条处置**，禁
+`--no-verify`、禁截断输出、禁改规则（规则有缺陷 → 上报维护者裁决）。
 
 ---
 
 ## 开发方式（worktree）
 
-- 每个开发会话 `git worktree add .wt/<name> -b <branch>` 挂独立分支；目录名与分支尾段一致
-  （`.wt/admin-api` ↔ `feat/admin-api`）。仓库根只读（除根 `Cargo.toml` 的 member 变更）。
-- **防嵌套硬规则**（历史事故：13 层嵌套 + 321G 重复编译产物）：
-  1. 必须先 `cd {{root}}`（仓库根）再 `git worktree add .wt/<name> -b <branch>`——相对路径按 cwd 解析，
-     在 worktree 内执行会嵌套。
-  2. 执行后自检 `git worktree list`：新条目路径出现第二个 `.wt/` 即嵌套，立即 `git worktree remove` 重来。
-     闸门 `checklist_no_nested_worktree` 命中即 FAIL。
-  3. 派子代理 prompt 必须写**全局绝对路径**（如 `{{root}}/.wt/<name>/`），禁止让其推导相对路径。
-- **建完分支立刻把上游指向自己的分支**：`git worktree add .wt/<name> -b <branch> origin/main`
-  这类带远端 start-point 的写法会把新分支的 upstream 设成那个 start-point —— 在该 worktree 里
-  一次 `git push`（尤其 `--force`）就会打到 **main 或别人的分支**。实测本仓：`.wt/admin-card` 的
-  `feat/admin-card` upstream = `origin/main`，`.wt/sidebar-migration` 的 upstream =
-  `origin/feat/coding-mount`。建完就 `git push -u origin <branch>` 落地自己的分支并改正 upstream；
-  不要上游时用 `git worktree add --no-track ...`（不带 start-point 时 git 本来也不设）。
-- **`.wt/` 删除保护**：只能删**本会话自己创建**且 PR 已合并的 worktree，且需维护者确认 +
-  对照 `git worktree list` 确认归属；用 `git worktree remove`。
-  严禁对 `.wt/` 做任何批量/暴力删除（`rm -rf`、`git clean`）——那是别人的开发会话，等同删库。
-  意外丢失：立即报告维护者，用 `git worktree prune` + `git checkout -b <branch> <merge-commit>` 恢复。
+- 每个会话 `cd {{root}}` 再 `git worktree add .wt/<name> -b <branch>`（目录名 = 分支尾段）。
+  **在 worktree 里执行会嵌套**，自检 `git worktree list` 出现第二个 `.wt/` 立即 `remove` 重来。
+- 建完分支立刻 `git push -u origin <branch>`：带远端 start-point 的 `worktree add` 会把 upstream
+  设成那个 start-point，一次 `git push` 就打到 **main 或别人的分支**。
+- 派子代理写**全局绝对路径**（`{{root}}/.wt/<name>/`），禁止让它推导相对路径。
+- `.wt/` 删除保护：只删**本会话创建**且 PR 已合并的 worktree（`git worktree remove`）；
+  严禁 `rm -rf .wt/`、`git clean`——那是别人的开发会话，等同删库。
 
 ---
 
-## 模块结构与所有权
+## 本机环境（只有红线，细节读导航表）
 
-| 术语 | 位置 | 含义 |
-|---|---|---|
-| 后端域 | `crates/api/` | 7 个 crate：`auth`、`billing`、`control-plane`（管理配置面）、`gateway-state`、`observe`、`router`、`api-mcp`。数据访问层单列在 `crates/db/`；职责详单见 README |
-| 前端域 | `crates/ui/` | 按层聚合：`ui-components`（原型件层：设计系统，零业务语义）、`feature-component`（业务组件层：吃数据与回调的域组装件）、`ui-models`（各域模型层）、`ui-util`（通用格式化）、`ui-styles`（样式真身）、`i18n`（全站文案）、`api`（REST wire，包名 `web-api`）、`pages`（页面组装：五域平铺页面文件）+ chatroom 前端 `coding`（wasm-safe 单 crate） |
-| 共享契约 | `crates/contract/` | 跨端 DTO 与协议错误；**唯一的跨域共享点** |
-| 网关与执行 | `crates/gateway-*`、`crates/harness/` | 调度转发引擎与 Agent 运行时 |
-| 基础内容 | `bin/<name>/` | 唯一有 `main.rs` 的独立构建单元：`api`、`mcp`、`web`、`kit-demo`（ui-components 演示场，wasm）、`harness`（无头宿主） |
-| 平台入口 | `apps/<name>/` | 端上壳（desktop / mobile）：Tauri v2 骨架已落地，各自独立 workspace |
-
-- 功能 crate 只出 library API（独立 `Cargo.toml` + workspace member），不定义进程入口；
-  组装只在 `bin/`：`api` 装后端与 gateway/harness；`harness` 是无头宿主入口（薄装配 daemon 库：UDS 控制面 + 环回 WS 面）；`web` 与 `kit-demo` 两个 wasm app 装前端——
-  `web` 是前端单体入口（消费 `ui-components`），`kit-demo` 是 ui-components 组件演示场。
-- 域间禁止私有依赖，跨端数据只走 `crates/contract` DTO；新 DTO 先声明、由一个会话统一改。
-- **域目录独占**：会话接手 `crates/<domain>/` 即独占，不准越界改其他域；跨域重构先在 PR 报备清单确认无冲突。
-  新增/移动 crate 才动根 `Cargo.toml`，改完在 PR 说明新增 member。
+- 共享后端 `127.0.0.1:3211` + 库 `uf-local-postgres/ferrite_smoke`：**严禁停 3211、严禁对共享库 `db-reset`**；
+  启停只走 `scripts/dev-backend.sh`。需要独立验证时用 `FERRITE_DEV_LISTEN=127.0.0.1:<端口>` + 独立库。
+- 长跑服务用**会话持久后台任务**（禁 `nohup ... &`）；起后 `ss -ltn` 验证端口。
+- 禁宽匹配 `pkill -f cargo|rustc`；清理前 `readlink /proc/<pid>/cwd` 认归属。
+- CPU 密集命令（编译 / 测试 / 装包）一律套 `.githooks/heavy`。
 
 ---
 
-## CI 与测试（壳仓执行）
+## 测试与 CI（入口只有两个）
 
-计费原因（私有仓 2000 分钟/月）→ CI 全部在公开壳仓 `hathawayANdRX105/ferrite-ci` 跑：
-主仓 `ci-dispatch.yml` 秒级派发 → 壳仓 `lint-check` ∥ `test`（PG18 服务）→ 回写主仓 commit status。
-主仓是免费计划私有仓，**没有服务端 branch protection**——红灯拦不住平台 merge，
-合并门 = canon gh shim + agent 纪律：merge 前必须核实 commit status **`shell-ci`** 绿；
-`ci` 这个名字**不得占用**（Actions app 绑定同名 check，回写会混淆）。
-
-**两关口语义（重要）**：
-
-| 关卡 | 性质 | 要求 |
-|---|---|---|
-| **快关**（PR push，`just test-fast` testless 影响分析） | **阻塞** | 合并门：`shell-ci` 绿了才能 merge；红了 `gh pr checks <N>` 拉日志修复重推，CI 没跑完/没跑完不许合并 |
-| **全量**（main push / 手动 `full=true`，壳仓内 `just test`） | **异步、离线跟进** | 不阻塞合并，但**必须回查并汇报**：触发（含 main push 自动）后用 bash 长间隔轮询（如 `gh run watch <id> -R hathawayANdRX105/ferrite-ci --interval 120`），无论成败都要向维护者汇报 run id + 结论；红了立即开修复任务，不静默收尾 |
-
-- 手动全量（主仓目录）：`gh workflow run ci-dispatch.yml --ref <branch> -f full=true`；
-  应急绕开私仓直接打壳仓：`gh workflow run ci.yml -R hathawayANdRX105/ferrite-ci -f sha=<sha> -f pr=<N> -f base=main`。
-- 看结果：PR 的 `shell-ci` 状态 → 壳仓 run；或 `gh run list -R hathawayANdRX105/ferrite-ci -L 5`。
-- 发布同走壳仓：推 `ferrite-v*` tag → 主仓 `ferrite-release.yml` 秒级派发 → 壳仓 `release.yml`
-  构建并把 Release（asset+notes）用 PAT 发回**私有主仓**；壳仓不落 artifact（私有代码产物
-  不进公开仓）。主仓手动触发只 dry-run；**合并新派发器之前不得推 tag**（旧全量版会烧私有分钟）。
-- **本地测试入口 = `just test-fast`**（testless 影响分析，只跑受波及用例；异常/零命中时本地
-  不降级、打印派发命令后 exit 1）；`cargo check -p` 与 3 秒内单用例调试照旧。
-  **中等及以上测试禁止本地跑**：`just test` 本地直接拒跑（`cargo test --all` / 整包 /
-  整个 test binary / e2e 一律交壳仓 CI）；需要全量时手动派发：
-  `gh workflow run ci-dispatch.yml --ref <branch> -f full=true`。
-  失效模式判据（feature 门禁假绿、`#[ignore]`、e2e 30 秒整数倍=PG 事故）见 **`.agent/rules/testing-ci.md`**，新增测试前必读。
-- 缓存不变量：只有写入方（main push / 手动 full）回填 sccache（日键）/ cargo（lock 键），PR 只读；
-  不做定期全量清（7 天 LRU 自动淘汰），手动兜底跑壳仓 `cache-admin`。壳仓 `on:` 只有 `workflow_dispatch`（防 fork 借 PAT 投毒）。
-- 坑：装 `just` 走 GitHub releases（just.systems CDN 403）；缓存中毒则 bump 键前缀 `v0.10.0` 并跑 cache-admin。
-  workflow 逐行说明：`hathawayANdRX105/ferrite-ci/.github/workflows/ci.yml`。
+- 本地：`just test-fast`（testless 影响分析，只跑受波及用例；异常/零命中会报警退出，不静默跳过）。
+  **中等及以上测试禁止本地跑**（整包 / 整个 test binary / e2e 一律交壳仓 CI）。
+- 合并门：PR 的 `shell-ci` 状态绿了才能 merge；全量（main push 后自动跑，写成 `shell-ci-full`）
+  异步跟进、不阻塞合并，但红了要开修复任务并汇报。
 
 ---
 
-## 本机环境与进程卫生
+## 硬约束
 
-> 起后端 / 数据库 / 前端，或遇 500、卡片 404 但 curl 200、dx 不重建、`Failed to find binary package`
-> → 读 **`.agent/rules/dev-env.md`**（实测命令 + 症状对照表）。
-
-- 共享后端（默认）：前端代理统一指 `127.0.0.1:3211`，库 `uf-local-postgres/ferrite_smoke`，
-  生命周期只走 `scripts/dev-backend.sh`；**红线：严禁停 3211、严禁对共享库跑 `db-reset`**（要独立验证用
-  `FERRITE_DEV_LISTEN=127.0.0.1:<端口>` + 独立库）。
-- 启停 / 种子 / 体检走 justfile：`just dev-check`（开工先跑）、`just dev-backend start|stop|status`、
-  `just db-seed`、`just verify`。免登录调试：`just dev-web debug`（端口 auto 10000-16000；`#login` 不触发自动登录）。
-- 长跑服务禁用 `nohup ... &`（进程组被回收，静默死亡）——用会话持久后台任务，起后 `ss -ltn` 验证端口。
-- 禁宽匹配 `pkill -f cargo|rustc`（别人在跑的构建，T 态 ≠ 死）；清理前 `readlink /proc/<pid>/cwd` 认归属。
-- CPU 密集命令（编译 / 测试 / 装包，含子代理的验证）一律套
-  `.githooks/heavy`；`git`/`grep`/文件读写例外（配额按核数现算，细节见 `.githooks/heavy` 头注）。
-
----
-
-## 密钥与配置
-
-- 凭据 / 真实 IP / 上游地址绝不入库、不进 PR 正文；文档示例用占位符（`<API_KEY>`、`127.0.0.1`）。
-- relay 引导参数放 `config/config.toml`（gitignore；可选——缺文件走 env `DATABASE_URL`/`LISTEN`，
-  见 `bin/api/src/config.rs`；模板 `deploy/config/config.toml`，运行时配置全在 PG）。
+- **只能通过 PR 干活**；禁止新建 issue、禁止改 epic 结构（维护者明确要求时先报备，批准才建）。
+- 合并只走 squash：`gh pr merge <N> --squash --delete-branch --body "Agent 🤖 - Merge: <原因>"`。
+- 提交身份是维护者本人（`hathawayANdRX105`），不得用 `-c user.name=...` 覆盖，不得署 `Co-authored-by:` 机器人。
+- `crates/harness-agent-prompts` 与 `crates/ui/` 下的前端 crate（含 `coding` 投影层）必须支持
+  `wasm32-unknown-unknown`；`crates/harness-tools` **不在此约束内**（是否 wasm 化属待裁决）。
+- 测试放 crate 同级 `tests/`，不在 `src/` 写 `#[cfg(test)]`；新增/移动功能 crate 同步根 `Cargo.toml` 与 README。
+- 凭据 / 真实 IP / 上游地址绝不入库、不进 PR 正文；示例用占位符（`<API_KEY>`、`127.0.0.1`）。
 
 ---
 
@@ -117,33 +70,10 @@
 
 | 场景 | 读这里 |
 |---|---|
-| 开 PR 干活 / 派子代理 | `.agent/rules/pr-workflow.md` |
+| 开 PR 干活 / 派子代理 / worktree 全流程 | `.agent/rules/pr-workflow.md` |
 | 写测试 / 跑测试 / 怀疑「CI 绿了但没验东西」 | `.agent/rules/testing-ci.md` |
 | 提交被拦 / 建 PR 被拒 / 查规则 | `.agent/rules/gates.md`（规则总览 `gate-spec` skill） |
-| 起后端 / 数据库 / 前端 | `.agent/rules/dev-env.md` |
-| Dioxus UI / Rust 公共 API / 调查审查 | `.agent/rules/conventions.md` |
+| 起后端 / 数据库 / 前端 / 进程卫生 | `.agent/rules/dev-env.md` |
+| Dioxus UI / Rust 公共 API / 代码风格 / 调查审查 | `.agent/rules/conventions.md` |
+| 任务编排与所有权矩阵 | `.agent/rules/workflow-state.md` |
 | `.agent/` 目录组织 | `.agent/README.md` |
-
----
-
-## PR 流程硬门禁（主控 agent）
-
-你是**主控**：编排、派子代理、审产出，不亲自写核心实现。
-
-- **只能通过 PR 干活**；禁止新建 issue、改 epic 结构（维护者对话明确要求建 issue 时，先报备标题 + 完成标准，批准才建）。
-- 门禁细节走闸门前置：操作前先跑 `canon check` 对应清单或 `canon issue` / `canon pr` 预检；
-  拦截信息**逐条读完**修根因（FAIL 清零，WARN 逐条处理或书面说明），禁 `--no-verify`、禁截断。
-- 子代理：prompt 写全（目标文件 / 要做什么 / 验收标准 / 不做什么 + 全局绝对路径 + 所属分支），
-  只能在 `.wt/<分支名>/` 内读写提交；单任务 ≤5 文件、单主题。
-- 每轮「审查 + 修复」在 PR 写一条评论（含修复 commit）；冒烟验证单独一条（手段 + 结果）。
-  「通过」= `shell-ci` 全绿；快关绿 ≠ 全绿——全量按上表离线回查后汇报。
-- 记录 `base_sha`，CRG / review 用 `--base <base_sha>`，不写死 main。
-
----
-
-## 目标约束
-
-- `crates/harness/agent-prompts` 与 `crates/ui/` 下的 Dioxus 前端 crate（含 `coding` 投影层）必须支持 `wasm32-unknown-unknown`。
-  `crates/harness/tools` **不在本约束内**：仓内没有 job 编过它到 wasm32（该结论未经实测），`scripts/wasm-check.sh` 也刻意不编它；把它纳入需先完成 wasm 化，属待裁决项 —— 不要据本约束推断它已 wasm-safe。
-- 测试放 crate 同级 `tests/`，不在 `src/` 用 `#[cfg(test)]`。
-- 新增/移动功能 crate 同步更新根 `Cargo.toml` members 与 README crate 清单。
