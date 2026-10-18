@@ -1,0 +1,16 @@
+[package]
+name = "check-crate"
+version = "0.1.0"
+edition = "2024"
+description = "Crate placement rules: per-crate TOML contracts, file-to-crate mapping via cargo metadata, path and file-responsibility checks"
+publish = false
+
+[dependencies]
+check-core = { path = "../check-core" }
+check-deps = { path = "../check-deps" }
+globset = "0.4"
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+
+[dev-dependencies]
+tempfile = "3"

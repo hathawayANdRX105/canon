@@ -45,6 +45,8 @@ projects:
         to: .agent/skills/scaffold-dsh/SKILL.md
       - src: agent-pack/skills/ainotation-web.md
         to: .agent/skills/ainotation-web/SKILL.md
+      - src: agent-pack/skills/crate-placement.md
+        to: .agent/skills/crate-placement/SKILL.md
       - src: agent-pack/rules/workflow-state.md
         to: .agent/rules/workflow-state.md
   kime:

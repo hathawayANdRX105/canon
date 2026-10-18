@@ -1,7 +1,7 @@
 # 新仓接入 checks 规则库（SOP）
 
 把 canon 的 Rust 规则库（`check-core` / `check-rust` / `check-dioxus` / `check-deps` /
-`check-assets`）接进一个成员仓。形态已由 mono 的 T3–T7 五轮接线验证；照抄即可。
+`check-crate` / `check-assets`）接进一个成员仓。形态已由 mono 的 T3–T7 五轮接线验证；照抄即可。
 
 > 前置：目标仓是 Rust 仓。canon 仓是**公开仓**（`github.com/hathawayANdRX105/canon`，
 > 匿名可拉），CI 不需要任何凭据。
@@ -41,6 +41,7 @@ check-core = { git = "https://github.com/hathawayANdRX105/canon", tag = "check-v
 check-rust = { git = "https://github.com/hathawayANdRX105/canon", tag = "check-v0.1.5" }
 check-dioxus = { git = "https://github.com/hathawayANdRX105/canon", tag = "check-v0.1.5" }
 check-deps = { git = "https://github.com/hathawayANdRX105/canon", tag = "check-v0.1.5" }
+check-crate = { git = "https://github.com/hathawayANdRX105/canon", tag = "check-v0.1.5" }
 check-assets = { git = "https://github.com/hathawayANdRX105/canon", tag = "check-v0.1.5" }
 
 [[bin]]
