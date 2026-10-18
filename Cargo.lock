@@ -154,6 +154,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "check-crate"
+version = "0.1.0"
+dependencies = [
+ "check-core",
+ "check-deps",
+ "globset",
+ "serde",
+ "tempfile",
+ "toml",
+]
+
+[[package]]
 name = "check-deps"
 version = "0.1.0"
 dependencies = [
