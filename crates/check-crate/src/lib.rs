@@ -15,6 +15,7 @@ pub use catalog::{
     Assignment, Catalog, DiagnoseOptions, Diagnostic, LoadConfig, LoadError, LoadedSpec,
     SpecProblem,
 };
+pub use check_core::finding::Severity;
 pub use kind::CratePlacementFactory;
 pub use spec::{FileRule, PlacementSpec, Redirect};
 
