@@ -778,6 +778,18 @@ pub fn spec_dir() -> Option<PathBuf> {
     git::find_githooks_dir().map(|g| g.join("spec"))
 }
 
+/// Spec dir for the *read-only* entrypoints (`canon list` / `canon pr check`).
+///
+/// `.githooks/spec` wins — it is what this repo's hooks actually enforce, and a
+/// second directory walk would be exactly the scan divergence this repo forbids.
+/// The canon rules pack (`specs/`, the source `canon init` seeds from) is the
+/// fallback for the canon checkout itself: a worktree or a fresh clone has no
+/// deployed `.githooks/spec`, and a listing command that errors there would just
+/// teach the agent to ignore it.
+pub fn resolve_spec_dir() -> Option<PathBuf> {
+    spec_dir().or_else(|| crate::tools::init::find_rules_pack())
+}
+
 // ---------------------------------------------------------------------------
 // Parallel execution
 // ---------------------------------------------------------------------------
