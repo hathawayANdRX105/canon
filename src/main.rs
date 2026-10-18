@@ -26,6 +26,30 @@ struct Cli {
     command: Commands,
 }
 
+/// `canon pr` 的子命令。无子命令 = gh shim 的拦截入口（老行为，不可改动，
+/// hooks 与 gh wrapper 都按那个形状调）。
+#[derive(Subcommand)]
+enum PrCommand {
+    /// 本地验 PR 正文，不必等 `gh pr create` 被拦
+    ///
+    /// 复用与线上完全相同的那套正文规则（PR-01/03/04/07）。依赖 gh 上下文的
+    /// PR-06/PR-08 在本地无法求值，输出里明确写「跳过」而不是当它过了。
+    Check {
+        /// 正文文件；`-` 表示从 stdin 读
+        #[arg(long)]
+        body_file: PathBuf,
+        /// PR 标题（PR-01/PR-02/PR-10 要它；缺省为空串，只验正文）
+        #[arg(long, default_value = "")]
+        title: String,
+        /// 假定 PR 上已有的 label（可重复）；本地拿不到线上 label 时留空
+        #[arg(long = "label")]
+        labels: Vec<String>,
+        /// head 分支名（fork 场景带 `user:` 前缀）
+        #[arg(long, default_value = "main")]
+        head_ref: String,
+    },
+}
+
 #[derive(Subcommand)]
 enum Commands {
     /// Install canon: copy binary to ~/.local/bin (canon + gh), set
@@ -51,6 +75,18 @@ enum Commands {
     },
     /// Run merge checks: `canon merge <owner/repo> <pr_number> [--dry-run]`
     Merge(MergeArgs),
+    /// 列出全部检查规范：规则 ID / 查什么 / 严重度 / 拦在哪个 hook
+    ///
+    /// 与 `canon check` 同一条加载路径（`catalog::load`），列得出就必然跑得到。
+    /// 先跑它再动手，好过提交后被闸门一条条告知有什么规矩。
+    List {
+        /// Output machine-readable JSON (id / description / severity / hooks / sla).
+        #[arg(long)]
+        json: bool,
+        /// Only rules at or below this SLA tier (l1/l2/l3; default: all)
+        #[arg(long)]
+        sla: Option<String>,
+    },
     Check {
         /// Checklist names (file name minus `checklist_` prefix and `.yaml`)
         names: Vec<String>,
@@ -66,8 +102,11 @@ enum Commands {
     Issue,
     /// Audit issues/PRs for checkbox & linkage compliance
     Audit(AuditArgs),
-    /// Validate issues
-    Pr,
+    /// gh shim 拦截 `gh pr create`；带子命令时是本地预检
+    Pr {
+        #[command(subcommand)]
+        command: Option<PrCommand>,
+    },
     /// Serve the rule catalog and a preflight run over MCP stdio
     Mcp,
     /// Run the local flow board: REST + WebSocket push over std::net.
@@ -145,7 +184,21 @@ fn main() -> ExitCode {
             ExitCode::from(tools::merge::run(&arg_vec) as u8)
         }
         Commands::Issue => ExitCode::from(tools::gh_wrap::intercept_issue_create(&[]) as u8),
-        Commands::Pr => ExitCode::from(tools::gh_wrap::intercept_pr_create(&[]) as u8),
+        Commands::Pr { command } => match command {
+            // 无子命令 = gh shim 的拦截入口，行为与加子命令之前逐字一致。
+            None => ExitCode::from(tools::gh_wrap::intercept_pr_create(&[]) as u8),
+            Some(PrCommand::Check {
+                body_file,
+                title,
+                labels,
+                head_ref,
+            }) => {
+                ExitCode::from(tools::pr_check::run(&body_file, &title, &labels, &head_ref) as u8)
+            }
+        },
+        Commands::List { json, sla } => {
+            ExitCode::from(tools::list::run(json, sla.as_deref()) as u8)
+        }
         Commands::Check { names, sla, json } => {
             let max_sla = engine::SlaLevel::parse(&sla);
             if !json {

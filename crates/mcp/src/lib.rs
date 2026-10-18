@@ -403,6 +403,7 @@ mod tests {
             hooks: vec!["merge".into()],
             mode: Some("grep".into()),
             why: "第一行\n第二行".into(),
+            description: String::new(),
         };
         assert_eq!(rule_json(&r)["why"], "第一行");
     }

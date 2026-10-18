@@ -531,6 +531,12 @@ fn gate_block(
     for f in &fails {
         println!("闸门 [{}]: {}", f.rule_id, f.msg);
     }
+    // 拦下之后只说「拒绝」是不够的：作者此刻最需要知道的是「下次怎么不撞」。
+    // 三条命令对应三层信息——看全貌 / 本地预检代码 / 本地预检 PR 正文。
+    println!(
+        "👉 下一步：canon list 看全部规范 · canon check --sla l1 本地预检 · \
+         canon pr check --body-file <正文文件> 预检 PR 正文"
+    );
     log(
         action,
         target,

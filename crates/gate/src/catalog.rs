@@ -34,6 +34,10 @@ pub struct Rule {
     pub mode: Option<String>,
     /// Leading comment block: why the rule exists and what it looks for.
     pub why: String,
+    /// Explicit one-liner from the yaml `description:` key; empty when the rule
+    /// declares none, in which case readers fall back to the first sentence of
+    /// [`Rule::why`] — the head comment is the only prose most rules carry.
+    pub description: String,
 }
 
 /// Leading `#` comment lines, up to the first non-comment line. Comment
@@ -142,6 +146,7 @@ fn parse_registry(raw: &str) -> Vec<Rule> {
             mode: None,
             source: "severity_overrides.yaml#registry".into(),
             why: desc.trim().to_string(),
+            description: String::new(),
         });
     }
     out
@@ -315,6 +320,11 @@ fn checklist_rule(path: &Path, sub: &str) -> Option<Rule> {
         hooks: crate::shared::cfg_str_list(Some(&cfg), "hooks"),
         mode: cfg.get("mode").and_then(|v| v.as_str()).map(str::to_string),
         why: why_from_head(&raw),
+        description: cfg
+            .get("description")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default()
+            .to_string(),
     })
 }
 
@@ -340,6 +350,7 @@ fn github_rules(path: &Path, spec_dir: &Path) -> Vec<Rule> {
                 hooks: Vec::new(),
                 mode: None,
                 why: String::new(),
+                description: String::new(),
             })
         })
         .collect();
@@ -366,6 +377,7 @@ fn root_overrides(spec_dir: &Path) -> Vec<Rule> {
                 hooks: vec!["commit-msg".to_string()],
                 mode: None,
                 why: String::new(),
+                description: String::new(),
             })
         })
         .collect()

@@ -174,7 +174,10 @@ fn is_pack(dir: &Path) -> bool {
 /// Look for the rules pack near the binary (canon checkout: target/debug →
 /// canon) then near cwd. New layout: `specs/`; legacy checkouts:
 /// `rules/` or `rules/gate/`.
-fn find_rules_pack() -> Option<PathBuf> {
+///
+/// Shared with `canon list`: reading the canon pack and seeding it must agree
+/// on what "the rules pack" is, or a rule can be listed but never seeded.
+pub fn find_rules_pack() -> Option<PathBuf> {
     let mut starts = Vec::new();
     if let Ok(exe) = std::env::current_exe()
         && let Some(parent) = exe.parent()
