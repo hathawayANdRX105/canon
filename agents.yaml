@@ -126,17 +126,18 @@ projects:
       local/: ferrite 约定
     params:
       testing_ci_ref: "与 `.agent/rules/testing-ci.md` "
+    # include 只留「本仓没有别处可指」的片段。裁掉的五条在 mono 的 .agent/rules/
+    # 都有全文，AGENTS.md 里再抄一份只会漂移（维护者 2026-10-18：AGENTS 写了一堆
+    # 废话，重要的事情跟做事风格只有那么几样）：
+    #   code-style / investigation → .agent/rules/conventions.md
+    #   tools / build-verify       → .agent/rules/dev-env.md + testing-ci.md
+    #   subagents                  → .agent/rules/pr-workflow.md
     include:
     - local/
     - _discipline
-    - code-style
     - rust-dev-perf
-    - build-verify
     - sensitive-ops
-    - investigation
     - git-workflow
-    - tools
-    - subagents
   algorchemy:
     root: algorchemy
     titles:
