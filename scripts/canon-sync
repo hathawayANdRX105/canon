@@ -10,6 +10,10 @@ Commands:
   canon-sync push <project>       分发 canon-owned 文件（保护 PROJECT-ONLY 与 custom/）
   canon-sync collect <project>    收集报告：项目有而 canon 没有的规则/模板（回port候选）
 
+安装根只认 agents.yaml / agent-sync.yaml 的 `root:` 映射（相对值落到 CANON_PROJECTS_BASE，
+缺省 ~/projects；见 scripts/canon_roots.py），不按项目名猜目录。CANON_TARGET_ROOT 覆盖一切
+（分发到 .wt 工作树而非主工作树）。
+
 Exit 0 = 无漂移（status）；push/collect 总是 0。
 """
 
@@ -18,6 +22,11 @@ import os
 import shutil
 import subprocess
 import sys
+
+# 同目录共享模块（`root:` 映射的唯一解析实现）。显式入 path：怎么被拉起
+# （直接执行 / SourceFileLoader / 别的工具导入）不该决定 import 能不能成功。
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+import canon_roots
 
 CANON = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 CANON_HOOKS = os.path.join(CANON, ".githooks")
@@ -88,7 +97,8 @@ ROOT_FILE_DIRS = {"SPEC_OVERVIEW.md": "docs"}
 ROOT_STAY = {"dispatch.yaml", "severity_overrides.yaml"}
 
 
-def project_root(project: str) -> str:
+def resolve_target(project: str, canon: str = CANON):
+    """(安装根绝对路径, 解析来源)。安装根只认清单里的 `root:` 映射，不按项目名猜目录。"""
     # CANON_TARGET_ROOT: 分发到 .wt 工作树而非主工作树(主树常挂他人改动)。
     # 与 agents.yaml 的 CANON_PROJECTS_BASE 同源思路,单独命名避免混淆。
     override = os.environ.get("CANON_TARGET_ROOT")
@@ -96,15 +106,23 @@ def project_root(project: str) -> str:
         p = os.path.join(override, project)
         if not os.path.isdir(p):
             sys.exit(f"worktree not found: {p}")
-        return p
-    # 换 checkout 根目录只需改这个环境变量，不必改脚本里的 home 路径。
-    base = os.environ.get("CANON_PROJECTS_BASE") or os.path.join(
-        os.path.expanduser("~"), "projects"
-    )
-    p = os.path.join(base, project)
-    if not os.path.isdir(p):
-        sys.exit(f"project not found: {p}")
-    return p
+        return p, f"CANON_TARGET_ROOT={override}"
+    root = canon_roots.mapped_root(canon, project)
+    if os.path.isdir(root):
+        return root, canon_roots.describe(canon, project)
+    # 映射目标不在 = 清单与实际 checkout 不一致。按项目名拼出来的同名目录往往存在
+    # （ferrite 就有一棵停在旧提交的独立检出），静默换用它正是要修掉的缺陷：报错点名，
+    # 并说清那个同名目录为什么没被采用。
+    guessed = os.path.join(canon_roots.projects_base(), project)
+    hint = (f"\n  {guessed} 存在，但那是按项目名猜的目录，不是映射目标 —— 不静默改用它。"
+            if os.path.isdir(guessed) else "")
+    sys.exit(f"project not found: {root}\n"
+             f"  映射来源：{canon_roots.describe(canon, project)}{hint}\n"
+             f"  改名后请同步两份清单的 root:，或用 CANON_PROJECTS_BASE 指向正确的 checkout 根。")
+
+
+def project_root(project: str, canon: str = CANON) -> str:
+    return resolve_target(project, canon)[0]
 
 
 def walk_files(base: str):
@@ -177,7 +195,7 @@ def checklist_yamls(spec_dir: str):
 
 
 def status(project: str):
-    proot = project_root(project)
+    proot, source = resolve_target(project)
     p_hooks = os.path.join(proot, ".githooks")
     drift, only_canon, dup_layer, project_only, moved_stale = [], [], [], [], []
 
@@ -246,6 +264,7 @@ def status(project: str):
 
     drift = sorted(set(drift))
     print(f"== {project}: canon status ==")
+    print(f"目标根: {proot}  ({source})")
     for name, items in [("DRIFT (canon newer)", drift), ("ONLY-CANON (missing)", only_canon),
                         ("DUPLICATE-LAYER (root copy of quality/)", dup_layer),
                         ("MOVED/STALE (旧副本或适用面外)", moved_stale),

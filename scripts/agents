@@ -14,6 +14,7 @@ agents.yaml 里声明「包含哪些章节、什么顺序、什么参数」。�
 
 agents.yaml 的 `root:` 写相对目录名（如 `root: canon`），解析到
 CANON_PROJECTS_BASE（缺省 ~/projects）之下 —— 计划文件不带任何机器的 home 路径。
+解析规则与两份清单的一致性校验在 scripts/canon_roots.py（agent-sync / canon-sync 共用）。
 
 片段正文可含 {{param}} 占位，由项目 agents.yaml 的 params 替换。
 未提供的占位保持原样并报 warning —— 宁可显式缺失，不静默填空。
@@ -25,6 +26,9 @@ import re
 import sys
 
 import yaml
+
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))  # 同目录共享模块 canon_roots
+import canon_roots
 
 CANON = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRAG_DIR = os.path.join(CANON, "agent-pack", "agents", "fragments")
@@ -152,26 +156,10 @@ def dst_path(root):
     return os.path.join(root, "AGENTS.md")
 
 
-
-def projects_base():
-    """Relative `root:` entries in agents.yaml resolve against this.
-
-    Override with CANON_PROJECTS_BASE (e.g. a second checkout root or a
-    container path) so the plan file never carries one machine's home dir."""
-    return os.environ.get("CANON_PROJECTS_BASE") or os.path.join(
-        os.path.expanduser("~"), "projects"
-    )
-
-
 def resolve_root(spec, project):
-    """Absolute `root:` wins as-is; `~/x` and `x` both land under projects_base."""
-    root = spec.get("root")
-    if not root:
-        die(f"agents.yaml 的 {project} 未配置 root")
-    root = os.path.expanduser(root)
-    if not os.path.isabs(root):
-        root = os.path.join(projects_base(), root)
-    return root
+    """清单 `root:` → 绝对路径；与 agent-sync.yaml 不一致时当场报错。"""
+    return canon_roots.resolve_root(spec.get("root"), project, "agents.yaml", canon=CANON)
+
 
 def cmd_list(_args):
     names = sorted(f[:-3] for f in os.listdir(FRAG_DIR) if f.endswith(".md"))
