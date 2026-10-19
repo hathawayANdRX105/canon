@@ -186,14 +186,14 @@ testless 函数级选区  ⊂  闭包内全部测试（包级）  ⊂  全量（
 **原因**：CI 从没带过 `--ignored` 参数。
 
 **规模**：全仓 **56 个** `#[ignore]`（13 个文件），主要集中在：
-- `crates/api/control-plane/tests/models_channels.rs`（15 个）
-- `crates/api/auth/tests/integration.rs`（11 个）
-- `crates/api/control-plane/tests/channels_groups.rs`（8 个）
-- `crates/api/observe/tests/logs.rs`（5 个）
+- `crates/api-control-plane/tests/models_channels.rs`（15 个）
+- `crates/api-auth/tests/integration.rs`（11 个）
+- `crates/api-control-plane/tests/channels_groups.rs`（8 个）
+- `crates/api-observe/tests/logs.rs`（5 个）
 
 **仓库里已有两种相反的做法**：
-- `crates/api/billing/tests/` 下的文件（`invitees_list.rs`、`topup_affiliate.rs`、`topup_provider.rs`）用"连不上数据库就 return"的方式跳过，不用 `#[ignore]`。
-- `crates/api/control-plane/`、`crates/api/auth/` 下的文件仍用 `#[ignore]`。
+- `crates/api-billing/tests/` 下的文件（`invitees_list.rs`、`topup_affiliate.rs`、`topup_provider.rs`）用"连不上数据库就 return"的方式跳过，不用 `#[ignore]`。
+- `crates/api-control-plane/`、`crates/api-auth/` 下的文件仍用 `#[ignore]`。
 
 两种做法在 CI 里的效果**不同**：return 方式在 CI test 关卡真跑（带 Postgres 服务、自带迁移）；`#[ignore]` 方式在 CI 里从不执行，本地也要手动加参数。
 
