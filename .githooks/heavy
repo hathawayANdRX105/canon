@@ -19,7 +19,27 @@
 #
 # 环境变量:
 #   HEAVY_VERBOSE=1  打印实际配额到 stderr
+#   CANON_HEAVY=1    本脚本在 scope 内注入的"已在配额内"标记; 嵌套调用见到它就直接
+#                    透传, 不再新建 scope(幂等)。理由见下方标记判断处的注释。
 set -eu
+
+# 已在配额 scope 内 → 直接执行, 不重复套一层。
+#
+# 为什么判据必须是显式标记, 不能是"能不能起 systemd":
+#   嵌套创建 transient scope 时, 内层 systemd-run 会生成与外层已在运行的那个 scope
+#   相同的 unit 名, 于是直接启动失败(实测 10/10):
+#     Failed to start transient scope unit: Unit run-p<pid>-i<n>.scope was already
+#     loaded or has a fragment file.
+#   而调用方常用 `| tail` 之类看输出, 管道退出码取的是 tail 的状态(0), 于是失败被
+#   当成通过 —— 命令其实压根没跑, 门却变绿了。
+#   也不能改用"探测能否起 systemd"来判: 那种探测在没有用户 systemd 会话的环境里
+#   一样失败, 但那是**另一种**处境(该裸跑, 且没有配额可继承), 两者必须区分开。
+if [ "${CANON_HEAVY:-}" = "1" ]; then
+    if [ "${HEAVY_VERBOSE:-}" = "1" ]; then
+        echo "heavy: 已在配额内 (CANON_HEAVY=1), 直接执行不新建 scope" >&2
+    fi
+    exec "$@"
+fi
 
 cores=$(nproc 2>/dev/null || echo 2)
 quota=$(( cores * 50 ))
@@ -29,4 +49,4 @@ if [ "${HEAVY_VERBOSE:-}" = "1" ]; then
     echo "heavy: CPUQuota=${quota}% (nproc=${cores})" >&2
 fi
 
-exec systemd-run --user --scope -q -p "CPUQuota=${quota}%" -- "$@"
+exec systemd-run --user --scope -q -p "CPUQuota=${quota}%" --setenv=CANON_HEAVY=1 -- "$@"
