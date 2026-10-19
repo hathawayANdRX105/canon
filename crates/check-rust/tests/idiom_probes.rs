@@ -186,3 +186,86 @@ fn redundant_pattern_matching_intact_method_broken_match() {
         "fn f(r: Result<i32, String>) -> bool {\n    match r {\n        Ok(_) => true,\n        Err(_) => false,\n    }\n}\n",
     );
 }
+
+// ---- batch 2：chain 式语法 → 标准库 API 提示 ----
+
+#[test]
+fn manual_map_intact_method_broken_match() {
+    assert_probe(
+        "manual-map",
+        "fn f(opt: Option<i32>) -> Option<i32> {\n    opt.map(|v| v * 2)\n}\n",
+        "fn f(opt: Option<i32>) -> Option<i32> {\n    match opt {\n        Some(v) => Some(v * 2),\n        None => None,\n    }\n}\n",
+    );
+}
+
+#[test]
+fn manual_and_then_intact_method_broken_match() {
+    assert_probe(
+        "manual-and-then",
+        "fn f(opt: Option<i32>) -> Option<String> {\n    opt.and_then(|v| v.to_string().parse().ok())\n}\n",
+        "fn f(opt: Option<i32>) -> Option<String> {\n    match opt {\n        Some(v) => v.to_string().parse().ok(),\n        None => None,\n    }\n}\n",
+    );
+}
+
+#[test]
+fn manual_unwrap_or_intact_method_broken_match() {
+    assert_probe(
+        "manual-unwrap-or",
+        "fn f(opt: Option<i32>) -> i32 {\n    opt.unwrap_or(0)\n}\n",
+        "fn f(opt: Option<i32>) -> i32 {\n    match opt {\n        Some(v) => v,\n        None => 0,\n    }\n}\n",
+    );
+}
+
+#[test]
+fn manual_map_or_intact_method_broken_match() {
+    assert_probe(
+        "manual-map-or",
+        "fn f(opt: Option<String>) -> usize {\n    opt.map_or(0, |v| v.len())\n}\n",
+        "fn f(opt: Option<String>) -> usize {\n    match opt {\n        Some(v) => v.len(),\n        None => 0,\n    }\n}\n",
+    );
+}
+
+#[test]
+fn manual_ok_or_intact_method_broken_match() {
+    assert_probe(
+        "manual-ok-or",
+        "fn f(opt: Option<i32>) -> Result<i32, &str> {\n    opt.ok_or(\"missing\")\n}\n",
+        "fn f(opt: Option<i32>) -> Result<i32, &str> {\n    match opt {\n        Some(v) => Ok(v),\n        None => Err(\"missing\"),\n    }\n}\n",
+    );
+}
+
+#[test]
+fn option_filter_intact_method_broken_if_let() {
+    assert_probe(
+        "option-filter",
+        "fn f(opt: Option<i32>) -> Option<i32> {\n    opt.filter(|v| *v > 0)\n}\n",
+        "fn f(opt: Option<i32>) -> Option<i32> {\n    if let Some(v) = opt {\n        if *v > 0 { Some(v) } else { None }\n    } else {\n        None\n    }\n}\n",
+    );
+}
+
+#[test]
+fn manual_flatten_intact_method_broken_match() {
+    assert_probe(
+        "manual-flatten",
+        "fn f(opt: Option<Option<i32>>) -> Option<i32> {\n    opt.flatten()\n}\n",
+        "fn f(opt: Option<Option<i32>>) -> Option<i32> {\n    match opt {\n        Some(Some(v)) => Some(v),\n        _ => None,\n    }\n}\n",
+    );
+}
+
+#[test]
+fn iter_index_loop_intact_iter_broken_range() {
+    assert_probe(
+        "iter-index-loop",
+        "fn f(v: &[i32]) {\n    for (i, x) in v.iter().enumerate() { use_pair(i, x); }\n}\n",
+        "fn f(v: &[i32]) {\n    for i in 0..v.len() { use_x(v[i]); }\n}\n",
+    );
+}
+
+#[test]
+fn derive_able_impl_intact_derive_broken_manual() {
+    assert_probe(
+        "derive-able-impl",
+        "#[derive(Clone)]\nstruct Foo { a: i32 }\n",
+        "struct Foo { a: i32 }\nimpl Clone for Foo {\n    fn clone(&self) -> Self {\n        Self { a: self.a.clone() }\n    }\n}\n",
+    );
+}
