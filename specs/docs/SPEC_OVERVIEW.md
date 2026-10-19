@@ -259,7 +259,7 @@ ferrite 是两层布局（`crates/<domain>/<crate>/src`），而规则原先写�
 | `rust_todo_needs_issue` | l1 | pre-commit, pre-push, merge | WARN | 注释里 TODO/FIXME 必须关联 issue 号（例 `// TODO(#123):`；不扫字符串/测试） |
 | `rust_test_no_assert` | l1 | pre-commit, pre-push, merge | WARN | 测试函数必须含 assert |
 | `clippy` | l1 | merge | FAIL/WARN | rustc 错误 + unused/dead_code → FAIL；collapsible_if 等默认风格 → WARN；显式启用 12 条 pedantic/restriction/nursery（too_many_lines / semicolon_if_nothing_returned / wildcard_imports / needless_pass_by_value / struct_excessive_bools / explicit_iter_loop / explicit_into_iter_loop / cloned_instead_of_copied / redundant_clone / collapsible_else_if / redundant_else / single_match_else，经 `cargo clippy … -- -W` 传 clippy-driver）→ WARN；不启用 cognitive_complexity（与 CK-CCN 冗余）、many_single_char_names（FP 高）、unwrap_used（与 error_panic 重复） |
-| `ts_signals` | l1 | pre-commit, merge | FAIL/WARN | tree-sitter 确定性语法信号:unsafe 块缺安全不变量 → FAIL;if/else-if 链 ≥3 臂或嵌套 ≥3 层、`0..len()` 索引循环、owned 参数 clone → WARN,均带 category+suggestion;软依赖 tree_sitter+tree_sitter_rust,缺失静默跳过 |
+| `ts_signals` | l1 | pre-commit, merge | FAIL/WARN | tree-sitter 确定性语法信号:unsafe 块缺安全不变量 → FAIL;owned 参数 clone → WARN,均带 category+suggestion;if 链/索引循环类惯用法已由 rust-idiom(syn) 覆盖并退役;软依赖 tree_sitter+tree_sitter_rust,缺失静默跳过 |
 | `dep_hygiene` | l1 | merge | WARN | `cargo-machete` 未使用依赖 |
 | `duplication` | l2 | merge | WARN | 跨文件 4+ 连续行重复块（sh+awk, 零依赖） |
 | `module_drawer` | l2 | merge | WARN | 杂物抽屉启发：通用名文件（util/helper/common/misc…）顶层 pub 项跨 ≥3 类且 ≥5 项 → 拆内聚模块；模块内聚语义归 `semantic_rust` 的 module_structure 类目 |
