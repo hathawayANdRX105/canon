@@ -22,7 +22,7 @@
   `.agents/skills/` 已有工作副本，重复装两份只会让 agent 加载混乱。
 - `shadcn-ui` / `vercel-react-best-practices`：第三方上游 vendored 技能（88K/80K 参考材料），
   正本留在 new-api `.agents/skills/`，canon 不收副本——上游更新时跟进一处即可。
-- `skills/refactor-workflow.ferrite.md` vs `.kymido.md`：仅第 1 步读的 README 位置不同
-  （仓根 vs 所属域目录），反映两仓 crate 布局差异。
+- `skills/refactor-workflow.kymido.md`：只装给 kymido。曾有 `.ferrite.md` 变体
+  （仅第 1 步读的 README 位置不同，仓根 vs 所属域目录），已按维护者口径删除。
 
 统一某份 = 删分叉副本、改正本、push；在那之前按项目分发当前版本。

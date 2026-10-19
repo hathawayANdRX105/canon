@@ -56,7 +56,7 @@
 
 现有技能，各有分工（详情进各自 SKILL.md 看）：
 `canon-check`（跑 canon 门禁与处置 finding）、
-`refactor-workflow`（重构流程）、`scaffold-dsh`（对照参考实现铺骨架）、
+`scaffold-dsh`（对照参考实现铺骨架）、
 `jev`（用 System One 决策模型做校准判断：问题设计/拆分/置信度分流 + harness 接入）。
 
 **`skills/` 与 `rules/` 的边界**：会被工具自动加载、想跨项目复用的 → `skills/`；
