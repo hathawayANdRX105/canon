@@ -1,6 +1,6 @@
 ---
 name: crate-placement
-description: "Author and use per-crate placement contracts before and after a code change. Use when planning a change that touches crates/** or bin/**, when deciding which crate or module should own a piece of code, or when a post-change diff must be checked against the crate placement spec. The spec is TOML, lives next to Cargo.toml, and is checked by cargo xtask-crate and the canon crate-placement rule."
+description: "Author and use per-crate cratebooks before and after a code change. Use when planning a change that touches crates/** or bin/**, when deciding which crate or module should own a piece of code, or when a post-change diff must be checked against the crate placement spec. The spec is TOML, lives next to Cargo.toml, and is checked by cargo xtask-crate and the canon crate-placement rule."
 license: MIT
 ---
 
@@ -15,7 +15,7 @@ The contract is machine-readable TOML. It is not a design document and not a tes
 
 ## Spec location
 
-Default: `crates/<package>/placement.toml`, next to `Cargo.toml`. The package name in the spec must match the cargo package name.
+Default: `crates/<package>/cratebook.toml`, next to `Cargo.toml`. The package name in the cratebook must match the cargo package name.
 
 ## Schema
 
@@ -55,7 +55,7 @@ path = "src/proxy/**"
 responsibility = "Egress proxy pool installation, health probing, and policy. No database access."
 
 [paths]
-allow = ["src/**", "tests/**", "Cargo.toml", "placement.toml"]
+allow = ["src/**", "tests/**", "Cargo.toml", "cratebook.toml"]
 deny = []
 ```
 
