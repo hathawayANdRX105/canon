@@ -206,10 +206,13 @@ name = "check-rust"
 version = "0.1.0"
 dependencies = [
  "check-core",
+ "globset",
  "proc-macro2",
  "quote",
+ "serde",
  "syn 2.0.119",
  "tempfile",
+ "toml",
 ]
 
 [[package]]

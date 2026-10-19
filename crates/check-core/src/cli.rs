@@ -56,6 +56,10 @@ enum Cmd {
         /// changed 口径的基线 rev
         #[arg(long, default_value = "HEAD")]
         base: String,
+        /// 只审查该路径（文件或目录，相对仓库根）：跳过 git scope 逻辑，
+        /// 文件未跟踪也纳入（审查未提交的新文件）；目录 = 其下全部 .rs 文件
+        #[arg(long)]
+        path: Option<PathBuf>,
         /// 只跑这些 class（可多次）
         #[arg(long = "class")]
         classes: Vec<String>,
@@ -103,6 +107,7 @@ pub fn run_with(frontend: Frontend, args: impl IntoIterator<Item = String>) -> i
         Cmd::Check {
             scope,
             base,
+            path,
             classes,
             json,
             report_json,
@@ -114,6 +119,7 @@ pub fn run_with(frontend: Frontend, args: impl IntoIterator<Item = String>) -> i
             root: args.root.as_ref(),
             scope: &scope,
             base: &base,
+            path: &path,
             classes: &classes,
             json,
             report_json,
@@ -174,6 +180,7 @@ struct CheckInvocation<'a> {
     root: Option<&'a PathBuf>,
     scope: &'a str,
     base: &'a str,
+    path: &'a Option<PathBuf>,
     classes: &'a [String],
     json: bool,
     report_json: bool,
@@ -184,7 +191,7 @@ fn check(p: CheckInvocation<'_>) -> i32 {
     if !p.build_errors.is_empty() {
         return fail_setup(p.build_errors);
     }
-    let (root, tracked, changed) = match resolve_inputs(p.root, p.scope, p.base) {
+    let (root, tracked, changed) = match resolve_inputs(p.root, p.scope, p.base, p.path.as_ref()) {
         Ok(parts) => parts,
         Err(msg) => {
             eprintln!("checks: {msg}");
@@ -221,7 +228,12 @@ fn fail_setup(errors: &[String]) -> i32 {
 /// (仓库根, 跟踪文件, 变更集)
 type FileInputs = (PathBuf, Vec<PathBuf>, Option<Vec<PathBuf>>);
 
-fn resolve_inputs(root: Option<&PathBuf>, scope: &str, base: &str) -> Result<FileInputs, String> {
+fn resolve_inputs(
+    root: Option<&PathBuf>,
+    scope: &str,
+    base: &str,
+    path: Option<&PathBuf>,
+) -> Result<FileInputs, String> {
     let root = match root {
         Some(r) => r.clone(),
         None => resolve_git_root()?,
@@ -229,6 +241,11 @@ fn resolve_inputs(root: Option<&PathBuf>, scope: &str, base: &str) -> Result<Fil
     let tracked = git_out(Some(&root), &["ls-files", "-z"])
         .map(|out| split_paths(&out))
         .ok_or_else(|| "git ls-files failed".to_string())?;
+    // --path 优先：文件 → 单文件（未跟踪也纳入）；目录 → 目录下全部 .rs。
+    if let Some(p) = path {
+        let selected = resolve_path_target(&root, p, &tracked)?;
+        return Ok((root, tracked, Some(selected)));
+    }
     let changed = match scope {
         "changed" => Some(
             git_out(Some(&root), &["diff", "--name-only", "-z", base])
@@ -239,6 +256,66 @@ fn resolve_inputs(root: Option<&PathBuf>, scope: &str, base: &str) -> Result<Fil
         other => return Err(format!("unknown scope {other:?} (all|changed)")),
     };
     Ok((root, tracked, changed))
+}
+
+/// `--path` 目标文件集：文件 → 该文件本身；目录 → 该目录下全部 .rs
+/// （跟踪文件 + 未跟踪新文件），供按 crate/目录审查。
+fn resolve_path_target(
+    root: &Path,
+    path: &Path,
+    tracked: &[PathBuf],
+) -> Result<Vec<PathBuf>, String> {
+    let rel = normalize_rel(root, path)?;
+    let abs = root.join(&rel);
+    if abs.is_file() {
+        return Ok(vec![rel]);
+    }
+    if abs.is_dir() {
+        let mut selected: Vec<PathBuf> = tracked
+            .iter()
+            .filter(|t| t.starts_with(&rel))
+            .cloned()
+            .collect();
+        collect_untracked_rs(&abs, &rel, &mut selected)?;
+        selected.sort();
+        selected.dedup();
+        return Ok(selected);
+    }
+    Err(format!("--path 不存在：{}", rel.display()))
+}
+
+/// 把 `--path` 归一化为相对 root 的路径（绝对路径剥掉 root 前缀，去掉 `./`）。
+fn normalize_rel(root: &Path, path: &Path) -> Result<PathBuf, String> {
+    let abs = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        root.join(path)
+    };
+    let rel = abs
+        .strip_prefix(root)
+        .map_err(|_| format!("--path 必须在仓库根内：{}", path.display()))?;
+    let mut clean = PathBuf::new();
+    for comp in rel.components() {
+        if !matches!(comp, std::path::Component::CurDir) {
+            clean.push(comp.as_os_str());
+        }
+    }
+    Ok(clean)
+}
+
+/// 收集目录下未跟踪的 .rs 文件（新文件也能被 `--path <crate>` 审查到）。
+fn collect_untracked_rs(dir: &Path, rel_dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), String> {
+    for entry in std::fs::read_dir(dir).map_err(|e| format!("read_dir {}: {e}", dir.display()))? {
+        let entry = entry.map_err(|e| format!("read_dir {}: {e}", dir.display()))?;
+        let path = entry.path();
+        let rel = rel_dir.join(entry.file_name());
+        if path.is_dir() {
+            collect_untracked_rs(&path, &rel, out)?;
+        } else if path.extension().is_some_and(|e| e == "rs") && !out.contains(&rel) {
+            out.push(rel);
+        }
+    }
+    Ok(())
 }
 
 fn resolve_git_root() -> Result<PathBuf, String> {
@@ -327,4 +404,79 @@ fn split_paths(null_separated: &str) -> Vec<PathBuf> {
         .filter(|s| !s.is_empty())
         .map(PathBuf::from)
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn write(root: &Path, rel: &str, body: &str) {
+        let path = root.join(rel);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, body).unwrap();
+    }
+
+    #[test]
+    fn path_file_selects_itself_even_when_untracked() {
+        let dir = tempfile::tempdir().unwrap();
+        write(dir.path(), "src/lib.rs", "pub fn f() {}\n");
+        let tracked = vec![PathBuf::from("src/lib.rs")];
+
+        // 跟踪文件
+        let selected = resolve_path_target(dir.path(), Path::new("src/lib.rs"), &tracked).unwrap();
+        assert_eq!(selected, vec![PathBuf::from("src/lib.rs")]);
+
+        // 未跟踪新文件也纳入（审查未提交文件）
+        write(dir.path(), "new.rs", "fn n() {}\n");
+        let selected = resolve_path_target(dir.path(), Path::new("new.rs"), &tracked).unwrap();
+        assert_eq!(selected, vec![PathBuf::from("new.rs")]);
+    }
+
+    #[test]
+    fn path_directory_collects_tracked_and_untracked_rs() {
+        let dir = tempfile::tempdir().unwrap();
+        write(dir.path(), "crates/foo/src/lib.rs", "pub fn f() {}\n");
+        write(dir.path(), "crates/foo/src/bar.rs", "pub fn g() {}\n");
+        write(dir.path(), "crates/foo/README.md", "# not rust\n");
+        write(dir.path(), "crates/other/src/lib.rs", "pub fn h() {}\n");
+        let tracked = vec![
+            PathBuf::from("crates/foo/src/lib.rs"),
+            PathBuf::from("crates/foo/src/bar.rs"),
+            PathBuf::from("crates/other/src/lib.rs"),
+        ];
+
+        // 未跟踪的新 .rs 也要进审查面
+        write(dir.path(), "crates/foo/src/brand_new.rs", "pub fn n() {}\n");
+
+        let selected = resolve_path_target(dir.path(), Path::new("crates/foo"), &tracked).unwrap();
+        let expected = vec![
+            PathBuf::from("crates/foo/src/bar.rs"),
+            PathBuf::from("crates/foo/src/brand_new.rs"),
+            PathBuf::from("crates/foo/src/lib.rs"),
+        ];
+        assert_eq!(selected, expected, "crates/other 与 README 不得混入");
+    }
+
+    #[test]
+    fn path_missing_or_outside_root_errors() {
+        let dir = tempfile::tempdir().unwrap();
+        write(dir.path(), "src/lib.rs", "pub fn f() {}\n");
+        let tracked = vec![PathBuf::from("src/lib.rs")];
+
+        assert!(resolve_path_target(dir.path(), Path::new("nope.rs"), &tracked).is_err());
+        assert!(resolve_path_target(dir.path(), Path::new("/etc"), &tracked).is_err());
+    }
+
+    #[test]
+    fn normalize_relative_path_strips_dot_and_absolute_prefix() {
+        let root = Path::new("/repo");
+        assert_eq!(
+            normalize_rel(root, Path::new("./crates/foo/src/lib.rs")).unwrap(),
+            PathBuf::from("crates/foo/src/lib.rs")
+        );
+        assert_eq!(
+            normalize_rel(root, Path::new("/repo/crates/foo/src/lib.rs")).unwrap(),
+            PathBuf::from("crates/foo/src/lib.rs")
+        );
+    }
 }

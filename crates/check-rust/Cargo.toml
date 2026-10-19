@@ -7,9 +7,12 @@ publish = false
 
 [dependencies]
 check-core = { path = "../check-core" }
+globset = "0.4"
 proc-macro2 = { version = "1", features = ["span-locations"] }
 quote = "1"
+serde = { version = "1", features = ["derive"] }
 syn = { version = "2", features = ["full", "visit"] }
+toml = "0.8"
 
 [dev-dependencies]
 tempfile = "3"

@@ -144,6 +144,26 @@ fn check_flags_route_and_agent_mode_exit_codes() {
 }
 
 #[test]
+fn check_path_missing_exits_two_existing_path_exits_zero() {
+    // --path 契约：不存在的路径必须 exit 2（不能静默空跑）；
+    // 存在的目录/文件正常执行（findings 不改变退出码）。
+    let dir = fixture_repo();
+    write(dir.path(), "src/deep.rs", "fn h() {\n    dbg!(2);\n}\n");
+    init_repo(dir.path());
+
+    let run = |extra: &[&str]| {
+        let mut args = base_argv(dir.path());
+        args.extend(["check".into(), "--scope".into(), "all".into()]);
+        args.extend(extra.iter().map(|s| s.to_string()));
+        cli::run_with(frontend_with(vec![]), args)
+    };
+
+    assert_eq!(run(&["--path", "no-such.rs", "--json"]), 2);
+    assert_eq!(run(&["--path", "src", "--json"]), 0);
+    assert_eq!(run(&["--path", "bad.rs", "--json"]), 0);
+}
+
+#[test]
 fn canon_flag_collapses_not_checked_exit_code() {
     // semantic 规则 + 无端点：agent 口径 rc=10（报告不完整）；--canon 收敛 0
     let dir = tempfile::tempdir().unwrap();

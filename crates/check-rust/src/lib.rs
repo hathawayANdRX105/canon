@@ -18,6 +18,7 @@ mod attrs;
 mod cfg_test_in_tests;
 mod dead_code_allow;
 mod empty_module;
+mod idiom;
 mod process_cmd;
 mod stale_api;
 mod test_file_in_src;
@@ -36,4 +37,9 @@ pub fn rules() -> Vec<Box<dyn Rule>> {
         Box::new(empty_module::EmptyModule),
         Box::new(test_no_assert::TestNoAssert),
     ]
+}
+
+/// 成员仓 bin 组装用：本域参数化 kind 工厂（rust-idiom）。
+pub fn factories() -> Vec<Box<dyn check_core::kinds::KindFactory>> {
+    vec![Box::new(idiom::RustIdiomFactory)]
 }
