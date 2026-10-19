@@ -53,42 +53,107 @@
 
 ### 3.2 CI 怎么跑测试（壳仓架构）
 
-CI 全部在公开壳仓 `hathawayANdRX105/ferrite-ci` 跑（计费原因见 AGENTS.md「CI 处理」），
-主仓 `.github/workflows/ci-dispatch.yml` 只做派发。壳仓两关卡**并行**：
+CI 全部在公开壳仓 `hathawayANdRX105/ferrite-ci` 跑（计费原因见「CI 处理」），
+主仓 `.github/workflows/ci-dispatch.yml` 只做派发。壳仓三关卡**并行**：
 
 | 关卡 | 跑什么 |
 |---|---|
-| `lint-check` | `cargo fmt --all --check` + `cargo clippy --all-targets -- -D warnings`（始终全量）+ ui-components 契约测试（显式全跑） |
-| `test` | PR：快关 `just test-fast origin/<base>`；main push / 手动 `full=true`：全量 `just test`（= `cargo test --all`）。挂 `postgres:18-alpine` 服务 |
+| `lint-check` | `cargo fmt --all --check`；`cargo clippy --all-targets --profile ci`（收窄到「改动包 ∪ 反向依赖闭包」）；契约测试 / 迁移守卫 / 形态检查 / doc 守卫**按闭包门控**；wasm32 门禁、样式守卫按 diff 门控 |
+| `test` | PR：快关 `just test-fast`；main push / 手动 `full=true`：条件全量 `just test-scoped HEAD^`（按闭包收窄，但保住全仓 `cargo check --all-targets`）。挂 `postgres:18-alpine` 服务 |
+| `app-shell-check` | 端上壳 `cargo check`（按 diff 门控） |
 
-| 怎么触发 | 命令 |
+三条车道的编译都走 `--profile ci`：那档继承 `dev`，只把**依赖**的 `opt-level` 降到 0。
+冷编对照实测编译省 **37% 到 54%**，运行只慢 0 到 3 秒（编译占总时间 98%）。
+
+### 3.2.1 用 gh 看 CI
+
+**先记住这一条：`shell-ci` 是 commit status，不是 check-run。** 壳仓最后那个
+`回写 commit status` 步骤写的是 status；查 check-runs 只会看到 `dispatch`，
+**永远等不到结果**。
+
+| 想干什么 | 命令 |
 |---|---|
-| 自动 | PR push / synchronize、main push——主仓 workflow 自动派发，无需操作 |
-| 手动全量 | 主仓目录：`gh workflow run ci-dispatch.yml --ref <branch> -f full=true` |
-| 看结果 | 主仓 PR 的 `shell-ci` 状态（点进去是壳仓 run）；`gh run list -R hathawayANdRX105/ferrite-ci -L 5` |
+| 看 PR 的检查（最省事） | `gh pr checks <N>` —— 把 check-run 与 status 合并显示 |
+| 盯到出结果 | `gh pr checks <N> --watch` |
+| 按 sha 查 `shell-ci` | `gh api repos/hathawayANdRX105/ferrite/commits/<sha>/status --jq '.statuses[] \| select(.context=="shell-ci") \| "\(.state) — \(.description)"'` |
+| ~~按 sha 查~~（**错法**） | `…/commits/<sha>/check-runs` —— 只有 `dispatch` |
+
+后台轮询的正确写法（`statuses[]` 按时间倒序，取 `head -1` 即最新一次）：
+
+```bash
+SHA=$(git rev-parse HEAD)
+for i in $(seq 1 80); do
+  out=$(gh api repos/hathawayANdRX105/ferrite/commits/$SHA/status \
+        --jq '.statuses[] | select(.context=="shell-ci") | "\(.state) — \(.description)"' 2>/dev/null | head -1)
+  if [ -n "$out" ]; then
+    echo "[$(date +%H:%M:%S)] shell-ci: $out"
+    case "$out" in success*|failure*|error*) break;; esac
+  else
+    echo "[$(date +%H:%M:%S)] shell-ci 尚未回写"
+  fi
+  sleep 30
+done
+```
+
+`combined state` 是 `pending` 只说明「有检查挂着」，**不代表 `shell-ci` 这个 context 已写入**——
+它要等壳仓 run 的 `report` 关卡跑完才出现。
+
+其余常用命令：
+
+| 目的 | 命令 |
+|---|---|
+| 手动触发全量 | 主仓目录：`gh workflow run ci-dispatch.yml --ref <branch> -f full=true` |
+| 列壳仓 run | `gh run list -R hathawayANdRX105/ferrite-ci -L 5` |
+| 盯壳仓 run | `gh run watch <id> -R hathawayANdRX105/ferrite-ci --interval 120` |
+| 拉失败日志 | `gh run view <id> -R hathawayANdRX105/ferrite-ci --log-failed` |
+
+**坑**：`--log` / `--log-failed` 在 run **未结束**时返回空串而不是报错，容易误判成
+「没有日志」；先确认 run 已是 `completed` 再拉。
+
+另一条：派发参数里 `pr=` 非空才是 PR 快关，`full=true` 是人明确要全量 ——
+看日志里那行 `>>> 手动 full=true：步骤级标志一律保守` 就能分辨。
 
 **两关口语义（必须分清）**：
 
 | 关卡 | 性质 | 要求 |
 |---|---|---|
 | 快关（PR push） | **阻塞** | `shell-ci` 绿是合并前提；红了 `gh pr checks <N>` 拉壳仓日志修复重推，CI 没跑完不许 merge |
-| 全量（main push / 手动 full） | **异步、离线跟进** | 不阻塞合并，但**必须回查并汇报**：触发后用 bash 长间隔轮询（`gh run watch <id> -R hathawayANdRX105/ferrite-ci --interval 120` 或间隔更大的轮询），无论成败都要汇报 run id + 结论；红了立即开修复任务，禁止静默收尾 |
+| 全量（main push / 手动 full） | **异步、离线跟进** | 不阻塞合并，但**必须回查并汇报**：触发后用 bash 长间隔轮询，无论成败都要汇报 run id + 结论；红了立即开修复任务，禁止静默收尾 |
 
-快关机制：`testless select --from <base>` 选出受影响的**测试名**过滤器 → `cargo test --workspace -- <过滤名>` 只跑这些测试。
-`just test-fast` 的收尾（绝不静默跳测试；降级目标分环境）：
+### 3.2.2 快关怎么选测试（现行三层）
 
-- `testless` 非 0 退出（如只有 `Cargo.lock` 变动、无法解析）或输出不是合法 JSON：
-  **CI 内**降级 `cargo test --workspace` 全量；**本地**不降级（中等及以上测试禁止本地跑），打印壳仓全量派发命令后 `exit 1`（`TEST_FORCE=1 just test-fast` 强跑）；
-- 选出了过滤名但全通过数为 0（零命中）→ 同上分环境处理：CI 降级全量 / 本地拒跑；
-- 选出的过滤名为空（本次 diff 真的不影响任何测试，典型是纯文档 / `.github/` / workflow 改动）→ 打印「本次改动不影响任何测试」并 `exit 0`（两种环境一致）。
+覆盖是**嵌套**的，从窄到宽：
 
-**最后这个分支的坑**：纯文档、`.github/`、workflow 改动会走「零选中 → exit 0」，此时 test 关卡对代码运行 0 个测试——
-**这种绿不代表 CI 运行链路本身被验证过**。改了 `ci.yml` / 选包逻辑后，务必手动触发全量验证。
+```
+testless 函数级选区  ⊂  闭包内全部测试（包级）  ⊂  全量（workspace）
+```
 
-`scripts/ci_scope.py` 仍在仓库里，但**已不再接入当前 CI**——选测试由 `justfile` 的 `test-fast`（`testless`）负责；勿把它当作 CI 选包预览工具。
+- **函数级（testless）**：`testless select --from <base>` 选出受影响的**测试名**，
+  用 nextest 的 filterset（`-E 'test(=a) | test(=b)'`）精确跑。
+- **包级（闭包）**：改了包 X，只有（传递地）依赖 X 的包会受影响 —— 这是编译期事实，
+  `cargo metadata` 的反向依赖图直接给。**搬动代码 / 纯注释 / 纯数据**这类函数级分析
+  看不见的改动由它兜住，不回落全量。
+- **全量**：只在闭包也算不出来时用。
+
+`just test-fast` 的收尾（绝不静默跳测试）：
+
+- `testless` 输出不是合法 JSON（真异常）→ **CI 内**降级全量；**本地**不降级
+  （中等及以上测试禁止本地跑），打印派发命令后 `exit 1`（`TEST_FORCE=1` 强跑）。
+- `testless` 退出码 **2 = run-all**（不是异常），stdout 仍是合法 JSON、`reason` 写明原因。
+  **例外**：若原因是 `Cargo.lock`，且前后 `Cargo.lock` 里**外部包**（带 `source` 的）
+  `(name, version)` 集合完全相同 —— 说明只是 workspace 成员改名 / 搬家、没动任何依赖，
+  则改用闭包判定而不是全量。
+- 选出的过滤名为空 → 按**包级闭包**跑那些包的全部测试；闭包也为空才谈「没事可跑」：
+  无改动 / 纯文档 / 无 `.rs` 且无构建清单（编译输入没变）三种。
+- 选出了过滤名但通过数为 0（零命中）→ CI 降级全量、本地拒跑。
+
+`scripts/ci_scope.py` 仍在仓库里，但**已不再接入当前 CI** —— 选测试由
+`scripts/test-fast.sh`（`testless` + 闭包）与 `scripts/test-full.sh`（条件全量）负责；
+判定面另外还有 `scripts/ci-scope.sh`（job 级 docs-only 快通道）与
+`scripts/ci-scope-flags.sh`（步骤级标志）。**这四个脚本的构建清单列表必须同口径**
+（`BUILD_MANIFEST_RE`），否则同一份 diff 会被两个判定器判出不同结论。
 
 缓存：只有写入方（main push / 手动 full）回填 sccache/cargo 缓存，PR 只读。改缓存键前先读壳仓 workflow 注释。
-
 ### 3.3 失效模式一：feature 门禁的测试，CI 不执行
 
 **症状**：测试文件开头写了 `#![cfg(feature = "xxx")]`，CI 里这个文件被编译、被执行，但输出是 `running 0 tests`，整体仍然绿。
