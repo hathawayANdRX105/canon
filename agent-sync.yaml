@@ -39,8 +39,6 @@ projects:
         to: .agent/rules/pr-workflow.md
       - src: agent-pack/rules/testing-ci.md
         to: .agent/rules/testing-ci.md
-      - src: agent-pack/skills/refactor-workflow.ferrite.md
-        to: .agent/skills/refactor-workflow/SKILL.md
       - src: agent-pack/skills/scaffold-dsh.md
         to: .agent/skills/scaffold-dsh/SKILL.md
       - src: agent-pack/skills/ainotation-web.md
