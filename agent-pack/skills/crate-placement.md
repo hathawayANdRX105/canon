@@ -1,6 +1,6 @@
 ---
 name: crate-placement
-description: "Author and use per-crate cratebooks before and after a code change. Use when planning a change that touches crates/** or bin/**, when deciding which crate or module should own a piece of code, or when a post-change diff must be checked against the crate placement spec. The spec is TOML, lives next to Cargo.toml, and is checked by cargo xtask-crate and the canon crate-placement rule."
+description: "Author and use per-crate cratebooks before and after a code change. Use when planning a change that touches crates/** or bin/**, when deciding which crate or module should own a piece of code, or when a post-change diff must be checked against the crate cratebook. The cratebook is TOML, lives next to Cargo.toml, and is checked by cargo xtask-crate and the canon crate-placement rule."
 license: MIT
 ---
 
