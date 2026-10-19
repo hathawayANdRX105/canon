@@ -16,8 +16,8 @@ use quote::ToTokens;
 use serde::Deserialize;
 use syn::spanned::Spanned;
 use syn::visit::{
-    Visit, visit_expr, visit_expr_method_call, visit_impl_item_fn, visit_item_fn, visit_item_mod,
-    visit_local, visit_trait_item_fn,
+    Visit, visit_expr, visit_expr_method_call, visit_impl_item_fn, visit_item_fn, visit_item_impl,
+    visit_item_mod, visit_local, visit_trait_item_fn,
 };
 use syn::{
     BinOp, Block, Expr, ExprBinary, ExprForLoop, ExprIf, ExprMatch, ExprMethodCall, ExprWhile, Lit,
@@ -38,6 +38,16 @@ pub const ALL_IDIOMS: &[&str] = &[
     "vec-push-loop",
     "bool-comparison",
     "redundant-pattern-matching",
+    // batch 2：chain 式语法 → 标准库 API 提示
+    "manual-map",
+    "manual-and-then",
+    "manual-unwrap-or",
+    "manual-map-or",
+    "manual-ok-or",
+    "option-filter",
+    "manual-flatten",
+    "iter-index-loop",
+    "derive-able-impl",
 ];
 
 // ---------------------------------------------------------------------------
@@ -163,6 +173,15 @@ impl Rule for RustIdiomRule {
          - vec-push-loop：for 循环只做 push 改用迭代器 collect\n\
          - bool-comparison：x==true/false 简化（clippy bool_comparison）\n\
          - redundant-pattern-matching：match 手写 bool 改用 is_ok/is_err/is_some/is_none（clippy redundant_pattern_matching）\n\
+         - manual-map：match 手写 map 语义改用 .map()\n\
+         - manual-and-then：match 手写 and_then 语义改用 .and_then()\n\
+         - manual-unwrap-or：match 手写 unwrap_or 语义改用 .unwrap_or()\n\
+         - manual-map-or：match 手写 map_or 语义改用 .map_or()/.map_or_else()\n\
+         - manual-ok-or：match 手写 ok_or 语义改用 .ok_or()\n\
+         - option-filter：手动 if 过滤 Option 改用 .filter()\n\
+         - manual-flatten：match 手写 flatten 语义改用 .flatten()\n\
+         - iter-index-loop：for i in 0..len()+下标改用 .iter().enumerate()\n\
+         - derive-able-impl：机械手写 Clone/Default/PartialEq/Debug/Hash 改用 #[derive(...)]\n\
          参数见 checks.toml [kinds.rust-idiom.<name>]（paths_include / paths_exclude / idioms / min_chain_len）。"
     }
 
@@ -262,6 +281,41 @@ impl<'ast, 'a> IdiomVisitor<'a> {
         if self.on("hashmap-entry") {
             self.check_hashmap_entry(e);
         }
+        if self.on("option-filter") {
+            self.check_option_filter(e);
+        }
+    }
+
+    /// batch 2：`if let Some(v) = opt { .. Some(v) .. } else { None }` → `opt.filter()`。
+    fn check_option_filter(&mut self, e: &'ast ExprIf) {
+        let Expr::Let(let_expr) = e.cond.as_ref() else {
+            return;
+        };
+        let Some(v) = ctor_binding(&let_expr.pat, "Some") else {
+            return;
+        };
+        let Some((_, else_expr)) = &e.else_branch else {
+            return;
+        };
+        if !is_none_value(else_expr) {
+            return;
+        }
+        let mut finder = SomeWrapFinder {
+            ctor: "Some",
+            ident: &v.to_string(),
+            found: false,
+        };
+        syn::visit::visit_block(&mut finder, &e.then_branch);
+        if !finder.found {
+            return;
+        }
+        let line = e.span().start().line;
+        self.push(
+            line,
+            "option-filter",
+            "手动 if 过滤 Option，可用 .filter() 替代",
+            "改写：opt.filter(|v| cond)。参考 https://doc.rust-lang.org/std/option/enum.Option.html#method.filter",
+        );
     }
 
     fn check_if_else_chain(&mut self, e: &'ast ExprIf) {
@@ -415,6 +469,138 @@ impl<'ast, 'a> IdiomVisitor<'a> {
         if self.on("redundant-pattern-matching") {
             self.check_redundant_bool_match(e);
         }
+        if self.on("manual-map")
+            || self.on("manual-and-then")
+            || self.on("manual-unwrap-or")
+            || self.on("manual-map-or")
+            || self.on("manual-ok-or")
+            || self.on("manual-flatten")
+        {
+            self.check_option_chain_match(e);
+        }
+    }
+
+    /// batch 2：手写 match 替代 Option/Result 组合子 → 给出标准库 API 提示。
+    fn check_option_chain_match(&mut self, e: &'ast ExprMatch) {
+        if e.arms.len() != 2 {
+            return;
+        }
+        if self.on("manual-flatten") {
+            self.check_manual_flatten(e);
+        }
+        let (a, b) = (&e.arms[0], &e.arms[1]);
+        if a.guard.is_some() || b.guard.is_some() {
+            return;
+        }
+        let line = e.span().start().line;
+        if let Some(v) = ctor_binding(&a.pat, "Some")
+            && pat_is_none(&b.pat)
+        {
+            self.emit_option_chain(line, v, &a.body, &b.body);
+            return;
+        }
+        if let Some(v) = ctor_binding(&b.pat, "Some")
+            && pat_is_none(&a.pat)
+        {
+            self.emit_option_chain(line, v, &b.body, &a.body);
+        }
+    }
+
+    fn emit_option_chain(
+        &mut self,
+        line: usize,
+        v: &syn::Ident,
+        some_body: &'ast Expr,
+        none_body: &'ast Expr,
+    ) {
+        let none_is_none = is_none_value(none_body);
+        let some_is_ident = is_path_ident(some_body, &v.to_string());
+        let some_wraps_some = expr_is_ctor_wrap(some_body, "Some", v);
+        if none_is_none {
+            if some_wraps_some {
+                if self.on("manual-map") {
+                    self.push(
+                        line,
+                        "manual-map",
+                        "match 手写 map 语义，可用 .map() 替代",
+                        "改写：opt.map(|v| ..)。参考 https://doc.rust-lang.org/std/option/enum.Option.html#method.map",
+                    );
+                }
+            } else if !some_is_ident && self.on("manual-and-then") {
+                self.push(
+                    line,
+                    "manual-and-then",
+                    "match 手写 and_then 语义，可用 .and_then() 替代",
+                    "改写：opt.and_then(|v| ..)。参考 https://doc.rust-lang.org/std/option/enum.Option.html#method.and_then",
+                );
+            }
+            return;
+        }
+        // Some(v) => Ok(v), None => Err(e) → ok_or
+        if expr_is_ctor_wrap(some_body, "Ok", v) && expr_is_ctor_call(none_body, "Err") {
+            if self.on("manual-ok-or") {
+                self.push(
+                    line,
+                    "manual-ok-or",
+                    "match 手写 ok_or 语义，可用 .ok_or() 替代",
+                    "改写：opt.ok_or(err)。参考 https://doc.rust-lang.org/std/option/enum.Option.html#method.ok_or",
+                );
+            }
+            return;
+        }
+        if some_is_ident {
+            if self.on("manual-unwrap-or") {
+                self.push(
+                    line,
+                    "manual-unwrap-or",
+                    "match 手写 unwrap_or 语义，可用 .unwrap_or() 替代",
+                    "改写：opt.unwrap_or(default)。参考 https://doc.rust-lang.org/std/option/enum.Option.html#method.unwrap_or",
+                );
+            }
+        } else if self.on("manual-map-or") {
+            self.push(
+                line,
+                "manual-map-or",
+                "match 手写 map_or 语义，可用 .map_or() / .map_or_else() 替代",
+                "改写：opt.map_or(default, |v| ..)。参考 https://doc.rust-lang.org/std/option/enum.Option.html#method.map_or",
+            );
+        }
+    }
+
+    /// manual-flatten：`match opt { Some(Some(v)) => Some(v), _ => None }`。
+    fn check_manual_flatten(&mut self, e: &'ast ExprMatch) {
+        if e.arms.len() != 2 {
+            return;
+        }
+        let (a, b) = (&e.arms[0], &e.arms[1]);
+        if a.guard.is_some() || b.guard.is_some() {
+            return;
+        }
+        // 嵌套 Some(Some(v)) → Some(v)，另一臂 None（或通配）
+        let Some(inner) = nested_some_binding(&a.pat) else {
+            return;
+        };
+        let ok = matches!(&b.pat, Pat::Wild(_))
+            || (pat_is_none(&b.pat) && is_path_ident(&b.body, "None"));
+        if !ok {
+            return;
+        }
+        let Some(some_body) = (match a.body.as_ref() {
+            Expr::Call(c) if callee_is(c, "Some") => c.args.first(),
+            _ => None,
+        }) else {
+            return;
+        };
+        if !tokens_contain_ident(&some_body.to_token_stream(), &inner.to_string()) {
+            return;
+        }
+        let line = e.span().start().line;
+        self.push(
+            line,
+            "manual-flatten",
+            "match 手写 flatten 语义，可用 .flatten() 替代",
+            "改写：opt.flatten()。参考 https://doc.rust-lang.org/std/option/enum.Option.html#method.flatten",
+        );
     }
 
     fn check_try_match(&mut self, e: &'ast ExprMatch) {
@@ -552,9 +738,15 @@ impl<'ast, 'a> IdiomVisitor<'a> {
     }
 
     fn check_for_loop(&mut self, e: &'ast ExprForLoop) {
-        if !self.on("vec-push-loop") {
-            return;
+        if self.on("vec-push-loop") {
+            self.check_vec_push_loop(e);
         }
+        if self.on("iter-index-loop") {
+            self.check_iter_index_loop(e);
+        }
+    }
+
+    fn check_vec_push_loop(&mut self, e: &'ast ExprForLoop) {
         if e.body.stmts.len() != 1 {
             return;
         }
@@ -570,6 +762,39 @@ impl<'ast, 'a> IdiomVisitor<'a> {
             "vec-push-loop",
             "for 循环只做 push，可改用迭代器 + collect",
             "改写：let v: Vec<_> = source.iter().map(|x| ..).collect();",
+        );
+    }
+
+    /// batch 2：`for i in 0..v.len() { .. v[i] .. }` → `v.iter().enumerate()`。
+    fn check_iter_index_loop(&mut self, e: &'ast ExprForLoop) {
+        let Expr::Range(range) = &*e.expr else {
+            return;
+        };
+        // 只处理从 0 起始的区间（`0..v.len()` / `0..n`）
+        let start_is_zero = range
+            .start
+            .as_deref()
+            .is_none_or(|s| matches!(s, Expr::Lit(l) if matches!(&l.lit, Lit::Int(i) if i.base10_digits() == "0")));
+        if !start_is_zero {
+            return;
+        }
+        let Pat::Ident(pi) = e.pat.as_ref() else {
+            return;
+        };
+        let mut finder = IndexFinder {
+            var: pi.ident.to_string(),
+            found: false,
+        };
+        syn::visit::visit_block(&mut finder, &e.body);
+        if !finder.found {
+            return;
+        }
+        let line = e.span().start().line;
+        self.push(
+            line,
+            "iter-index-loop",
+            "for i in 0..len() + 下标访问，可改用迭代器",
+            "改写：for (i, x) in v.iter().enumerate() { .. } 或 for x in &v { .. }。参考 clippy::needless_range_loop（style）。",
         );
     }
 
@@ -736,6 +961,13 @@ impl<'ast> Visit<'ast> for IdiomVisitor<'_> {
             self.cfg_test_depth -= 1;
         }
     }
+
+    fn visit_item_impl(&mut self, node: &'ast syn::ItemImpl) {
+        if self.on("derive-able-impl") {
+            self.check_derive_able_impl(node);
+        }
+        visit_item_impl(self, node);
+    }
 }
 
 impl<'a> IdiomVisitor<'a> {
@@ -779,6 +1011,95 @@ impl<'a> IdiomVisitor<'a> {
             format!("改写：let {pat_tt} = {init_tt} else {{ {else_tt} }};。参考 clippy::manual_let_else（pedantic）。"),
         );
     }
+
+    /// batch 2：机械的手写 trait impl（可被 `#[derive(...)]` 替代）→ 提示复用 derive。
+    fn check_derive_able_impl(&mut self, node: &syn::ItemImpl) {
+        let Some((_, trait_path, _)) = &node.trait_ else {
+            return;
+        };
+        let Some(trait_name) = trait_path.segments.last() else {
+            return;
+        };
+        let trait_name = trait_name.ident.to_string();
+        let line = node.span().start().line;
+        match trait_name.as_str() {
+            "Clone" => {
+                let Some(f) = impl_fn(node, "clone") else {
+                    return;
+                };
+                let Some(tail) = tail_expr_of_block(&f.block) else {
+                    return;
+                };
+                if is_struct_self_literal(tail, |v| expr_contains_method_ident(v, "clone")) {
+                    self.push(
+                        line,
+                        "derive-able-impl",
+                        "手写 Clone 实现可改用 #[derive(Clone)] 复用",
+                        "改写：#[derive(Clone)]。参考 https://doc.rust-lang.org/std/clone/trait.Clone.html",
+                    );
+                }
+            }
+            "Default" => {
+                let Some(f) = impl_fn(node, "default") else {
+                    return;
+                };
+                let Some(tail) = tail_expr_of_block(&f.block) else {
+                    return;
+                };
+                if is_struct_self_literal(tail, |v| {
+                    is_path_ident(v, "Default") || is_method_call_ident(v, "default")
+                }) {
+                    self.push(
+                        line,
+                        "derive-able-impl",
+                        "手写 Default 实现可改用 #[derive(Default)] 复用",
+                        "改写：#[derive(Default)]。参考 https://doc.rust-lang.org/std/default/trait.Default.html",
+                    );
+                }
+            }
+            "PartialEq" => {
+                let Some(f) = impl_fn(node, "eq") else { return };
+                let Some(tail) = tail_expr_of_block(&f.block) else {
+                    return;
+                };
+                if is_binary_chain_of(tail, "==") {
+                    self.push(
+                        line,
+                        "derive-able-impl",
+                        "手写 PartialEq 实现可改用 #[derive(PartialEq)] 复用",
+                        "改写：#[derive(PartialEq)]。参考 https://doc.rust-lang.org/std/cmp/trait.PartialEq.html",
+                    );
+                }
+            }
+            "Debug" => {
+                let Some(f) = impl_fn(node, "fmt") else {
+                    return;
+                };
+                if block_contains_method_ident(&f.block, "debug_struct") {
+                    self.push(
+                        line,
+                        "derive-able-impl",
+                        "手写 Debug 实现可改用 #[derive(Debug)] 复用",
+                        "改写：#[derive(Debug)]。参考 https://doc.rust-lang.org/std/fmt/trait.Debug.html",
+                    );
+                }
+            }
+            "Hash" => {
+                let Some(f) = impl_fn(node, "hash") else {
+                    return;
+                };
+                if block_contains_method_ident(&f.block, "hash") {
+                    self.push(
+                        line,
+                        "derive-able-impl",
+                        "手写 Hash 实现可改用 #[derive(Hash)] 复用",
+                        "改写：#[derive(Hash)]。参考 https://doc.rust-lang.org/std/hash/trait.Hash.html",
+                    );
+                }
+            }
+            _ => {}
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -812,6 +1133,63 @@ fn is_diverging(expr: &Expr) -> bool {
 
 fn is_path_ident(expr: &Expr, ident: &str) -> bool {
     matches!(expr, Expr::Path(p) if p.path.get_ident().is_some_and(|i| i == ident))
+}
+
+/// 表达式求值为 `None`：裸 `None` 路径，或 `{ None }` 块尾表达式。
+fn is_none_value(expr: &Expr) -> bool {
+    match expr {
+        Expr::Path(p) => p.path.get_ident().is_some_and(|i| i == "None"),
+        Expr::Block(b) => {
+            matches!(b.block.stmts.last(), Some(Stmt::Expr(e, None)) if is_none_value(e))
+        }
+        _ => false,
+    }
+}
+
+/// `Some(expr)` / `Ok(expr)` 包裹，且包裹体内引用绑定 `v`。
+fn expr_is_ctor_wrap(expr: &Expr, ctor: &str, v: &syn::Ident) -> bool {
+    let Expr::Call(call) = expr else {
+        return false;
+    };
+    callee_is(call, ctor)
+        && call.args.len() == 1
+        && tokens_contain_ident(&call.args[0].to_token_stream(), &v.to_string())
+}
+
+/// `Err(e)` 之类的 tuple 构造调用。
+fn expr_is_ctor_call(expr: &Expr, ctor: &str) -> bool {
+    matches!(expr, Expr::Call(call) if callee_is(call, ctor) && !call.args.is_empty())
+}
+
+fn callee_is(call: &syn::ExprCall, name: &str) -> bool {
+    matches!(&*call.func, Expr::Path(p) if p.path.get_ident().is_some_and(|i| i == name))
+}
+
+/// `Some(Some(v))` 嵌套模式的绑定 `v`。
+fn nested_some_binding(pat: &Pat) -> Option<&syn::Ident> {
+    let syn::Pat::TupleStruct(outer) = pat else {
+        return None;
+    };
+    if outer.path.get_ident().is_none_or(|i| i != "Some") || outer.elems.len() != 1 {
+        return None;
+    }
+    let syn::Pat::TupleStruct(inner) = &outer.elems[0] else {
+        return None;
+    };
+    if inner.path.get_ident().is_none_or(|i| i != "Some") || inner.elems.len() != 1 {
+        return None;
+    }
+    let syn::Pat::Ident(pi) = &inner.elems[0] else {
+        return None;
+    };
+    (pi.subpat.is_none()).then_some(&pi.ident)
+}
+
+/// token 流中是否存在指定标识符（精确 token 匹配，避免 `v` 命中 `var`）。
+fn tokens_contain_ident(ts: &proc_macro2::TokenStream, ident: &str) -> bool {
+    ts.clone()
+        .into_iter()
+        .any(|t| matches!(t, proc_macro2::TokenTree::Ident(i) if i == ident))
 }
 
 fn bool_lit(expr: &Expr) -> Option<bool> {
@@ -867,7 +1245,12 @@ fn returns_ctor_with_binding(expr: &Expr, ctor: &str, ident: &syn::Ident) -> boo
 }
 
 fn pat_is_none(pat: &Pat) -> bool {
-    matches!(pat, Pat::Path(pp) if pp.path.get_ident().is_some_and(|i| i == "None"))
+    match pat {
+        // `None` 是 unit variant：syn 里无类型参数的 `None` 解析为 Pat::Ident。
+        Pat::Ident(pi) => pi.by_ref.is_none() && pi.subpat.is_none() && pi.ident == "None",
+        Pat::Path(pp) => pp.path.get_ident().is_some_and(|i| i == "None"),
+        _ => false,
+    }
 }
 
 fn returns_none(expr: &Expr) -> bool {
@@ -946,5 +1329,129 @@ impl<'ast> Visit<'ast> for MethodFinder<'_> {
             self.found = true;
         }
         visit_expr_method_call(self, node);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// batch 2 助手：迭代器下标循环、derive 替代检测
+
+/// 在 `for i in 0..n { .. v[i] .. }` 中找 `v[i]`（i 是循环变量）。
+struct IndexFinder {
+    var: String,
+    found: bool,
+}
+
+impl<'ast> Visit<'ast> for IndexFinder {
+    fn visit_expr_index(&mut self, node: &'ast syn::ExprIndex) {
+        if let Expr::Path(p) = &*node.index
+            && p.path.get_ident().is_some_and(|i| i == self.var.as_str())
+        {
+            self.found = true;
+        }
+        syn::visit::visit_expr_index(self, node);
+    }
+}
+
+/// 表达式/块中是否存在指定方法名的调用。
+fn expr_contains_method_ident(expr: &Expr, method: &str) -> bool {
+    let mut v = MethodIdentFinder {
+        method,
+        found: false,
+    };
+    syn::visit::visit_expr(&mut v, expr);
+    v.found
+}
+
+fn block_contains_method_ident(block: &Block, method: &str) -> bool {
+    let mut v = MethodIdentFinder {
+        method,
+        found: false,
+    };
+    syn::visit::visit_block(&mut v, block);
+    v.found
+}
+
+struct MethodIdentFinder<'a> {
+    method: &'a str,
+    found: bool,
+}
+
+impl<'ast> Visit<'ast> for MethodIdentFinder<'_> {
+    fn visit_expr_method_call(&mut self, node: &'ast ExprMethodCall) {
+        if node.method == self.method {
+            self.found = true;
+        }
+        visit_expr_method_call(self, node);
+    }
+}
+
+/// 在块中找 `Some(v)` 包裹（option-filter 用）。
+struct SomeWrapFinder<'a> {
+    ctor: &'a str,
+    ident: &'a str,
+    found: bool,
+}
+
+impl<'ast> Visit<'ast> for SomeWrapFinder<'_> {
+    fn visit_expr(&mut self, node: &'ast Expr) {
+        if let Expr::Call(call) = node
+            && callee_is(call, self.ctor)
+            && call
+                .args
+                .iter()
+                .any(|a| tokens_contain_ident(&a.to_token_stream(), self.ident))
+        {
+            self.found = true;
+        }
+        syn::visit::visit_expr(self, node);
+    }
+}
+
+/// 块尾表达式（无分号）。
+fn tail_expr_of_block(block: &Block) -> Option<&Expr> {
+    match block.stmts.last() {
+        Some(Stmt::Expr(e, None)) => Some(e),
+        _ => None,
+    }
+}
+
+/// `impl Trait for Type` 中名为 `name` 的方法。
+fn impl_fn<'a>(node: &'a syn::ItemImpl, name: &str) -> Option<&'a syn::ImplItemFn> {
+    node.items.iter().find_map(|i| match i {
+        syn::ImplItem::Fn(f) if f.sig.ident == name => Some(f),
+        _ => None,
+    })
+}
+
+/// 结构体字面量 `Self { .. }`（或 `Type { .. }`），且所有字段值满足 `pred`。
+fn is_struct_self_literal(expr: &Expr, mut pred: impl FnMut(&Expr) -> bool) -> bool {
+    let Expr::Struct(s) = expr else {
+        return false;
+    };
+    if s.fields.is_empty() {
+        return false;
+    }
+    s.fields.iter().all(|f| pred(&f.expr))
+}
+
+fn is_method_call_ident(expr: &Expr, method: &str) -> bool {
+    matches!(expr, Expr::MethodCall(mc) if mc.method == method)
+}
+
+/// 手写 `a == b && c == d` 这类链式字段比较（PartialEq 机械实现）。
+fn is_binary_chain_of(expr: &Expr, op: &str) -> bool {
+    match expr {
+        Expr::Binary(b) => match &b.op {
+            BinOp::Eq(_) => op == "==",
+            BinOp::Ne(_) => op == "!=",
+            BinOp::And(_) => {
+                op == "&&"
+                    || (op == "=="
+                        && is_binary_chain_of(&b.left, "==")
+                        && is_binary_chain_of(&b.right, "=="))
+            }
+            _ => false,
+        },
+        _ => false,
     }
 }

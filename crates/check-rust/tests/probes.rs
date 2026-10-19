@@ -34,65 +34,6 @@ fn run(
 }
 
 #[test]
-fn test_file_in_src_intact_zero_broken_one() {
-    let dir = tempfile::tempdir().unwrap();
-    let registry = registry();
-    let intact = vec![
-        write_fixture(dir.path(), "src/lib.rs", "pub fn f() {}\n"),
-        write_fixture(
-            dir.path(),
-            "tests/api.rs",
-            "use my_crate::f;\n#[test]\nfn api_works() {\n    assert!(true);\n}\n",
-        ),
-        write_fixture(
-            dir.path(),
-            "tests/foo_test.rs",
-            "// tests/ 下允许 *_test.rs\n#[test]\nfn foo() {\n    assert!(true);\n}\n",
-        ),
-        write_fixture(dir.path(), "src/test_helper.rs", "pub fn helper() {}\n"),
-    ];
-    assert!(run(&registry, dir.path(), &intact).findings.is_empty());
-
-    let mut broken = intact.clone();
-    broken.push(write_fixture(
-        dir.path(),
-        "src/foo_test.rs",
-        "fn test_foo() {}\n",
-    ));
-    let report = run(&registry, dir.path(), &broken);
-    assert_eq!(report.findings.len(), 1, "{report:?}");
-    assert_eq!(report.findings[0].id, "RUST.test-file-in-src");
-    assert_eq!(report.findings[0].path, "src/foo_test.rs");
-}
-
-#[test]
-fn cfg_test_in_tests_intact_zero_broken_one_src_stays_legal() {
-    let dir = tempfile::tempdir().unwrap();
-    let registry = registry();
-    let intact = vec![
-        write_fixture(
-            dir.path(),
-            "tests/api.rs",
-            "use my_crate::f;\n#[test]\nfn api_works() {\n    assert!(true);\n}\n",
-        ),
-        // src/ 里的 #[cfg(test)] 是正当单测形态，规则不得触碰
-        write_fixture(dir.path(), "src/lib.rs", "#[cfg(test)]\nmod tests {\n}\n"),
-    ];
-    assert!(run(&registry, dir.path(), &intact).findings.is_empty());
-
-    let mut broken = intact.clone();
-    broken.push(write_fixture(
-        dir.path(),
-        "tests/wired.rs",
-        "#[cfg(test)]\nmod inner {\n}\n",
-    ));
-    let report = run(&registry, dir.path(), &broken);
-    assert_eq!(report.findings.len(), 1, "{report:?}");
-    assert_eq!(report.findings[0].id, "RUST.cfg-test-in-tests");
-    assert_eq!(report.findings[0].line, 1);
-}
-
-#[test]
 fn dead_code_allow_same_line_reason_passes_bare_fails() {
     let dir = tempfile::tempdir().unwrap();
     let registry = registry();

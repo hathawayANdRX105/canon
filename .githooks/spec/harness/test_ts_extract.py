@@ -297,28 +297,6 @@ class SignalTest(unittest.TestCase):
         self.assertEqual(f[0]["line"], 2)
         self.assertIn("take &x", f[0]["suggestion"])
 
-    def test_if_chain(self):
-        lines = [x["line"] for x in self._all()
-                 if x["id"] == "TS-IF-CHAIN"]
-        self.assertIn(3, lines)
-
-    def test_deep_if_nesting(self):
-        lines = [x["line"] for x in self._all()
-                 if x["id"] == "TS-IF-CHAIN"]
-        self.assertIn(20, lines)
-
-    def test_chain_not_double_reported(self):
-        # 3 臂 else-if 链只在顶端报一次(内层是链成员,不算嵌套)
-        lines = [x["line"] for x in self._all()
-                 if x["id"] == "TS-IF-CHAIN"]
-        self.assertEqual(lines.count(3), 1)
-
-    def test_index_loop(self):
-        f = [x for x in self._all() if x["id"] == "TS-INDEX-LOOP"]
-        self.assertEqual(len(f), 1)
-        self.assertEqual(f[0]["line"], 4)
-        self.assertIn("enumerate", f[0]["suggestion"])
-
     def test_unsafe_without_invariant_fails(self):
         f = [x for x in self._all()
              if x["id"] == "TS-UNSAFE-NOINVARIANT"]
@@ -341,11 +319,6 @@ class SignalTest(unittest.TestCase):
         lines = [x["line"] for x in self._all()
                  if x["id"] == "TS-CLONE-OWNED"]
         self.assertNotIn(15, lines)
-
-    def test_short_chain_not_signaled(self):
-        src = "pub fn f() { if a { } else if b { } }"
-        self.assertEqual([x for x in ts.signals("f.rs", src)
-                          if x["id"] == "TS-IF-CHAIN"], [])
 
     def test_category_and_suggestion_present(self):
         for x in self._all():

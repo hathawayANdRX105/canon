@@ -58,12 +58,11 @@ impl Rule for TodoNeedsIssue {
                 if !is_candidate(line) {
                     continue;
                 }
-                if let Some(lits) = &lits {
-                    if let Some(col) = first_hit_col(line) {
-                        if lits.iter().any(|s| s.contains(line_no, col)) {
-                            continue; // 命中落在字符串字面量内
-                        }
-                    }
+                if let Some(lits) = &lits
+                    && let Some(col) = first_hit_col(line)
+                    && lits.iter().any(|s| s.contains(line_no, col))
+                {
+                    continue; // 命中落在字符串字面量内
                 }
                 findings.push(Finding::new(
                     self.id(),

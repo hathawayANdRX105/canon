@@ -10,9 +10,6 @@ Two outputs, one parse:
 
 2. Deterministic signals (this CLI, mode:file): zero-LLM findings with
    category + suggestion, so the coding agent can act directly:
-   - TS-IF-CHAIN: if/else-if chain >= 3 arms or nesting >= 3 levels
-                                    -> WARN consider match
-   - TS-INDEX-LOOP: `for i in 0..v.len()`          -> WARN iter()/enumerate()
    - TS-CLONE-OWNED: clone() on an owned parameter -> WARN borrow + lifetime
    - TS-UNSAFE-NOINVARIANT: unsafe block whose item doc comment and
      the comment run directly above the block both lack a safety
@@ -72,7 +69,6 @@ SLOT_TRANSPARENT = (
     "binary_expression", "parenthesized_expression",
 )
 FILE_MARKER = re.compile(r"^===== FILE: (.+) =====$")
-INDEX_LOOP_RE = re.compile(r"^0\.\.=?[\w.\[\]() ]+\.len\(\)(-\s*1)?$")
 TYPE_NODE_TYPES = (
     "generic_type", "type_identifier", "tuple_type",
     "reference_type", "qualified_type",
@@ -137,44 +133,6 @@ def _params(src: bytes, item) -> list:
                     out.append((m.group(1), raw))
             return out
     return []
-
-
-def _if_chain_len(if_node) -> int:
-    n = 1
-    cur = if_node
-    while True:
-        alt = None
-        for c in cur.children:
-            if c.type == "else_clause":
-                alt = c
-                break
-        if alt is None:
-            break
-        inner = None
-        for c in alt.children:
-            if c.type == "if_expression":
-                inner = c
-                break
-        if inner is None:
-            break
-        n += 1
-        cur = inner
-    return n
-
-
-def _if_depth(node) -> int:
-    """Nesting depth via consequents only — else-chain members
-    don't count (a 3-arm else-if chain is one dispatch, not
-    three nested ifs)."""
-    d = 0
-    cur = node.parent
-    while cur is not None:
-        if cur.type == "else_clause":
-            break
-        if cur.type == "if_expression":
-            d += 1
-        cur = cur.parent
-    return d
 
 
 def parse_items(content: str) -> list:
@@ -289,35 +247,7 @@ def signals(rel: str, content: str) -> list:
             ]
     for node in _walk(root):
         line = node.start_point[0] + 1
-        if node.type == "if_expression":
-            chain = _if_chain_len(node)
-            depth = _if_depth(node)
-            if chain >= 3 or depth >= 2:
-                findings.append({
-                    "id": "TS-IF-CHAIN", "severity": "WARN",
-                    "path": rel, "line": line,
-                    "category": "syntax",
-                    "message": (f"if/else-if chain of {chain} arms "
-                                f"(nesting {depth}) — a match expresses "
-                                f"the same dispatch"),
-                    "suggestion": "rewrite as match on the "
-                                  "discriminant value",
-                })
-        elif node.type == "for_expression":
-            for c in node.children:
-                if (c.type == "range_expression"
-                        and INDEX_LOOP_RE.match(_text(src, c).strip())):
-                    findings.append({
-                        "id": "TS-INDEX-LOOP", "severity": "WARN",
-                        "path": rel, "line": line,
-                        "category": "syntax",
-                        "message": "index loop over 0..len() — Rust "
-                                   "iterators are zero-cost and clearer",
-                        "suggestion": "use iter()/iter_mut() or "
-                                      "enumerate() for the index",
-                    })
-                    break
-        elif node.type == "call_expression":
+        if node.type == "call_expression":
             for c in node.children:
                 if (c.type == "field_expression"
                         and _text(src, c).rsplit(".", 1)[-1] == "clone"):
