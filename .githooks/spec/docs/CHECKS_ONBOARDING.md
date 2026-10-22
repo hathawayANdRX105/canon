@@ -1,6 +1,6 @@
 # 新仓接入 checks 规则库（SOP）
 
-把 canon 的 Rust 规则库（`check-core` / `check-rust` / `check-dioxus` / `check-deps` /
+把 canon 的 Rust 规则库（`check-core` / `check-rust` / `check-deps` /
 `check-crate` / `check-assets`）接进一个成员仓。形态已由 mono 的 T3–T7 五轮接线验证；照抄即可。
 
 > 前置：目标仓是 Rust 仓。canon 仓是**公开仓**（`github.com/hathawayANdRX105/canon`，
@@ -39,7 +39,6 @@ publish = false
 [dependencies]
 check-core = { git = "https://github.com/hathawayANdRX105/canon", tag = "check-v0.1.5" }
 check-rust = { git = "https://github.com/hathawayANdRX105/canon", tag = "check-v0.1.5" }
-check-dioxus = { git = "https://github.com/hathawayANdRX105/canon", tag = "check-v0.1.5" }
 check-deps = { git = "https://github.com/hathawayANdRX105/canon", tag = "check-v0.1.5" }
 check-crate = { git = "https://github.com/hathawayANdRX105/canon", tag = "check-v0.1.5" }
 check-assets = { git = "https://github.com/hathawayANdRX105/canon", tag = "check-v0.1.5" }
@@ -57,11 +56,9 @@ path = "src/main.rs"
 ```rust
 fn main() {
     let mut static_rules = check_rust::rules();
-    static_rules.extend(check_dioxus::rules());
     static_rules.extend(check_deps::rules());
     static_rules.extend(check_assets::rules());
     let mut factories = check_core::kinds::builtin_factories();
-    factories.extend(check_dioxus::factories());
     factories.extend(check_deps::factories());
     factories.extend(check_assets::factories());
     std::process::exit(check_core::cli::run(check_core::cli::Frontend { static_rules, factories }));
@@ -83,24 +80,21 @@ xtask/ 是独立工作区（不进目标仓 workspace），所以要走 `--manif
 ## 2. 写策略：仓根 `checks.toml`
 
 一页文件装三类东西；**规则管判定、路径管策略**——存量债/非纪律面用 `scope_*`
-收口，不改规则实现（这是 T4 踩过的坑：RSX 规则全仓口径在 mono 出过 ~1200 条 WARN）。
+收口，不改规则实现（这是 T4 踩过的坑：规则全仓口径在 mono 出过 ~1200 条 WARN）。
 
 ```toml
 [semantic]
 endpoint = "http://127.0.0.1:8000"   # laya（本机）；未运行时 semantic 类 → CHECKS-NOTCHECKED INFO
 
 # 参数化实例：同一 Rust 实现，多实例（键 = kind 名; 见 `checks list`）
-[kinds.rsx-nesting.web]
-max_depth = 3
-
 [kinds.dep-edge.domain]
 edges_deny = [
   { from = "crates/ui/**", to = "crates/api/**" },   # 目录 glob（`/**` 含子树）
 ]
 
 # 策略层覆盖：severity / enabled / scope_include / scope_exclude（glob）
-[rules."RSX.cjk-text"]
-scope_include = ["crates/ui/**"]
+[rules."RUST.process-cmd"]
+scope_include = ["crates/**"]
 scope_exclude = ["apps/kit-demo"]
 ```
 
@@ -112,7 +106,7 @@ scope_include/exclude 条目可写 `@<域>` 标记，load() 展开为对应 glob
 [domains]
 frontend = ["crates/ui/**", "apps/web/**"]
 
-[rules."RSX.cjk-text"]
+[rules."RUST.process-cmd"]
 scope_include = ["@frontend"]
 ```
 

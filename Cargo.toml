@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/gate", "crates/flow", "crates/mcp", "crates/check-core", "crates/check-rust", "crates/check-dioxus", "crates/check-deps", "crates/check-crate", "crates/check-assets", "crates/check-semantic", "crates/check-git"]
+members = ["crates/gate", "crates/flow", "crates/mcp", "crates/check-core", "crates/check-rust", "crates/check-deps", "crates/check-crate", "crates/check-assets", "crates/check-semantic", "crates/check-git"]
 # .wt/* worktree 基于各种历史提交（含分 crate 前的旧布局，manifest 无
 # [workspace] 表），不属于本 workspace；不排除会被 cargo 误收编报错。
 exclude = [".wt"]

@@ -276,22 +276,21 @@ verify 家族（l2 级联）的 `slop_comment`/`antislop`/`duplication` 三个�
 
 离线工具（不挂钩子，手动/周期跑）：`harness/tune_ledger.py`（collect 从 merged PR 抽处置进 `specs/ledger/findings.jsonl`，只存 sha256 摘要；propose 聚合"屡被有实质依据的书面驳回"的规则出**人批**阈值复核提案，永不改配置）；`harness/adjudicate_pack.py`（把待裁决发现打包成四选项证据简报供维护者裁决，零副作用）。
 
-### dioxus 家族（canon `specs/dioxus/` + `check-dioxus`，只发给有 dioxus 证据的仓）
+### dioxus 家族（canon `specs/dioxus/`，只发给有 dioxus 证据的仓）
 
 > 分发判据 = 目标仓跟踪文件里有 dioxus 依赖或 `rsx!` 宏（`scripts/canon-sync` 的
 > `GATED_DIRS` + `has_evidence()`）；不满足的仓一条都收不到。规则自身也会自查语料，
 > 语料为空输出 `*-NO-CORPUS` INFO（绿 ≠ 查过，见 `specs/harness/css_token_guard.py`）。
 >
-> rsx 结构规则已迁到 canon 规则库 `crates/check-dioxus`（`dioxus-rsx` AST），经
-> `checks_deterministic` 执行；下表保留文本/CSS 层规则与迁移后的规则名。
+> rsx 结构规则（嵌套 / 一组件一 rsx / 中文 / list-key）已迁到 rust-specs 的 dylint
+> （`dioxus_rsx_*`），由 ferrite 的 `just lint-dioxus` 本地扫描与 merge 钩子
+> `dioxus_lint` 执行；canon 不再执行 rsx 结构规则。下表保留文本/CSS 层规则。
 
 | 名字 | SLA | 触发 | 严重度 | 检测内容 |
 |---|---|---|---|---|
-| `RSX-NESTING.web`（`check-dioxus`，经 `checks_deterministic`） | l1 | pre-push, merge | WARN | rsx 组件嵌套 >1 层（`dioxus-rsx` AST 精确解析，替代 `dioxus_web.py` 花括号计数） |
 | `dioxus_style_scatter` | l1 | pre-push, merge | WARN | rsx 里成组散写 class（`DIOXUS-INLINE-CLASS`）、硬编码 `#hex`、原始色板类（`dioxus_web.py --only style`） |
 | `dioxus_css_semantic` | l1 | pre-push, merge | WARN | rsx `class:` 字面量只许语义类（`ui-*`/`role-*`/data-*）；项目自有物理类只能登记 `custom/css_token_allowlist.txt`（`css_token_guard.py --mode rsx`） |
 | `css_token_composition` | l1 | pre-push, merge | WARN | kit CSS 规则体禁 `@apply` 原始色板类与裸 `#hex`；自定义属性行/渐变/带 alpha 的 black/white 不判，生成物与样张走 `custom/css_guard_skip.txt`（`css_token_guard.py --mode css`） |
-| `RSX.one-rsx-per-component` / `RSX.cjk-text`（`check-dioxus`，经 `checks_deterministic`） | l1 | pre-push, merge | WARN | 一组件一体一个 `rsx!`；rsx 元素体内中文为 0（AST 精确解析） |
 | `web_spec` | l2 | pre-push, merge | WARN（`optional: true`） | web-spec 语义层 11 问句逐文件 jev 判决（条文全文在 `dioxus/web_spec.json` 的 intent）；无 key 时降 WARN 不清零 |
 
 ### 项目侧 checklist（成员仓自带，未收录进 canon `specs/quality/`）

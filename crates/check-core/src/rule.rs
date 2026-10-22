@@ -4,7 +4,7 @@ use crate::context::Ctx;
 use crate::finding::{Class, Finding, RuleOutcome, Severity};
 
 pub trait Rule: Send + Sync {
-    /// 规则 id，形如 `TEXT-PATTERN.no-dbg`（kind 实例）或 `RSX.one-rsx`。
+    /// 规则 id，形如 `TEXT-PATTERN.no-dbg`（kind 实例）或 `RUST.process-cmd`。
     fn id(&self) -> &str;
 
     fn class(&self) -> Class;

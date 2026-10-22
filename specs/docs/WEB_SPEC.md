@@ -15,16 +15,17 @@ gate 不重新发明规则——**条款原文在两份文档里**，本文档�
 
 ## 2. 检查项映射（全部条款 → 谁负责判）
 
-### 2.1 确定性层（l1，`dioxus_web.py` / `check-dioxus`，零 LLM 成本）
+### 2.1 确定性层（l1，`dioxus_web.py` + rust-specs dylint，零 LLM 成本）
 
 | 条款 | 检查项 | 载体 |
 |---|---|---|
 | 原则 §4.1 token 唯一来源（硬编码色值违规） | `DIOXUS-RAW-PALETTE` 原始色板类（`bg-zinc-800` / `text-white`…） | `checklist_dioxus_style_scatter`（`--only style`） |
 | 同上（#hex 硬编码） | `DIOXUS-HARDCODED-COLOR` | 同上 |
 | 同上（成组样式散落，单原子类不提常量——防过度抽象） | `DIOXUS-INLINE-CLASS`（≥72 字符） | 同上 |
-| 指南 §2 RSX 三层内可读（嵌套 ~3 层抽组件） | `RSX-NESTING.web`（`dioxus-rsx` AST，深度阈值见 `checks.toml`） | `check-dioxus`（经 `checks_deterministic`） |
-| 指南 §1/§3 单 rsx 纪律 + 文案常量化（H1.3/H3 口径） | `RSX.one-rsx-per-component` / `RSX.cjk-text`（AST） | `check-dioxus`（经 `checks_deterministic`） |
-| 指南 层级（components/ 反向依赖 views/） | `WEB-LAYERING-DEPENDENCY`（`--only layering`） | `checklist_web_layering`（项目侧） |
+| 指南 §2 RSX 三层内可读（嵌套 ~3 层抽组件） | `dioxus_rsx_nesting`（rust-specs dylint） | `just lint-dioxus` / merge 钩子 `dioxus_lint` |
+| 指南 §1/§3 单 rsx 纪律 + 文案常量化（H1.3/H3 口径） | `dioxus_rsx_one_per_component` / `dioxus_rsx_cjk_text`（rust-specs dylint） | 同上 |
+| 指南 §1 列表 key 稳定性 | `dioxus_rsx_list_key`（rust-specs dylint） | 同上 |
+| 指南 层级（components/ 反向依赖 views/） | `dioxus_layer_direction`（rust-specs dylint） | 同上 |
 
 ### 2.2 语义层（l2，`web_spec.json` via `jev_rule.py`，11 问句）
 
