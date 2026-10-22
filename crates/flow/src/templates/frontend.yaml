@@ -5,7 +5,7 @@ steps:
   - { title: "决策：交互与组件组合（定 UI 方案）", kind: work, state: 规划 }
   - { title: "准备：dx serve 环境/端口/依赖", kind: work, state: 规划 }
   - { title: "开发：实现", kind: work, state: 开发 }
-  - { title: "UI 校验：真实浏览器打开验证（可配 ainotation 标注）", kind: spec, spec_ref: web_spec_deterministic, state: UI校验 }
+  - { title: "UI 校验：真实浏览器打开验证（可配 ainotation 标注）", kind: spec, spec_ref: checks_deterministic, state: UI校验 }
   - { title: "规范清洁：style-scatter / dioxus 检查 FAIL 清零", kind: spec, spec_ref: dioxus_style_scatter, state: 规范清洁 }
   - { title: "审查：结构层 + 语义层 + 视觉回归", kind: spec, spec_ref: review_chain, state: 审查 }
   - { title: "清理整理：dev server/临时文件", kind: work, state: 完成 }

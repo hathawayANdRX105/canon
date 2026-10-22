@@ -85,8 +85,8 @@ canon/
 | `duplication` | 跨文件 4 行以上连续重复块 |
 | `slop_comment` / `antislop` | AI 腔注释：「临时」「凑合」「大概」这类拖延语与含糊语，以及占位、敷衍两类 slop |
 | `api_endpoint_security` | 接口鉴权与密钥处理 |
-| `css_token_composition`、`dioxus_*` | CSS token 组合、rsx 嵌套、样式散落（Dioxus 项目） |
-| `web_spec` / `web_spec_deterministic` | Web 规范与其确定性检查 |
+| `css_token_composition`、`dioxus_*` | CSS token 组合、样式散落（Dioxus 项目；rsx 结构由 `check-dioxus` 执行） |
+| `web_spec` | Web 规范语义层（确定性 rsx 规则由 `check-dioxus` 执行） |
 
 ### 第二层 · 结构信号（tree-sitter）
 
