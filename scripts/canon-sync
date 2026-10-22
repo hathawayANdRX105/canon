@@ -72,10 +72,8 @@ GATED_DIRS = {"spec/dioxus": "dioxus"}
 # 2026-10-10：dioxus 家族由 quality/ 迁到 dioxus/（mono 早就自己这么摆了，canon 没跟
 # 上，于是 canon 侧对这些规则的更新进不了 mono）。内容不一致的不删，报 conflict。
 MOVED_RULES = {
-    "checklist_dioxus_rsx_nesting.yaml": "dioxus",
     "checklist_dioxus_style_scatter.yaml": "dioxus",
     "checklist_web_spec.yaml": "dioxus",
-    "checklist_web_spec_deterministic.yaml": "dioxus",
     "web_spec.json": "dioxus",
     "checklist_css_token_composition.yaml": "dioxus",
     "checklist_dioxus_css_semantic.yaml": "dioxus",
