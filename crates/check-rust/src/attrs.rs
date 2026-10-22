@@ -2,7 +2,7 @@
 //!
 //! 字符串字面量、注释、doc-comment 里的 `#[allow(dead_code)]` / `#[cfg(test)]`
 //! 文案不会成为属性节点，天然免疫误报（T10 取证遗留 FP 的修正）。
-//! 行号取 proc-macro2 span-locations（syn 2 + span-locations，与 check-dioxus 同款）。
+//! 行号取 proc-macro2 span-locations（syn 2 + span-locations）。
 
 use syn::File;
 use syn::spanned::Spanned;

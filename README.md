@@ -38,7 +38,7 @@ canon/
 ├── crates/flow/       # 任务流：项目/任务/步骤 + 工作日志
 ├── crates/web/        # flow 的本地看板（Dioxus wasm）
 ├── crates/check-*/    # Rust 规则库（纯 lib，被成员仓的 checks/ 独立包消费）：
-│                      #   check-core（引擎/kind 框架）、check-rust、check-dioxus、
+│                      #   check-core（引擎/kind 框架）、check-rust、
 │                      #   check-deps、check-crate（crate 落入规范：TOML 契约 +
 │                      #   cargo metadata 文件→包映射）、check-assets、check-git
 │                      #   （git 历史信号：热点/变更耦合/缺陷历史，advisory）；
@@ -85,8 +85,8 @@ canon/
 | `duplication` | 跨文件 4 行以上连续重复块 |
 | `slop_comment` / `antislop` | AI 腔注释：「临时」「凑合」「大概」这类拖延语与含糊语，以及占位、敷衍两类 slop |
 | `api_endpoint_security` | 接口鉴权与密钥处理 |
-| `css_token_composition`、`dioxus_*` | CSS token 组合、样式散落（Dioxus 项目；rsx 结构由 `check-dioxus` 执行） |
-| `web_spec` | Web 规范语义层（确定性 rsx 规则由 `check-dioxus` 执行） |
+| `css_token_composition`、`dioxus_*` | CSS token 组合、样式散落（Dioxus 项目；rsx 结构由 rust-specs 的 dylint 执行，本地 `just lint-dioxus` / merge 钩子） |
+| `web_spec` | Web 规范语义层（确定性 rsx 规则由 rust-specs 的 dylint 执行） |
 
 ### 第二层 · 结构信号（tree-sitter）
 

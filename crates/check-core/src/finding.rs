@@ -65,7 +65,7 @@ impl RuleOutcome {
     }
 }
 
-/// 一条发现。id 形如 `TEXT-PATTERN.no-dbg`（kind 实例）或 `RSX.one-rsx`（专用规则）。
+/// 一条发现。id 形如 `TEXT-PATTERN.no-dbg`（kind 实例）或 `RUST.process-cmd`（专用规则）。
 #[derive(Debug, Clone, Serialize)]
 pub struct Finding {
     pub id: String,
